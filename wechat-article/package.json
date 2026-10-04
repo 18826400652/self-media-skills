@@ -1,0 +1,12 @@
+{
+  "name": "wechat-article",
+  "private": true,
+  "type": "module",
+  "description": "公众号文章：Markdown → 公众号排版 HTML（预览/复制）→ 发布到草稿箱。底座为文颜（@wenyan-md/cli）",
+  "bin": {
+    "wa": "bin/wa"
+  },
+  "dependencies": {
+    "@wenyan-md/cli": "2.0.12"
+  }
+}

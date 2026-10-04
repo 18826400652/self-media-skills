@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{TITLE}} · 公众号预览</title>
+    <style>
+      body {
+        margin: 0;
+        background: #ededed;
+        font-family: -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      }
+      .bar {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 16px;
+        background: #1f2024;
+        color: #f4f1ea;
+        font-size: 14px;
+      }
+      .bar button {
+        padding: 6px 16px;
+        border: 0;
+        border-radius: 6px;
+        background: #07c160;
+        color: #fff;
+        font-size: 14px;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+      .bar button:hover {
+        background: #06ad56;
+      }
+      .bar .hint {
+        opacity: 0.7;
+      }
+      /* 模拟手机阅读宽度 */
+      .phone {
+        max-width: 420px;
+        margin: 24px auto;
+        padding: 24px 18px 48px;
+        background: #fff;
+        box-shadow: 0 4px 24px rgb(0 0 0 / 0.08);
+      }
+      .phone h1.title {
+        margin: 0 0 24px;
+        font-size: 22px;
+        line-height: 1.4;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bar">
+      <button id="copy">复制到公众号</button>
+      <span class="hint" id="hint">复制后到公众号编辑器粘贴</span>
+    </div>
+    <main class="phone">
+      <h1 class="title">{{TITLE}}</h1>
+      <div id="article">{{CONTENT}}</div>
+    </main>
+    <script>
+      const hint = document.getElementById("hint");
+      document.getElementById("copy").addEventListener("click", async () => {
+        const node = document.getElementById("wenyan") || document.getElementById("article");
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              "text/html": new Blob([node.outerHTML], { type: "text/html" }),
+              "text/plain": new Blob([node.innerText], { type: "text/plain" }),
+            }),
+          ]);
+        } catch {
+          // 旧浏览器或非安全上下文：退回到选区复制
+          const range = document.createRange();
+          range.selectNode(node);
+          const sel = getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          document.execCommand("copy");
+          sel.removeAllRanges();
+        }
+        hint.textContent = "已复制，去公众号编辑器粘贴吧";
+      });
+    </script>
+  </body>
+</html>

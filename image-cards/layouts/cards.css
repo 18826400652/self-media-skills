@@ -1,0 +1,260 @@
+/* 卡片通用样式与版式。尺寸来自预设（--card-w 等，由脚本注入），颜色和字体来自主题变量：
+   --bg --fg --fg-muted --highlight --accent --surface --font-body --font-mono */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #d9d9d9;
+}
+
+.card {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  padding: var(--pad-top) var(--pad-right) var(--pad-bottom) var(--pad-left);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--font-size);
+  line-height: 1.6;
+}
+
+.card-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 内容垂直居中，避免下半张空白 */
+  gap: 0.7em;
+  overflow: hidden;
+}
+
+/* ---------- 正文元素 ---------- */
+
+.card h1 {
+  font-size: 2.6em;
+  font-weight: 900;
+  line-height: 1.22;
+  letter-spacing: -0.01em;
+}
+
+.card h2 {
+  font-size: 1.55em;
+  font-weight: 800;
+  line-height: 1.35;
+  margin-bottom: 0.3em;
+}
+
+.card h3 {
+  font-size: 1.15em;
+  font-weight: 700;
+}
+
+.card p {
+  line-height: 1.65;
+}
+
+/* 加粗 = 荧光笔重点 */
+.card strong {
+  font-weight: 800;
+  /* 细色带压在字的底部，保证深色底上白字仍然清晰 */
+  background: linear-gradient(transparent 76%, var(--highlight) 76%);
+  padding: 0 0.08em;
+}
+
+.card em {
+  font-style: normal;
+  color: var(--fg-muted);
+}
+
+.card a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* 有序列表：大号序号 */
+.card ol {
+  list-style: none;
+  counter-reset: item;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+}
+
+.card ol > li {
+  counter-increment: item;
+  position: relative;
+  padding-left: 1.9em;
+  line-height: 1.5;
+}
+
+.card ol > li::before {
+  content: counter(item, decimal-leading-zero);
+  position: absolute;
+  left: 0;
+  color: var(--highlight);
+  font-family: var(--font-mono);
+  font-weight: 800;
+}
+
+/* 无序列表：方块圆点 */
+.card ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+}
+
+.card ul > li {
+  position: relative;
+  padding-left: 1.1em;
+  line-height: 1.5;
+}
+
+.card ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.42em;
+  height: 0.42em;
+  background: var(--highlight);
+}
+
+.card code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.1em 0.35em;
+  border-radius: 0.25em;
+  background: var(--surface);
+}
+
+.card pre {
+  padding: 0.9em 1em;
+  border-radius: 0.4em;
+  background: var(--surface);
+  font-size: 0.78em;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.card pre code {
+  padding: 0;
+  background: none;
+  font-size: 1em;
+}
+
+.card blockquote {
+  padding: 0.6em 0.9em;
+  border-left: 0.18em solid var(--highlight);
+  background: var(--surface);
+  border-radius: 0 0.3em 0.3em 0;
+  color: var(--fg);
+}
+
+.card table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85em;
+}
+
+.card th,
+.card td {
+  padding: 0.5em 0.6em;
+  border-bottom: 2px solid var(--surface);
+  text-align: left;
+}
+
+.card th {
+  color: var(--highlight);
+  font-weight: 800;
+}
+
+.card img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 0.4em;
+  object-fit: contain;
+}
+
+/* ---------- 页脚 ---------- */
+
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 0.6em;
+  font-size: 0.6em;
+  color: var(--fg-muted);
+  letter-spacing: 0.05em;
+}
+
+/* ---------- 版式 ---------- */
+
+/* 封面：大标题居中偏上，副标题弱化 */
+.layout-cover .card-body {
+  justify-content: center;
+  gap: 0.9em;
+}
+
+.layout-cover h1 {
+  font-size: 2.9em;
+}
+
+.layout-cover p {
+  font-size: 1.05em;
+  color: var(--fg-muted);
+}
+
+.layout-cover .page {
+  visibility: hidden;
+}
+
+/* 金句：大字居中 */
+.layout-quote .card-body {
+  justify-content: center;
+  text-align: center;
+}
+
+.layout-quote p {
+  font-size: 1.45em;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+/* 结尾：关注引导 */
+.layout-end .card-body {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  gap: 0.6em;
+}
+
+.layout-end h2 {
+  font-size: 2em;
+}
+
+/* 图片：图片占满主体 */
+.layout-image .card-body {
+  justify-content: center;
+  align-items: center;
+}
+
+/* ---------- 预览页 ---------- */
+
+.gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 24px;
+  zoom: var(--preview-zoom, 0.4);
+}

@@ -1,0 +1,13 @@
+/* 默认主题（中性深色）。变量约定与 narrated-video 的 theme.css 相同，项目可以共用一份品牌主题。 */
+:root {
+  --bg: #111318;
+  --fg: #f2f2f2;
+  --fg-muted: #8b8f98;
+  --highlight: #5b9dff;
+  --accent: #5b9dff;
+  --surface: #1c1f26;
+
+  --font-body: "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "Noto Sans Mono CJK SC", ui-monospace, monospace;
+}
