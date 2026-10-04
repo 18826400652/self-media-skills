@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// 用法：nv voice <视频目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>]
+// 用法：nv voice <视频目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>]
 // 按 脚本.md 逐句生成配音 → 拼接成 audio/voice.wav → 写 timeline.json → 同步到 index.html。
 // 已生成且文本未变的句子会复用缓存，只改一句时很快。
 // 默认的服务商、音色、语速来自项目配置 narrated-video.config.json 的 tts 字段。
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { getProvider } from "../tts/index.mjs";
 import { loadConfig } from "./lib/config.mjs";
@@ -15,12 +15,12 @@ import { syncEpisode } from "./sync.mjs";
 const GAP_SECONDS = 0.35; // 句间停顿
 const TAIL_SECONDS = 1.0; // 结尾留白
 const SAMPLE_RATE = 24000;
-const OPTION_KEYS = ["voice", "speed", "provider"];
+const OPTION_KEYS = ["voice", "speed", "provider", "model"];
 
 function parseArgs(argv) {
   const [dir, ...rest] = argv;
   if (!dir) {
-    console.error("用法：nv voice <视频目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>]");
+    console.error("用法：nv voice <视频目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>]");
     process.exit(1);
   }
   const overrides = {};
@@ -42,7 +42,7 @@ function probeDuration(file) {
 }
 
 async function synthesizeLine(line, tts, linesDir) {
-  const key = `${tts.provider}|${tts.voice}|${tts.speed}|${line.text}`;
+  const key = `${tts.provider}|${tts.model ?? ""}|${tts.voice}|${tts.speed}|${line.text}`;
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const file = join(linesDir, `${String(line.n).padStart(2, "0")}-${hash}.wav`);
   if (existsSync(file)) {
@@ -81,9 +81,21 @@ function buildTimeline(clips, tts) {
   return { tts, duration, lines };
 }
 
+/** 读取项目根目录 .env（KEY=VALUE），已存在的环境变量不覆盖。密钥类配置放这里，不要写进配置文件 */
+function loadDotEnv(root) {
+  const file = join(root, ".env");
+  if (!existsSync(file)) return;
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
+  }
+}
+
 async function main() {
   const { dir, overrides } = parseArgs(process.argv.slice(2));
-  const tts = { ...loadConfig(dir).tts, ...overrides };
+  const config = loadConfig(dir);
+  loadDotEnv(config.root);
+  const tts = { ...config.tts, ...overrides };
   const scriptPath = join(dir, "脚本.md");
   const linesDir = join(dir, "audio", "lines");
   mkdirSync(linesDir, { recursive: true });
