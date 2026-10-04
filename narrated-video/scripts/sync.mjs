@@ -36,11 +36,32 @@ function spanOf(timeline, first, last) {
   return { start: timeline.lines[a].start, duration: end - timeline.lines[a].start };
 }
 
-function captionHtml(line, end) {
-  const text = line.highlights.reduce(
+const CAPTION_LINE_CHARS = 13; // 超过这个字数就会折成两行（竖屏 56px 字号约 14 字一行）
+const BREAK_AFTER = /[，、：；！？,:;!?]/;
+
+/** 两行字幕优先在中间附近的标点后换行，避免把一个词拆到两行；找不到标点就交给 CSS 平衡换行 */
+function splitCaption(text) {
+  if (text.length <= CAPTION_LINE_CHARS) return [text];
+  const candidates = [...text]
+    .map((ch, i) => (BREAK_AFTER.test(ch) && i < text.length - 2 ? i + 1 : -1))
+    .filter((i) => i > 0);
+  if (candidates.length === 0) return [text];
+  const mid = text.length / 2;
+  const cut = candidates.reduce((best, i) => (Math.abs(i - mid) < Math.abs(best - mid) ? i : best));
+  return [text.slice(0, cut), text.slice(cut)];
+}
+
+function highlight(segment, words) {
+  return words.reduce(
     (html, word) => html.split(escapeHtml(word)).join(`<mark>${escapeHtml(word)}</mark>`),
-    escapeHtml(line.text),
+    escapeHtml(segment),
   );
+}
+
+function captionHtml(line, end) {
+  const text = splitCaption(line.text)
+    .map((seg) => highlight(seg, line.highlights))
+    .join("<br />");
   return `      <div id="cap-${line.n}" class="clip caption" data-line="${line.n}" data-start="${fmt(line.start)}" data-duration="${fmt(end - line.start)}">${text}</div>`;
 }
 

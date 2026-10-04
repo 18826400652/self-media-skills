@@ -243,6 +243,15 @@ body {
   font-size: 2em;
 }
 
+/* 双栏列表：条目多但每条很短（≤6 字）的清单 */
+.layout-list2 ol,
+.layout-list2 ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 1em;
+  row-gap: 0.75em;
+}
+
 /* 图片：图片占满主体 */
 .layout-image .card-body {
   justify-content: center;

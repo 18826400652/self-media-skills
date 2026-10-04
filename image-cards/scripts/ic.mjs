@@ -4,7 +4,7 @@
 //   ic preview <卡片.md> [--preset xiaohongshu]                只生成 卡片预览.html，浏览器里看
 //
 // 卡片.md 格式：可选 frontmatter（preset / footer / theme），卡片之间用单独一行 --- 分隔，
-// 版式用 <!-- layout: cover|content|quote|end|image --> 指定；不指定时，以 # 一级标题开头的卡片为 cover，其余为 content。
+// 版式用 <!-- layout: cover|content|list2|quote|end|image --> 指定；不指定时，以 # 一级标题开头的卡片为 cover，其余为 content。
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -16,8 +16,8 @@ import { findChrome } from "./lib/chrome.mjs";
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CONFIG_NAME = "image-cards.config.json";
 const DEFAULTS = { preset: "xiaohongshu", theme: null, footer: "" };
-const LAYOUTS = ["cover", "content", "quote", "end", "image"];
-const LAYOUT_RE = /<!--\s*layout:\s*([a-z]+)\s*-->/;
+const LAYOUTS = ["cover", "content", "list2", "quote", "end", "image"];
+const LAYOUT_RE = /<!--\s*layout:\s*([a-z0-9-]+)\s*-->/;
 const OUTPUT_RE = /^\d{2}\.png$/;
 
 function findUp(start, name) {
