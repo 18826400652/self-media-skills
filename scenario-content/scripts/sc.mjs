@@ -18,6 +18,11 @@ const BANNED = [
   "拥抱变化", "被时代抛弃", "不可或缺", "至关重要", "毋庸置疑",
 ];
 const LIMITS = { wechatTitle: 30, xhsTitle: 20, douyinLine: 28 };
+// 口播（配音原文）检查：TTS 照字读，书面腔会让配音像播报
+const EMOTIONS = ["平静", "开心", "惊讶", "难过", "生气", "害怕", "厌恶",
+  "neutral", "happy", "surprised", "sad", "angry", "fearful", "disgusted"];
+const WRITTEN_WORDS = ["因此", "然而", "此外", "首先", "其次", "从而", "以及", "即可", "便于", "进行", "此时", "该方法"];
+const SPOKEN_MARKERS = /[吧呢啊嘛呀？?]|你猜|其实|结果/;
 const SKIP_SCAN = new Set(["实测记录.md"]);
 
 const chars = (s) => [...s.trim()].length;
@@ -122,13 +127,22 @@ function checkPlatforms(ep, config, r) {
     const rows = douyin.split("\n").filter((l) => l.trim().startsWith("|"));
     const header = rows[0]?.split("|").map((c) => c.trim()) ?? [];
     const col = header.findIndex((h) => h.startsWith("口播"));
-    rows.slice(2).forEach((row) => {
-      const cells = row.split("|").map((c) => c.trim());
-      const text = cells[col] ?? "";
-      if (/^\d+$/.test(cells[1]) && chars(text) > LIMITS.douyinLine) {
-        r.warn(`抖音第 ${cells[1]} 句 ${chars(text)} 字，建议 ≤ ${LIMITS.douyinLine}：${text}`);
-      }
-    });
+    const emoCol = header.findIndex((h) => h.startsWith("情感"));
+    const lines = rows
+      .slice(2)
+      .map((row) => row.split("|").map((c) => c.trim()))
+      .filter((cells) => /^\d+$/.test(cells[1]) && cells[col]);
+    for (const cells of lines) {
+      const [n, text, emo] = [cells[1], cells[col], emoCol >= 0 ? cells[emoCol] : ""];
+      if (chars(text) > LIMITS.douyinLine) r.warn(`抖音第 ${n} 句 ${chars(text)} 字，建议 ≤ ${LIMITS.douyinLine}：${text}`);
+      if (emo && !EMOTIONS.includes(emo)) r.fail(`抖音第 ${n} 句情感「${emo}」无效，可选：${EMOTIONS.slice(0, 7).join(" ")}`);
+      const written = WRITTEN_WORDS.filter((w) => text.includes(w));
+      if (written.length) r.warn(`抖音第 ${n} 句有书面词「${written.join("、")}」，配音会像播报：${text}`);
+      if (/\d/.test(text)) r.warn(`抖音第 ${n} 句有阿拉伯数字，TTS 可能读错，建议写汉字：${text}`);
+    }
+    if (lines.length && !lines.some((cells) => SPOKEN_MARKERS.test(cells[col]))) {
+      r.warn("抖音口播整段没有语气词或反问（吧、呢、其实、结果……），听起来可能像念稿");
+    }
   }
 }
 

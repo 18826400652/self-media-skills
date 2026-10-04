@@ -42,7 +42,7 @@ function probeDuration(file) {
 }
 
 async function synthesizeLine(line, tts, linesDir) {
-  const key = `${tts.provider}|${tts.model ?? ""}|${tts.voice}|${tts.speed}|${tts.instruction ?? ""}|${line.text}`;
+  const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, line.text].join("|");
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const file = join(linesDir, `${String(line.n).padStart(2, "0")}-${hash}.wav`);
   if (existsSync(file)) {
@@ -73,7 +73,7 @@ function buildTimeline(clips, tts) {
   const lines = clips.reduce((acc, c) => {
     const start = acc.length ? acc[acc.length - 1].end + GAP_SECONDS : 0;
     return [...acc, {
-      n: c.n, text: c.text, highlights: c.highlights,
+      n: c.n, text: c.text, highlights: c.highlights, emotion: c.emotion,
       start: round(start), end: round(start + c.speechDuration),
     }];
   }, []);
@@ -103,7 +103,11 @@ async function main() {
   console.log(`读取 ${scriptPath}（${tts.provider} · ${tts.voice} · ${tts.speed}x）`);
   const lines = parseScript(scriptPath);
   const clips = [];
-  for (const line of lines) clips.push(await synthesizeLine(line, tts, linesDir)); // 逐句串行，避免本地模型抢资源
+  for (const line of lines) {
+    // 脚本里写了情感就覆盖默认情感；逐句串行，避免本地模型抢资源
+    const lineTts = line.emotion ? { ...tts, emotion: line.emotion } : tts;
+    clips.push(await synthesizeLine(line, lineTts, linesDir));
+  }
 
   concatWithGaps(clips, join(dir, "audio", "voice.wav"));
   const timeline = buildTimeline(clips, tts);

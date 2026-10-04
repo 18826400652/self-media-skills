@@ -46,6 +46,7 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 
 - **每句口播不超过 28 字**（字幕最多两行，竖屏一行约 14 字）。超过 13 字时，`sync` 会在靠近中间的标点后自动换行，所以长句中间要有逗号
 - **重点词**用顿号分隔，会在字幕里自动高亮
+- **情感**（可选列）：平静 开心 惊讶 难过 生气 害怕 厌恶，逐句覆盖配置里的默认情感（需要 TTS 支持，目前是 cosyvoice）
 - 英文缩写容易被 TTS 读错，必要时写成读音友好的形式
 
 ## 时间轴约定（编排 index.html 时必须遵守）
@@ -140,7 +141,7 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 
 - **新平台**：在 `presets/` 加一个 JSON，字段参照 `douyin.json`
 - **TTS 服务商**（配置 `tts.provider`）：
-  - `cosyvoice`：阿里云百炼 CosyVoice，官方付费接口，中文自然，**支持声音复刻**（用自己的声音）。需要 `DASHSCOPE_API_KEY`，放在项目根目录 `.env`（`nv voice` 自动读取）；`tts.model` 指定模型。
+  - `cosyvoice`：阿里云百炼 CosyVoice，官方付费接口，中文自然，**支持声音复刻**。需要 `DASHSCOPE_API_KEY`，放在项目根目录 `.env`（`nv voice` 自动读取）。`tts.model` 指定模型；`tts.scene` + `tts.emotion` 控制语气（仅部分音色支持，场景名因音色而异，如 longanyang 用「闲聊互动」、longanhuan 用「闲聊对话」，以[官方音色列表](https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list)为准）
   - `edge`：微软神经网络音色，音质好、免费，需要联网。属于非官方接口，商业化前要评估风险，见 `tts/edge.mjs` 的说明。
   - `kokoro`：本地离线，中文只有一个音色。
   - 新增服务商：写 `tts/<名字>.mjs` 导出 `synthesize({ text, voice, speed, outFile })`，再到 `tts/index.mjs` 登记。密钥用环境变量。

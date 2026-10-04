@@ -11,7 +11,7 @@ function cells(row) {
     .map((c) => c.trim());
 }
 
-/** @returns {{ n: number, text: string, highlights: string[] }[]} */
+/** @returns {{ n: number, text: string, highlights: string[], emotion: string }[]} */
 export function parseScript(scriptPath) {
   const md = readFileSync(scriptPath, "utf8");
   const sectionStart = md.indexOf("## 分镜");
@@ -26,6 +26,7 @@ export function parseScript(scriptPath) {
   const header = tableRows.length ? cells(tableRows[0]) : [];
   const textCol = header.findIndex((h) => h.startsWith("口播"));
   const markCol = header.findIndex((h) => h.startsWith("重点词"));
+  const emotionCol = header.findIndex((h) => h.startsWith("情感")); // 可选列：逐句情感
   if (textCol < 0) {
     throw new Error(`${scriptPath}: 找不到「## 分镜」表格里的「口播」列`);
   }
@@ -37,6 +38,7 @@ export function parseScript(scriptPath) {
       n: Number(c[0]),
       text: c[textCol],
       highlights: markCol >= 0 && c[markCol] ? c[markCol].split(SPLIT_KEYWORDS).filter(Boolean) : [],
+      emotion: emotionCol >= 0 ? c[emotionCol] ?? "" : "",
     }));
 
   if (lines.length === 0) {
