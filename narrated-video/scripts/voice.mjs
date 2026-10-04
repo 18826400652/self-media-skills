@@ -42,7 +42,7 @@ function probeDuration(file) {
 }
 
 async function synthesizeLine(line, tts, linesDir) {
-  const key = `${tts.provider}|${tts.model ?? ""}|${tts.voice}|${tts.speed}|${line.text}`;
+  const key = `${tts.provider}|${tts.model ?? ""}|${tts.voice}|${tts.speed}|${tts.instruction ?? ""}|${line.text}`;
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const file = join(linesDir, `${String(line.n).padStart(2, "0")}-${hash}.wav`);
   if (existsSync(file)) {
