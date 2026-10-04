@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# scenario-content 入口：sc check <作品目录>
+set -euo pipefail
+SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+exec node "$SKILL_DIR/scripts/sc.mjs" "$@"
