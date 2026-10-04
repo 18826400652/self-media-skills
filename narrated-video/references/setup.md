@@ -9,8 +9,8 @@ cd <skill 目录>
 npm install                            # HyperFrames（锁定 0.8.119）+ yauzl
 bin/nv browser ensure                  # 下载渲染用的 chrome-headless-shell
 
-# 本地 TTS（Kokoro）
-uv venv .venv && VIRTUAL_ENV=.venv uv pip install kokoro-onnx soundfile
+# TTS：edge（微软音色，需联网）+ Kokoro（本地离线）
+uv venv .venv && VIRTUAL_ENV=.venv uv pip install edge-tts kokoro-onnx soundfile
 
 # 让 nv 全局可用，并注册给 Claude Code
 ln -s "$PWD/bin/nv" ~/.local/bin/nv

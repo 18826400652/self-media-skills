@@ -4,9 +4,10 @@
 //   export async function synthesize({ text, voice, speed, outFile }) → 在 outFile 写出 WAV
 //   - 失败时抛出带服务商名字的错误
 //   - 密钥从环境变量读取，不要写进配置文件
+import * as edge from "./edge.mjs";
 import * as kokoro from "./kokoro.mjs";
 
-const PROVIDERS = { kokoro };
+const PROVIDERS = { edge, kokoro };
 
 export function getProvider(name) {
   const provider = PROVIDERS[name];

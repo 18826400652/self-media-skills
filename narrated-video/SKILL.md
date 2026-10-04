@@ -139,5 +139,8 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 ## 扩展
 
 - **新平台**：在 `presets/` 加一个 JSON，字段参照 `douyin.json`
-- **新 TTS 服务商**：写 `tts/<名字>.mjs` 导出 `synthesize({ text, voice, speed, outFile })`，再到 `tts/index.mjs` 登记。密钥用环境变量
+- **TTS 服务商**（配置 `tts.provider`）：
+  - `edge`：微软神经网络音色，音质好、免费，需要联网。属于非官方接口，商业化前要评估风险，见 `tts/edge.mjs` 的说明。
+  - `kokoro`：本地离线，中文只有一个音色。
+  - 新增服务商：写 `tts/<名字>.mjs` 导出 `synthesize({ text, voice, speed, outFile })`，再到 `tts/index.mjs` 登记。密钥用环境变量。
 - **环境搭建与排坑**：见 `references/setup.md`
