@@ -7,6 +7,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { SKILL_DIR, loadConfig } from "./lib/config.mjs";
+import { writeCues } from "./lib/cues.mjs";
 
 const SRC = join(SKILL_DIR, "hf-kit", "kit.js");
 const TOKENS_RE = /\/\*KIT_TOKENS\*\/([\s\S]*?)\/\*END_KIT_TOKENS\*\//;
@@ -37,6 +38,8 @@ function main() {
   const out = join(outDir, "kit.js");
   writeFileSync(out, source.replace(TOKENS_RE, `/*KIT_TOKENS*/ ${JSON.stringify(tokens)} /*END_KIT_TOKENS*/`));
   console.log(`✓ compositions/kit/kit.js（品牌色：${Object.keys(overrides).length ? "项目配置 hfKit.tokens" : "默认配色"}）`);
+  const cueFrames = writeCues(dir);
+  console.log(cueFrames ? `✓ compositions/kit/cues.js（${cueFrames} 帧的逐字时间）` : "  还没有配音（audio_meta.json），cues.js 等 nv hf-audio 之后生成");
   console.log("  在帧里引用：<script src=\"compositions/kit/kit.js\"></script>，用法见 references/hf-kit.md");
 }
 

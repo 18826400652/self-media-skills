@@ -18,6 +18,7 @@ import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { loadConfig } from "./lib/config.mjs";
+import { writeCues } from "./lib/cues.mjs";
 import { loadDotEnv, probeDuration, synthesizeClean } from "./lib/speech.mjs";
 
 const OPTION_KEYS = ["voice", "speed", "provider", "model"];
@@ -181,6 +182,7 @@ async function main() {
   writeFileSync(join(dir, "audio_engine_meta.json"), `${JSON.stringify(neutral, null, 2)}\n`);
   writeFileSync(join(dir, "audio_meta.json"), `${JSON.stringify(frameKeyed, null, 2)}\n`);
   console.log(`✓ 配音完成：${voices.length} 帧，共 ${total} 秒 → audio_meta.json`);
+  if (existsSync(join(dir, "compositions"))) console.log(`✓ 逐字时间 → compositions/kit/cues.js（${writeCues(dir)} 帧）`);
 }
 
 main().catch((err) => {

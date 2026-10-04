@@ -8,6 +8,7 @@
 #   nv hf-sfx <HyperFrames 工程>        按 STORYBOARD 的 sfx（可写 @关键词）放音效
 #   nv hf-fonts <HyperFrames 工程>      把画面用到的中文字体按需打包进工程
 #   nv hf-kit <HyperFrames 工程>        装入画面组件库（kit.js，带项目品牌色）
+#   nv hf-build <HyperFrames 工程> [--snap]  一键组装：音效、素材、字体、字幕、index、转场、检查
 #   nv render <视频目录> [参数]         渲染到 <视频目录>/renders/
 #   nv <其他>                           透传给 hyperframes（check/snapshot/preview/doctor/lint…）
 set -euo pipefail
@@ -30,7 +31,7 @@ cmd="${1:-help}"
 shift || true
 
 case "$cmd" in
-  new | voice | sync | hf-audio | hf-sfx | hf-fonts | hf-kit)
+  new | voice | sync | hf-audio | hf-sfx | hf-fonts | hf-kit | hf-build)
     exec node "$SKILL_DIR/scripts/$cmd.mjs" "$@"
     ;;
   render)
@@ -44,7 +45,7 @@ case "$cmd" in
     exec "$HF" render "$dir" -o "$dir/renders/$name.mp4" "$@"
     ;;
   help | -h | --help)
-    sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'
     ;;
   *)
     exec "$HF" "$cmd" "$@"

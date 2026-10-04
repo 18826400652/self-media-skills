@@ -205,6 +205,31 @@
 
   var Kit = {};
 
+  /**
+   * 第 frame 帧口播里说到 word 的时间（秒，相对这一帧开头）。需要先引用 compositions/kit/cues.js。
+   * nth：第几次出现（默认 1）。不区分大小写，忽略空格。找不到会直接报错，避免动画悄悄错位。
+   *   Kit.cue(3, "一下午")      → 2.80
+   *   Kit.cue(5, "整理", 2)     → 第二次说「整理」的时间
+   */
+  Kit.cue = function (frame, word, nth) {
+    var cues = window.KIT_CUES && window.KIT_CUES[frame];
+    if (!cues) throw new Error("Kit.cue: 没有第 " + frame + " 帧的逐字时间（先运行 nv hf-audio，并在帧里引用 compositions/kit/cues.js）");
+    var norm = function (t) { return String(t).toLowerCase().replace(/\s+/g, ""); };
+    var text = "", starts = [];
+    cues.forEach(function (c) {
+      var t = norm(c[0]);
+      for (var i = 0; i < t.length; i++) starts.push(c[1]);
+      text += t;
+    });
+    var w = norm(word), from = 0, idx = -1;
+    for (var k = 0; k < (nth || 1); k++) {
+      idx = text.indexOf(w, from);
+      if (idx < 0) throw new Error("Kit.cue: 第 " + frame + " 帧口播里找不到「" + word + "」" + (k ? "（第 " + (k + 1) + " 次）" : "") + "：" + text);
+      from = idx + 1;
+    }
+    return starts[idx];
+  };
+
   /** 划掉换新：「一下午」被划掉，换成「8 秒」。{ from, to, at, inAt=0, size=140 } */
   Kit.strike = function (tl, sel, o) {
     var host = hostOf(sel);

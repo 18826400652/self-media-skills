@@ -37,10 +37,11 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 | `/faceless-explainer` | 建工程、写 BRIEF.md / STORYBOARD.md / frame.md、SCRIPT.md |
 | `nv hf-audio <工程>` | 用项目配置的 TTS 逐帧配音，带逐字时间（替代官方 TTS）。SCRIPT.md 每帧可写 `**情感:**`、`**重点词:**` |
 | `nv hf-kit <工程>` | 装入画面组件库，**写帧之前读 `references/hf-kit.md` 的选用表**，帧里用 `Kit.xxx(...)` 拼画面 |
-| `nv hf-sfx <工程>` | STORYBOARD 每帧 `- sfx: error @数错了`，音效落在说到这个词的时刻 |
-| 官方组装步骤 | assemble-index、字幕、转场（见 faceless-explainer） |
-| `nv hf-fonts <工程>` | 把用到的中文字按需打包进工程（渲染机没有中文字体），之后重跑字幕生成 |
-| `nv check` / `nv snapshot` / `nv render` | 检查、看截图、渲染 |
+| 写 `compositions/frames/NN-*.html` | 每帧用 `Kit.xxx(...)`，时间用 `Kit.cue(帧号, "词")`（说到这个词的时刻），不手写秒数 |
+| `nv hf-build <工程> --snap` | 一键组装：组件库和逐字时间 → 帧时长 → 音效（STORYBOARD `- sfx: error @数错了`）→ 素材 → 中文字体 → 字幕 → index → 转场 → lint/check → 每帧截图拼成 `snapshots/sheet.jpg` |
+| 看 `snapshots/sheet.jpg` → `nv render <工程>` | 看图确认后渲染 |
+
+改了口播或语速：重跑 `nv hf-audio` 和 `nv hf-build`，画面时间会跟着 `Kit.cue` 自动对齐。单独的 `nv hf-sfx`、`nv hf-fonts`、`nv hf-kit` 一般不用手动跑。
 
 ## 视频工程的组成
 
