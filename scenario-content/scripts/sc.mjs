@@ -124,26 +124,43 @@ function checkPlatforms(ep, config, r) {
 
   const douyin = read("douyinScript");
   if (douyin) {
-    const rows = douyin.split("\n").filter((l) => l.trim().startsWith("|"));
-    const header = rows[0]?.split("|").map((c) => c.trim()) ?? [];
-    const col = header.findIndex((h) => h.startsWith("口播"));
-    const emoCol = header.findIndex((h) => h.startsWith("情感"));
-    const lines = rows
-      .slice(2)
-      .map((row) => row.split("|").map((c) => c.trim()))
-      .filter((cells) => /^\d+$/.test(cells[1]) && cells[col]);
-    for (const cells of lines) {
-      const [n, text, emo] = [cells[1], cells[col], emoCol >= 0 ? cells[emoCol] : ""];
+    const lines = douyinLines(douyin);
+    for (const { n, text, emo } of lines) {
       if (chars(text) > LIMITS.douyinLine) r.warn(`抖音第 ${n} 句 ${chars(text)} 字，建议 ≤ ${LIMITS.douyinLine}：${text}`);
       if (emo && !EMOTIONS.includes(emo)) r.fail(`抖音第 ${n} 句情感「${emo}」无效，可选：${EMOTIONS.slice(0, 7).join(" ")}`);
       const written = WRITTEN_WORDS.filter((w) => text.includes(w));
       if (written.length) r.warn(`抖音第 ${n} 句有书面词「${written.join("、")}」，配音会像播报：${text}`);
       if (/\d/.test(text)) r.warn(`抖音第 ${n} 句有阿拉伯数字，TTS 可能读错，建议写汉字：${text}`);
     }
-    if (lines.length && !lines.some((cells) => SPOKEN_MARKERS.test(cells[col]))) {
+    if (lines.length && !lines.some((l) => SPOKEN_MARKERS.test(l.text))) {
       r.warn("抖音口播整段没有语气词或反问（吧、呢、其实、结果……），听起来可能像念稿");
     }
   }
+}
+
+/**
+ * 抖音口播 → [{ n, text, emo }]。支持两种写法：
+ *   - 分镜表：表头含「口播…」「情感…」列，第一列是行号（narrated-video 旧流程的 脚本.md）
+ *   - HyperFrames SCRIPT.md：`## … (Frame N)` 开一句，`**Emotion:**`/`**情感:**`，缩进块是口播原文
+ */
+function douyinLines(md) {
+  if (/\(Frame \d+\)/.test(md)) {
+    return md.split(/^## /m).slice(1).flatMap((block) => {
+      const n = block.match(/\(Frame (\d+)\)/)?.[1];
+      const text = block.split("\n").filter((l) => /^ {4}\S/.test(l)).map((l) => l.trim()).join("");
+      const emo = block.match(/\*\*(?:Emotion|情感)[:：]\*\*\s*(\S+)/i)?.[1] ?? "";
+      return n && text ? [{ n, text, emo }] : [];
+    });
+  }
+  const rows = md.split("\n").filter((l) => l.trim().startsWith("|"));
+  const header = rows[0]?.split("|").map((c) => c.trim()) ?? [];
+  const col = header.findIndex((h) => h.startsWith("口播"));
+  const emoCol = header.findIndex((h) => h.startsWith("情感"));
+  return rows
+    .slice(2)
+    .map((row) => row.split("|").map((c) => c.trim()))
+    .filter((cells) => /^\d+$/.test(cells[1]) && cells[col])
+    .map((cells) => ({ n: cells[1], text: cells[col], emo: emoCol >= 0 ? cells[emoCol] : "" }));
 }
 
 function main() {

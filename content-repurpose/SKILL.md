@@ -41,7 +41,7 @@ description: >
    - 小红书：挑 3-6 个最容易「存下来」的。
    - 抖音：挑 1 个结论加 2-3 个支撑点。
 4. 按对应 reference 的模板写初稿。
-5. 逐条过自检清单，再交给成品工具：`wa preview`、`ic render`、`nv voice`。
+5. 逐条过自检清单，再交给成品工具：`wa preview`、`ic render`、`nv`（视频，见 narrated-video）。
 
 ## 标题套路（三个平台通用，按平台调整长度）
 

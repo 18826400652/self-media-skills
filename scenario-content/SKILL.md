@@ -70,13 +70,13 @@ sc check <作品目录>
   "platformFiles": {
     "wechat": "公众号/文章.md",
     "xiaohongshuCopy": "小红书/文案.md",
-    "douyinScript": "抖音/脚本.md"
+    "douyinScript": "抖音/SCRIPT.md"
   }
 }
 ```
 
 - `requiredSections`：母稿必须包含的二级标题关键词（标题里包含即可）。
-- `platformFiles`：各平台文件相对作品目录的路径，用于长度检查；不存在的文件会跳过。
+- `platformFiles`：各平台文件相对作品目录的路径，用于长度检查；不存在的文件会跳过。抖音口播支持两种写法：分镜表（含「口播」「情感」列）和 HyperFrames 的 SCRIPT.md（`## … (Frame N)` + 缩进口播 + `**Emotion:**`）。
 
 ## 文件
 

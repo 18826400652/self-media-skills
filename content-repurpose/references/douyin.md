@@ -1,6 +1,6 @@
 # 抖音 / 视频号口播短视频
 
-成品制作交给 narrated-video：分镜表写在 `脚本.md`，一行 = 一句口播 = 一个画面。
+成品制作交给 narrated-video：一句口播 = 一个画面。用 HyperFrames 官方流程时口播写在 `SCRIPT.md`（每句一个 `## … (Frame N)`），用旧流程时写在 `脚本.md` 的分镜表。
 
 ## 结构
 
