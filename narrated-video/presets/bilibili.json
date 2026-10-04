@@ -1,0 +1,9 @@
+{
+  "label": "B 站 / YouTube 横屏 16:9",
+  "width": 1920,
+  "height": 1080,
+  "safe": { "top": 100, "bottom": 220, "left": 160, "right": 160 },
+  "captionBottom": 90,
+  "sizes": { "hero": 112, "point": 60, "caption": 48, "note": 34 },
+  "notes": "横屏，字幕贴近底部，两侧留出较宽边距"
+}

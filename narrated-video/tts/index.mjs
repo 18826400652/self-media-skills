@@ -1,0 +1,17 @@
+// TTS 适配器注册表。新增服务商：写一个 tts/<名字>.mjs，导出 synthesize()，再在这里登记。
+//
+// 适配器约定：
+//   export async function synthesize({ text, voice, speed, outFile }) → 在 outFile 写出 WAV
+//   - 失败时抛出带服务商名字的错误
+//   - 密钥从环境变量读取，不要写进配置文件
+import * as kokoro from "./kokoro.mjs";
+
+const PROVIDERS = { kokoro };
+
+export function getProvider(name) {
+  const provider = PROVIDERS[name];
+  if (!provider) {
+    throw new Error(`未知的 TTS 服务商：${name}（可选：${Object.keys(PROVIDERS).join("、")}）`);
+  }
+  return provider;
+}

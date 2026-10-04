@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width={{WIDTH}}, height={{HEIGHT}}" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link rel="stylesheet" href="preset.css" />
+    <link rel="stylesheet" href="base.css" />
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body>
+    <!--
+      时间轴约定（nv sync 自动维护，不要手改这些时间）：
+      - 场景用 data-lines="2" 或 data-lines="2-4" 绑定 脚本.md 的分镜行号，
+        sync 会写入 data-start / data-duration。
+      - 字幕在 captions 标记之间自动生成（#cap-1、#cap-2 ……）。
+      - #root 和 #voice 的时长也由 sync 写入。
+    -->
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="10"
+      data-width="{{WIDTH}}"
+      data-height="{{HEIGHT}}"
+    >
+      <audio id="voice" src="audio/voice.wav" data-start="0" data-duration="10"></audio>
+
+      <!-- 场景 1：钩子 · 标题卡（中文大标题用 <br /> 手动断行） -->
+      <section id="s1" class="clip scene" data-lines="1" data-start="0" data-duration="3">
+        <h1 class="hero">一句话<br /><mark>抓住注意力</mark></h1>
+      </section>
+
+      <!-- 场景 2：干货 · 要点列表 -->
+      <section id="s2" class="clip scene" data-lines="2-4" data-start="3" data-duration="5">
+        <ol class="list point">
+          <li><span class="num">01</span><span>第一个要点</span></li>
+          <li><span class="num">02</span><span>第二个要点</span></li>
+          <li><span class="num">03</span><span>第三个要点</span></li>
+        </ol>
+      </section>
+
+      <!-- 场景 3：收尾 -->
+      <section id="s3" class="clip scene" data-lines="5" data-start="8" data-duration="2">
+        <p class="hero">感谢<mark>观看</mark></p>
+        <p class="note">关注我，下期见</p>
+      </section>
+
+      <!-- captions:start -->
+      <!-- captions:end -->
+    </div>
+
+    <script>
+      // 时间都从配音时间轴取，重新配音后动画自动跟着走：
+      //   at("s2")  → 场景 s2 的开始时间
+      //   line(3)   → 第 3 句口播的开始时间（读字幕 #cap-3）
+      const at = (id) => Number(document.getElementById(id).dataset.start);
+      const line = (n) => Number(document.getElementById("cap-" + n)?.dataset.start ?? 0); // 未配音前为 0
+      const tl = gsap.timeline({ paused: true });
+
+      // 场景 1：标题上浮，高亮划过
+      tl.from("#s1 .hero", { y: 60, opacity: 0, duration: 0.6, ease: "power3.out" }, at("s1"));
+      tl.from("#s1 mark", { "--mark": "0%", duration: 0.5, ease: "power2.inOut" }, at("s1") + 0.5);
+
+      // 场景 2：每个要点在对应那句口播开始时出现
+      document.querySelectorAll("#s2 li").forEach((li, i) => {
+        tl.from(li, { x: -80, opacity: 0, duration: 0.5, ease: "power3.out" }, line(2 + i));
+      });
+
+      // 场景 3：收尾
+      tl.from("#s3 > *", { y: 40, opacity: 0, duration: 0.5, stagger: 0.2 }, at("s3"));
+      tl.from("#s3 mark", { "--mark": "0%", duration: 0.4 }, at("s3") + 0.5);
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

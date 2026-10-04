@@ -1,0 +1,9 @@
+{
+  "label": "小红书 竖屏视频 3:4",
+  "width": 1080,
+  "height": 1440,
+  "safe": { "top": 140, "bottom": 300, "left": 80, "right": 80 },
+  "captionBottom": 200,
+  "sizes": { "hero": 112, "point": 64, "caption": 52, "note": 38 },
+  "notes": "小红书信息流常用 3:4，底部留给标题与互动区"
+}

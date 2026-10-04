@@ -1,0 +1,13 @@
+{
+  "name": "narrated-video",
+  "private": true,
+  "type": "module",
+  "description": "配音讲解视频工具：脚本 → AI 配音 → 时间轴同步 → HyperFrames 动画 → MP4",
+  "bin": {
+    "nv": "bin/nv"
+  },
+  "devDependencies": {
+    "hyperframes": "0.8.119",
+    "yauzl": "^3.4.0"
+  }
+}

@@ -1,0 +1,15 @@
+/* 默认主题（中性深色）。项目在配置里用 "theme" 指向自己的品牌主题来替换本文件。
+   主题需要定义下面这些变量；装饰性元素（背景纹理、角标等）也写在主题里。 */
+
+:root {
+  --bg: #111318;
+  --fg: #f2f2f2;
+  --fg-muted: #8b8f98;
+  --highlight: #5b9dff;
+  --accent: #5b9dff;
+  --surface: #1c1f26;
+
+  --font-body: "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "Noto Sans Mono CJK SC", ui-monospace, monospace;
+}
