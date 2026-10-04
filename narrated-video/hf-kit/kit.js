@@ -65,6 +65,7 @@
       ".kit-card .body{font-weight:500}",
       ".kit-card.bad .body{color:var(--kit-muted)}",
       ".kit-num{font-weight:900;color:var(--kit-accent);line-height:1;white-space:nowrap}",
+      ".kit-num>span{display:inline-block;line-height:1}",
       ".kit-num .u{font-size:.36em;margin-left:.12em}",
       ".kit-num-label{font-size:40px;font-weight:700;color:var(--kit-ink);margin-top:20px}",
       ".kit-tpl{background:var(--kit-surface);border-top:8px solid var(--kit-accent);padding:40px 44px}",
@@ -473,7 +474,12 @@
         onUpdate: function () { v.textContent = proxy.v.toFixed(digits); },
       }, at);
     }
-    if (o.label) inFrom(tl, el("div", "kit-num-label", box, o.label), at + 0.25, 16);
+    if (o.label) {
+      // 大字的字形框比行高大约 0.23em，说明文字要让开，否则会和数字的文字框重叠
+      var lab = el("div", "kit-num-label", box, o.label);
+      lab.style.marginTop = Math.round(num(o.size, 300) * 0.25) + "px";
+      inFrom(tl, lab, at + 0.25, 16);
+    }
   };
 
   /** 模板卡：可截图保存的提问模板，【】里的内容高亮成要替换的部分。{ title, lines:[], at, stagger=0.25, size=40, footer } */
