@@ -34,8 +34,8 @@ case "$cmd" in
     shift
     name="$(basename "$dir")"
     parent="$(basename "$(dirname "$dir")")"
-    # 视频目录是作品下的平台子目录（如 2026-10-08-xxx/抖音）时，用作品名命名
-    [[ "$parent" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}- ]] && name="$parent"
+    # 视频目录是作品下的平台子目录（如 03-周报/抖音、2026-10-08-xxx/抖音）时，用作品名命名
+    [[ "$parent" =~ ^[0-9]+- ]] && name="$parent"
     mkdir -p "$dir/renders"
     exec "$HF" render "$dir" -o "$dir/renders/$name.mp4" "$@"
     ;;
