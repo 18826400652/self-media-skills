@@ -253,3 +253,116 @@
   font-weight: 400;
   color: var(--fg-muted);
 }
+
+/* ---------- 顶部大标题 nv-title：整条视频常驻，划到中途的人也知道在讲什么 ---------- */
+.nv-title {
+  position: absolute;
+  top: var(--safe-top);
+  left: var(--safe-left);
+  right: var(--safe-right);
+  z-index: 5;
+  font-size: calc(var(--text-point) * 0.95);
+  font-weight: 900;
+  line-height: 1.22;
+}
+.nv-title .kicker {
+  display: block;
+  margin-bottom: 14px;
+  font-size: calc(var(--text-note) * 0.8);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--highlight);
+}
+.nv-title em {
+  font-style: normal;
+  color: var(--highlight);
+}
+/* 有标题时，场景内容从标题下方开始 */
+#root:has(.nv-title) .scene {
+  padding-top: var(--content-top, 500px);
+}
+
+/* ---------- 真实截图 nv-shot：画框 + 可推拉的镜头 + 框选 ---------- */
+.nv-shot {
+  position: relative;
+  height: var(--shot-h, 700px);
+  border: 3px solid rgb(255 255 255 / 0.14);
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.5);
+}
+.nv-shot .cam {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+}
+.nv-shot .cam img {
+  display: block;
+  width: 100%;
+}
+.nv-shot .src {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  z-index: 2;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.7);
+  color: var(--fg-muted);
+  font-size: calc(var(--text-note) * 0.7);
+}
+/* 框选：位置写成截图的百分比，style="left:63%;top:7%;width:4%;height:9%" */
+.nv-box {
+  position: absolute;
+  border: 5px solid var(--highlight);
+  border-radius: 12px;
+  box-shadow: 0 0 24px var(--highlight);
+}
+.nv-box.is-bad {
+  border-color: var(--danger, #ff5a5f);
+  box-shadow: 0 0 24px var(--danger, #ff5a5f);
+}
+
+/* ---------- 盖章 / 徽章的「出错」版 ---------- */
+.nv-stamp.is-bad {
+  background: var(--danger, #ff5a5f);
+  color: var(--fg);
+}
+.nv-stamp.is-xl {
+  padding: 18px 56px;
+  border-radius: 20px;
+  font-size: var(--text-hero);
+  font-weight: 900;
+}
+
+/* ---------- 超大对比字 ---------- */
+.nv-duel.is-xl .value {
+  font-size: calc(var(--text-hero) * 1.6);
+}
+.nv-duel .is-strike .value {
+  color: var(--fg-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 0.08em;
+  text-decoration-color: var(--danger, #ff5a5f);
+}
+
+/* ---------- 纵向组合 nv-stack：几个组件一起抖动、一起出现 ---------- */
+.nv-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+}
+.nv-stamp.is-xl {
+  align-self: center;
+}
+
+/* 表格里的「问题值」：<s>5</s> 标红 */
+.nv-table s {
+  padding: 0 0.15em;
+  border-radius: 8px;
+  background: rgb(255 90 95 / 0.2);
+  color: var(--danger, #ff5a5f);
+  text-decoration: none;
+}

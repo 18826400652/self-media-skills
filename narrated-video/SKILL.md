@@ -28,6 +28,20 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 
 其他子命令会原样透传给 `hyperframes`，如 `nv preview`、`nv doctor`、`nv lint`。
 
+## 另一条路：HyperFrames 官方 faceless-explainer 工作流（抖音竖屏推荐）
+
+画面质量更高，分镜、动效规范按官方 `/faceless-explainer` 来；本 skill 补上中文配音、音效、字体和固定画面组件：
+
+| 步骤 | 做什么 |
+|---|---|
+| `/faceless-explainer` | 建工程、写 BRIEF.md / STORYBOARD.md / frame.md、SCRIPT.md |
+| `nv hf-audio <工程>` | 用项目配置的 TTS 逐帧配音，带逐字时间（替代官方 TTS）。SCRIPT.md 每帧可写 `**情感:**`、`**重点词:**` |
+| `nv hf-kit <工程>` | 装入画面组件库，**写帧之前读 `references/hf-kit.md` 的选用表**，帧里用 `Kit.xxx(...)` 拼画面 |
+| `nv hf-sfx <工程>` | STORYBOARD 每帧 `- sfx: error @数错了`，音效落在说到这个词的时刻 |
+| 官方组装步骤 | assemble-index、字幕、转场（见 faceless-explainer） |
+| `nv hf-fonts <工程>` | 把用到的中文字按需打包进工程（渲染机没有中文字体），之后重跑字幕生成 |
+| `nv check` / `nv snapshot` / `nv render` | 检查、看截图、渲染 |
+
 ## 视频工程的组成
 
 | 文件 | 作用 | 谁来改 |

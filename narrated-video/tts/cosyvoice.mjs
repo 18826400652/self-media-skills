@@ -6,6 +6,7 @@
 //   scene    = 场景（可选，仅支持指令的音色，如 longanyang 的「闲聊互动」、longanhuan 的「闲聊对话」）
 //   emotion  = 默认情感（可选）；脚本「情感」列可逐句覆盖。可写中文：平静 开心 惊讶 难过 生气 害怕 厌恶
 //   instruction = 完整的语气指令（可选，写了就不再用 scene / emotion 拼接）
+// 每句同时输出逐字时间戳 <音频名>.words.json（单位秒）。
 // 音色支持哪些场景，以官方音色列表为准：https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list
 // 密钥：环境变量 DASHSCOPE_API_KEY，可写在项目根目录 .env（nv voice 会自动读取，.env 不入 git）。
 import { execFileSync } from "node:child_process";
@@ -15,6 +16,9 @@ import { SKILL_DIR } from "../scripts/lib/config.mjs";
 const PYTHON = join(SKILL_DIR, ".venv", "bin", "python");
 const SCRIPT = join(SKILL_DIR, "tts", "cosyvoice_synth.py");
 const DEFAULT_MODEL = "cosyvoice-v3-flash";
+
+/** 每句同时输出逐字时间戳 */
+export const wordTimestamps = true;
 
 export const EMOTIONS = {
   平静: "neutral",
@@ -53,7 +57,9 @@ export async function synthesize(opts) {
   }
   const instruction = buildInstruction(opts);
   try {
-    execFileSync(PYTHON, [SCRIPT, model || DEFAULT_MODEL, voice, String(speed), outFile, instruction], {
+    // 逐字时间戳写在音频旁边：xx.wav → xx.words.json（voice.mjs 用它精确切静音、对齐关键词）
+    const wordsFile = outFile.replace(/\.wav$/, ".words.json");
+    execFileSync(PYTHON, [SCRIPT, model || DEFAULT_MODEL, voice, String(speed), outFile, instruction, wordsFile], {
       input: text,
       stdio: ["pipe", "ignore", "pipe"],
       timeout: 120_000,

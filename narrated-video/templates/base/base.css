@@ -100,10 +100,12 @@ mark {
   bottom: var(--caption-bottom);
   text-align: center;
   font-size: var(--text-caption);
-  font-weight: 700;
+  font-weight: 900;
   line-height: 1.35;
   color: var(--fg);
-  text-shadow: 0 4px 16px rgb(0 0 0 / 0.6);
+  -webkit-text-stroke: 0.2em var(--bg); /* 粗描边：任何背景上都看得清 */
+  paint-order: stroke fill;
+  text-shadow: 0 6px 18px rgb(0 0 0 / 0.5);
   text-wrap: balance; /* 两行字幕长度均衡，避免单字落行 */
   z-index: 10;
 }
@@ -112,10 +114,9 @@ mark {
   font-size: calc(var(--text-caption) * 0.88); /* 折行后仍超宽的长句，自动缩小 */
 }
 
+/* 字幕重点词：高亮色大字（不用色块，描边字更像短视频字幕） */
 .caption mark {
-  --mark: 100%;
-  color: var(--bg);
-  background: var(--highlight);
-  padding: 0 0.12em;
-  border-radius: 6px;
+  display: inline-block; /* 让重点词能单独跳动 */
+  color: var(--highlight);
+  background: none;
 }

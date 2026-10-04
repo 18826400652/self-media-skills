@@ -4,6 +4,6 @@
   "height": 1920,
   "safe": { "top": 220, "bottom": 640, "left": 88, "right": 168 },
   "captionBottom": 520,
-  "sizes": { "hero": 128, "point": 72, "caption": 56, "note": 40 },
+  "sizes": { "hero": 128, "point": 72, "caption": 60, "note": 40 },
   "notes": "右侧约 160px 为点赞评论按钮，底部约 450px 为文案区，字幕放在其上方"
 }

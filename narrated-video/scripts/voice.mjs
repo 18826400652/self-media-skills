@@ -1,26 +1,25 @@
 #!/usr/bin/env node
-// 用法：nv voice <视频目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>]
-// 按 脚本.md 逐句生成配音 → 拼接成 audio/voice.wav → 写 timeline.json → 同步到 index.html。
+// 用法：nv voice <视频目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>] [--gap <秒>]
+// 按 脚本.md 逐句生成配音 → 切掉首尾静音、按 gap 拼接成 audio/voice.wav → 写 timeline.json → 同步到 index.html。
 // 已生成且文本未变的句子会复用缓存，只改一句时很快。
 // 默认的服务商、音色、语速来自项目配置 narrated-video.config.json 的 tts 字段。
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { getProvider } from "../tts/index.mjs";
 import { loadConfig } from "./lib/config.mjs";
 import { parseScript } from "./lib/script-md.mjs";
+import { loadDotEnv, synthesizeClean } from "./lib/speech.mjs";
 import { syncEpisode } from "./sync.mjs";
 
-const GAP_SECONDS = 0.35; // 句间停顿
-const TAIL_SECONDS = 1.0; // 结尾留白
+const DEFAULT_GAP = 0.15; // 句间停顿（配置 tts.gap 可改）；短视频要紧凑，TTS 自带的首尾静音会先切掉
+const TAIL_SECONDS = 0.8; // 结尾留白
 const SAMPLE_RATE = 24000;
-const OPTION_KEYS = ["voice", "speed", "provider", "model"];
+const OPTION_KEYS = ["voice", "speed", "provider", "model", "gap"];
 
 function parseArgs(argv) {
   const [dir, ...rest] = argv;
   if (!dir) {
-    console.error("用法：nv voice <视频目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>]");
+    console.error("用法：nv voice <视频目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>] [--gap <秒>]");
     process.exit(1);
   }
   const overrides = {};
@@ -34,29 +33,14 @@ function parseArgs(argv) {
   return { dir: resolve(dir), overrides };
 }
 
-function probeDuration(file) {
-  const out = execFileSync("ffprobe", [
-    "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file,
-  ]);
-  return Number(out.toString().trim());
-}
-
 async function synthesizeLine(line, tts, linesDir) {
-  const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, line.text].join("|");
-  const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
-  const file = join(linesDir, `${String(line.n).padStart(2, "0")}-${hash}.wav`);
-  if (existsSync(file)) {
-    console.log(`  ✓  第 ${line.n} 句（缓存）`);
-  } else {
-    console.log(`  🎙  第 ${line.n} 句：${line.text}`);
-    await getProvider(tts.provider).synthesize({ ...tts, text: line.text, outFile: file });
-  }
-  return { ...line, file, speechDuration: probeDuration(file) };
+  const clip = await synthesizeClean(line, tts, linesDir, String(line.n).padStart(2, "0"));
+  return { ...line, ...clip };
 }
 
-function concatWithGaps(clips, outFile) {
+function concatWithGaps(clips, gap, outFile) {
   const pads = clips.map((c, i) => {
-    const pad = i === clips.length - 1 ? TAIL_SECONDS : GAP_SECONDS;
+    const pad = i === clips.length - 1 ? TAIL_SECONDS : gap;
     return `[${i}:a]aresample=${SAMPLE_RATE},aformat=channel_layouts=mono,apad=pad_dur=${pad}[a${i}]`;
   });
   const joined = clips.map((_, i) => `[a${i}]`).join("");
@@ -68,27 +52,19 @@ function concatWithGaps(clips, outFile) {
   ]);
 }
 
-function buildTimeline(clips, tts) {
+function buildTimeline(clips, tts, gap) {
   const round = (x) => Math.round(x * 1000) / 1000;
   const lines = clips.reduce((acc, c) => {
-    const start = acc.length ? acc[acc.length - 1].end + GAP_SECONDS : 0;
+    const start = acc.length ? acc[acc.length - 1].end + gap : 0;
     return [...acc, {
-      n: c.n, text: c.text, highlights: c.highlights, emotion: c.emotion,
+      n: c.n, text: c.text, highlights: c.highlights, emotion: c.emotion, sfx: c.sfx,
       start: round(start), end: round(start + c.speechDuration),
+      // 逐字时间（整条配音的绝对时间）；TTS 不提供时为空，关键词时间退回按字数估算
+      words: c.words.map((w) => ({ text: w.text, start: round(start + w.start), end: round(start + w.end) })),
     }];
   }, []);
   const duration = round(lines[lines.length - 1].end + TAIL_SECONDS);
   return { tts, duration, lines };
-}
-
-/** 读取项目根目录 .env（KEY=VALUE），已存在的环境变量不覆盖。密钥类配置放这里，不要写进配置文件 */
-function loadDotEnv(root) {
-  const file = join(root, ".env");
-  if (!existsSync(file)) return;
-  for (const line of readFileSync(file, "utf8").split("\n")) {
-    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
-    if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2].replace(/^["']|["']$/g, "");
-  }
 }
 
 async function main() {
@@ -109,8 +85,9 @@ async function main() {
     clips.push(await synthesizeLine(line, lineTts, linesDir));
   }
 
-  concatWithGaps(clips, join(dir, "audio", "voice.wav"));
-  const timeline = buildTimeline(clips, tts);
+  const gap = Number(tts.gap ?? DEFAULT_GAP);
+  concatWithGaps(clips, gap, join(dir, "audio", "voice.wav"));
+  const timeline = buildTimeline(clips, tts, gap);
   writeFileSync(join(dir, "timeline.json"), `${JSON.stringify(timeline, null, 2)}\n`);
   console.log(`配音完成：${lines.length} 句，共 ${timeline.duration} 秒`);
 

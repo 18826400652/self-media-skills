@@ -4,11 +4,16 @@
 //   - data-lines="N" / "N-M" 的场景 → data-start / data-duration
 //   - #root、#voice → 总时长
 //   - <!-- captions:start --> 与 <!-- captions:end --> 之间 → 重新生成字幕
-import { readFileSync, writeFileSync } from "node:fs";
+//   - <!-- sfx:start --> 与 <!-- sfx:end --> 之间 → 按 脚本.md「音效」列生成音效轨（音效文件复制到 sfx/）
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { fromRoot, loadConfig } from "./lib/config.mjs";
+import { findSfxFile, probe } from "./lib/sfx.mjs";
 
 const CAPTIONS_RE = /(<!-- captions:start -->)[\s\S]*?(\n\s*<!-- captions:end -->)/;
+const SFX_BLOCK_RE = /(<!-- sfx:start -->)[\s\S]*?(\n\s*<!-- sfx:end -->)/;
+const DEFAULT_SFX_VOLUME = 0.35;
 const SCENE_TAG_RE = /<[a-z]+\b[^>]*\sdata-lines="(\d+)(?:-(\d+))?"[^>]*>/g;
 
 const fmt = (x) => String(Math.round(x * 1000) / 1000);
@@ -63,7 +68,44 @@ function captionHtml(line, end) {
   const segments = splitCaption(line.text);
   const long = segments.some((seg) => [...seg].length > CAPTION_FIT_CHARS);
   const text = segments.map((seg) => highlight(seg, line.highlights)).join("<br />");
-  return `      <div id="cap-${line.n}" class="clip caption${long ? " caption-long" : ""}" data-line="${line.n}" data-start="${fmt(line.start)}" data-duration="${fmt(end - line.start)}">${text}</div>`;
+  // data-speech = 这句真正在说话的时长，components.js 用它估算关键词出现的时间（data-at="3@关键词"）
+  return `      <div id="cap-${line.n}" class="clip caption${long ? " caption-long" : ""}" data-line="${line.n}" data-start="${fmt(line.start)}" data-duration="${fmt(end - line.start)}" data-speech="${fmt(line.end - line.start)}">${text}</div>`;
+}
+
+/** 关键词在这句里开始说的时间：有逐字时间戳就用真实时间，否则按字数比例估算（与 components.js 一致） */
+export function wordTime(line, word) {
+  const idx = line.text.indexOf(word);
+  if (idx < 0) throw new Error(`第 ${line.n} 句里找不到关键词「${word}」`);
+  const before = [...line.text.slice(0, idx)].length;
+  if (line.words?.length) {
+    let offset = 0;
+    for (const w of line.words) {
+      offset += [...w.text].length;
+      if (offset > before) return w.start;
+    }
+  }
+  return line.start + (before / [...line.text].length) * (line.end - line.start);
+}
+
+/** 脚本「音效」列 → <audio> 音效轨；音效文件复制进 <视频目录>/sfx/，让工程自包含 */
+function sfxTracks(dir, timeline) {
+  const config = loadConfig(dir);
+  const dirs = [fromRoot(config, config.sfx?.dir)].filter(Boolean);
+  const volume = Number(config.sfx?.volume ?? DEFAULT_SFX_VOLUME);
+  const cues = timeline.lines.flatMap((line) =>
+    (line.sfx || []).map((cue) => ({
+      ...cue,
+      at: (cue.word ? wordTime(line, cue.word) : line.start) + cue.offset,
+    })),
+  );
+  if (cues.length) mkdirSync(join(dir, "sfx"), { recursive: true });
+  return cues.map((cue, i) => {
+    const src = findSfxFile(cue.name, dirs);
+    const file = `sfx/${src.split("/").pop()}`;
+    if (!existsSync(join(dir, file))) copyFileSync(src, join(dir, file));
+    const end = Math.min(cue.at + probe(src), timeline.duration);
+    return `      <audio id="sfx-${i + 1}" class="clip sfx" src="${file}" data-start="${fmt(cue.at)}" data-duration="${fmt(end - cue.at)}" data-volume="${volume}"></audio>`;
+  });
 }
 
 export function syncEpisode(dir) {
@@ -88,10 +130,16 @@ export function syncEpisode(dir) {
     const next = timeline.lines[i + 1];
     return captionHtml(line, next ? next.start : line.end + 0.3);
   });
-  const result = withTotals.replace(CAPTIONS_RE, `$1\n${captions.join("\n")}$2`);
+  const withCaptions = withTotals.replace(CAPTIONS_RE, `$1\n${captions.join("\n")}$2`);
+
+  const tracks = sfxTracks(dir, timeline);
+  if (tracks.length && !SFX_BLOCK_RE.test(withCaptions)) {
+    throw new Error(`${htmlPath}: 脚本里写了音效，但缺少 <!-- sfx:start --> / <!-- sfx:end --> 标记`);
+  }
+  const result = withCaptions.replace(SFX_BLOCK_RE, `$1${tracks.length ? `\n${tracks.join("\n")}` : ""}$2`);
 
   writeFileSync(htmlPath, result);
-  console.log(`已同步 ${htmlPath}：${timeline.lines.length} 条字幕，总时长 ${timeline.duration} 秒`);
+  console.log(`已同步 ${htmlPath}：${timeline.lines.length} 条字幕，${tracks.length} 个音效，总时长 ${timeline.duration} 秒`);
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
