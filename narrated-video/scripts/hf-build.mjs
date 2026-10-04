@@ -10,6 +10,7 @@ import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync } from "nod
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { SKILL_DIR } from "./lib/config.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 const FE = join(process.env.FACELESS_DIR || join(homedir(), ".claude", "skills", "faceless-explainer"), "scripts");
 const HF = join(SKILL_DIR, "node_modules", ".bin", "hyperframes");
@@ -49,7 +50,7 @@ function stageAssets(dir) {
 }
 
 /** index.html 里每帧的起止时间 → 每帧结尾前的截图时刻 */
-function frameEndTimes(dir) {
+export function frameEndTimes(dir) {
   const html = readFileSync(join(dir, "index.html"), "utf8");
   const frames = [];
   for (const m of html.matchAll(/<div[^>]*data-composition-src="compositions\/frames\/[^"]+"[^>]*>/g)) {
@@ -105,7 +106,7 @@ function main() {
   console.log("\n✓ 组装完成。看完截图后：nv render <工程>");
 }
 
-try {
+if (isMain(import.meta.url)) try {
   main();
 } catch (err) {
   console.error(`\n✗ ${err.message}`);

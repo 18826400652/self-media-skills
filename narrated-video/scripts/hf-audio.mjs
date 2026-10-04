@@ -19,6 +19,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { join, resolve } from "node:path";
 import { loadConfig } from "./lib/config.mjs";
 import { writeCues } from "./lib/cues.mjs";
+import { isMain } from "./lib/is-main.mjs";
 import { loadDotEnv, probeDuration, synthesizeClean } from "./lib/speech.mjs";
 
 const OPTION_KEYS = ["voice", "speed", "provider", "model"];
@@ -111,7 +112,7 @@ function splitClause(chars, keywords) {
 }
 
 /** 字幕用的「词」：一个分句一屏，重点词单独成段；带真实起止时间，分句最后一段带英文标点 */
-function toCaptionWords(words, keywords) {
+export function toCaptionWords(words, keywords) {
   return toClauses(words).flatMap(({ chars, punct }) => {
     const chunks = splitClause(chars, keywords);
     return chunks.map((chunk, i) => ({
@@ -123,7 +124,7 @@ function toCaptionWords(words, keywords) {
 }
 
 /** 逐字时间里的英文可能被 TTS 改成小写（deepseek），按口播原文恢复写法（DeepSeek） */
-function restoreCase(words, text) {
+export function restoreCase(words, text) {
   const lower = text.toLowerCase();
   let pos = 0;
   return words.map((w) => {
@@ -198,7 +199,9 @@ async function main() {
   if (existsSync(join(dir, "compositions"))) console.log(`✓ 逐字时间 → compositions/kit/cues.js（${writeCues(dir)} 帧）`);
 }
 
-main().catch((err) => {
-  console.error(`✗ ${err.message}`);
-  process.exit(1);
-});
+if (isMain(import.meta.url)) {
+  main().catch((err) => {
+    console.error(`✗ ${err.message}`);
+    process.exit(1);
+  });
+}

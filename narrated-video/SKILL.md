@@ -162,3 +162,4 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
   - `kokoro`：本地离线，中文只有一个音色。
   - 新增服务商：写 `tts/<名字>.mjs` 导出 `synthesize({ text, voice, speed, outFile })`，再到 `tts/index.mjs` 登记。密钥用环境变量。
 - **环境搭建与排坑**：见 `references/setup.md`
+- **改了脚本或组件库后**：在 skill 目录运行 `npm test`（`tests/` 里是口播解析、字幕分段、音效定位、按词取时间等纯逻辑测试）

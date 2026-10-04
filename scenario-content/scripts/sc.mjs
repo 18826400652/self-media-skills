@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // 用法：sc check <作品目录>
 // 检查一期内容：场景卡、实测记录、母稿结构、占位符、AI 腔用语、各平台长度。有 ✗ 时退出码为 1。
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const CONFIG_NAME = "scenario-content.config.json";
 const DEFAULTS = {
@@ -143,7 +144,7 @@ function checkPlatforms(ep, config, r) {
  *   - 分镜表：表头含「口播…」「情感…」列，第一列是行号（narrated-video 旧流程的 脚本.md）
  *   - HyperFrames SCRIPT.md：`## … (Frame N)` 开一句，`**Emotion:**`/`**情感:**`，缩进块是口播原文
  */
-function douyinLines(md) {
+export function douyinLines(md) {
   if (/\(Frame \d+\)/.test(md)) {
     return md.split(/^## /m).slice(1).flatMap((block) => {
       const n = block.match(/\(Frame (\d+)\)/)?.[1];
@@ -187,9 +188,20 @@ function main() {
   process.exitCode = fails ? 1 : 0;
 }
 
-try {
-  main();
-} catch (err) {
-  console.error(`✗ ${err.message}`);
-  process.exit(1);
+// 直接运行时才执行（被测试导入时不执行）；按真实路径比较，skill 常通过软链接调用
+const isMain = (() => {
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
+  } catch {
+    return false;
+  }
+})();
+
+if (isMain) {
+  try {
+    main();
+  } catch (err) {
+    console.error(`✗ ${err.message}`);
+    process.exit(1);
+  }
 }

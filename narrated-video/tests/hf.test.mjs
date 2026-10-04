@@ -1,0 +1,94 @@
+// HyperFrames 工作流相关的纯逻辑测试：node --test tests/*.test.mjs
+import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
+import vm from "node:vm";
+import { parseHfScript, restoreCase, toCaptionWords } from "../scripts/hf-audio.mjs";
+import { frameEndTimes } from "../scripts/hf-build.mjs";
+import { mergeTokens } from "../scripts/hf-kit.mjs";
+import { parseStoryboardSfx } from "../scripts/hf-sfx.mjs";
+import { writeCues } from "../scripts/lib/cues.mjs";
+
+const KIT_SRC = readFileSync(new URL("../hf-kit/kit.js", import.meta.url), "utf8");
+const chars = (s, t0 = 0, step = 0.1) => [...s].map((ch, i) => ({ text: ch, start: t0 + i * step, end: t0 + (i + 1) * step }));
+const tmp = () => mkdtempSync(join(tmpdir(), "nv-test-"));
+
+test("parseHfScript 读出帧号、口播、情感和重点词", () => {
+  const md = `## Line 1 — 钩子 (Frame 1)\n\n**重点词:** 八秒钟、一下午\n**Emotion:** 惊讶\n\n    AI八秒钟，干完了我一下午的活。\n\n## Line 2 (Frame 2)\n\n    第二句。\n`;
+  const lines = parseHfScript(md);
+  assert.equal(lines.length, 2);
+  assert.deepEqual([lines[0].frame, lines[0].text, lines[0].emotion], [1, "AI八秒钟，干完了我一下午的活。", "惊讶"]);
+  assert.deepEqual(lines[0].keywords, ["八秒钟", "一下午"]);
+  assert.equal(lines[1].emotion, "");
+});
+
+test("toCaptionWords 按分句切开、重点词单独成段并加 *、中文标点换成英文", () => {
+  const words = chars("说好不重复，结果数错了！");
+  const out = toCaptionWords(words, ["数错了"]);
+  assert.deepEqual(out.map((w) => w.text), ["说好不重复,", "结果", "*数错了!"]);
+  assert.equal(out[2].start, words[8].start);
+});
+
+test("restoreCase 把 TTS 小写的英文恢复成口播原文写法", () => {
+  const words = [{ text: "我", start: 0 }, { text: "让deepseek", start: 0.1 }, { text: "整", start: 0.5 }];
+  assert.deepEqual(restoreCase(words, "我让DeepSeek整理").map((w) => w.text), ["我", "让DeepSeek", "整"]);
+});
+
+test("parseStoryboardSfx 支持 @关键词、+秒数、none", () => {
+  const md = "## Frame 1 — a\n- sfx: impact-bass-1 @八秒钟, ping +1.2, whoosh\n\n## Frame 2 — b\n- sfx: none\n";
+  const frames = parseStoryboardSfx(md);
+  assert.deepEqual(frames[0].cues, [
+    { name: "impact-bass-1", word: "八秒钟", offset: 0 },
+    { name: "ping", word: null, offset: 1.2 },
+    { name: "whoosh", word: null, offset: 0 },
+  ]);
+  assert.deepEqual(frames[1].cues, []);
+  assert.throws(() => parseStoryboardSfx("## Frame 1\n- sfx: 坏 写法 !!"), /写法不对/);
+});
+
+test("mergeTokens 用项目配置覆盖默认色，拒绝不认识的键", () => {
+  const src = 'var T = /*KIT_TOKENS*/ { accent: "#000", ink: "#fff" } /*END_KIT_TOKENS*/;';
+  assert.deepEqual(mergeTokens(src, { accent: "#FFD84D" }), { accent: "#FFD84D", ink: "#fff" });
+  assert.throws(() => mergeTokens(src, { acent: "#f00" }), /不认识的键/);
+});
+
+test("writeCues 把逐字时间写成 cues.js；没有配音时返回 0", () => {
+  const dir = tmp();
+  assert.equal(writeCues(dir), 0);
+  writeFileSync(join(dir, "audio_meta.json"), JSON.stringify({ voices: [{ frame: 3, chars: chars("你看第五条", 0.04) }] }));
+  assert.equal(writeCues(dir), 1);
+  const ctx = { window: {} };
+  vm.runInNewContext(readFileSync(join(dir, "compositions", "kit", "cues.js"), "utf8"), ctx);
+  assert.equal(ctx.window.KIT_CUES[3][2][0], "第");
+});
+
+test("frameEndTimes 取每帧结尾前 0.3 秒，有转场重叠时取在下一帧进场之前", () => {
+  const dir = tmp();
+  writeFileSync(join(dir, "index.html"), [
+    '<div id="a" data-composition-src="compositions/frames/01.html" data-start="0" data-duration="3"></div>',
+    '<div id="b" data-composition-src="compositions/frames/02.html" data-start="2.5" data-duration="2"></div>',
+  ].join("\n"));
+  assert.deepEqual(frameEndTimes(dir), [2.2, 4.2]);
+});
+
+function loadKit(cues) {
+  const node = () => ({ setAttribute() {}, appendChild() {}, style: {} });
+  const ctx = { window: { KIT_CUES: cues }, document: { createElement: node, head: node() } };
+  vm.runInNewContext(KIT_SRC, ctx);
+  return ctx.window.Kit;
+}
+
+test("Kit.cue 按词取时间：支持第几次出现、忽略大小写、跨多字 token；找不到就报错", () => {
+  const Kit = loadKit({
+    5: [["写", 2.0], ["、", 2.4], ["整", 3.0], ["理", 3.2], ["。", 3.4], ["是", 5.1], ["整", 5.3], ["理", 5.6]],
+    6: [["丢", 1.3], ["给deepseek", 1.4], ["，", 1.9]],
+  });
+  assert.equal(Kit.cue(5, "整理"), 3.0);
+  assert.equal(Kit.cue(5, "整理", 2), 5.3);
+  assert.equal(Kit.cue(6, "DeepSeek"), 1.4);
+  assert.throws(() => Kit.cue(5, "列编号"), /找不到「列编号」/);
+  assert.throws(() => Kit.cue(5, "整理", 3), /第 3 次/);
+  assert.throws(() => Kit.cue(9, "x"), /没有第 9 帧/);
+});

@@ -13,6 +13,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { basename, join, resolve } from "node:path";
 import { fromRoot, loadConfig } from "./lib/config.mjs";
 import { findSfxFile, probe } from "./lib/sfx.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 const DEFAULT_VOLUME = 0.35; // 音效压在人声下面
 const NONE = new Set(["none", "no", "-", "—", "无"]);
@@ -98,7 +99,7 @@ function main() {
   console.log(`✓ ${sfx.length} 个音效 → audio_meta.json`);
 }
 
-try {
+if (isMain(import.meta.url)) try {
   main();
 } catch (err) {
   console.error(`✗ ${err.message}`);

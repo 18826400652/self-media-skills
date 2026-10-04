@@ -8,13 +8,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { SKILL_DIR, loadConfig } from "./lib/config.mjs";
 import { writeCues } from "./lib/cues.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 const SRC = join(SKILL_DIR, "hf-kit", "kit.js");
 const TOKENS_RE = /\/\*KIT_TOKENS\*\/([\s\S]*?)\/\*END_KIT_TOKENS\*\//;
 const TOKEN_KEYS = ["accent", "ink", "muted", "bg", "surface", "line", "font", "mono"];
 
 /** 默认 token（kit.js 里写的）+ 项目配置覆盖 */
-function mergeTokens(source, overrides) {
+export function mergeTokens(source, overrides) {
   const m = source.match(TOKENS_RE);
   if (!m) throw new Error("kit.js 里找不到 /*KIT_TOKENS*/ 标记");
   const defaults = Function(`"use strict"; return (${m[1]});`)();
@@ -43,7 +44,7 @@ function main() {
   console.log("  在帧里引用：<script src=\"compositions/kit/kit.js\"></script>，用法见 references/hf-kit.md");
 }
 
-try {
+if (isMain(import.meta.url)) try {
   main();
 } catch (err) {
   console.error(`✗ ${err.message}`);
