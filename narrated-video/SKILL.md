@@ -53,21 +53,49 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 | 写法 | 含义 |
 |---|---|
 | `<section id="s2" class="clip scene" data-lines="2-4">` | 场景绑定第 2-4 句口播，`sync` 会写入 `data-start` / `data-duration` |
-| `at("s2")` | 场景 s2 的开始时间 |
-| `line(3)` | 第 3 句口播的开始时间（读取字幕元素 `#cap-3`） |
+| `data-at="3"` / `nvLine(3)` | 第 3 句口播的开始时间（读取字幕元素 `#cap-3`） |
+| `data-at="s2"` / `nvAt("s2")` | 场景 s2 的开始时间 |
 | `<!-- captions:start -->…<!-- captions:end -->` | 字幕区，由 `sync` 生成，不要手改 |
-
-示例：要点在对应那句口播开始时出现：
-
-```js
-document.querySelectorAll("#s2 li").forEach((li, i) => {
-  tl.from(li, { x: -80, opacity: 0, duration: 0.5 }, line(2 + i));
-});
-```
 
 改了口播文字就重跑 `nv voice`（未改的句子走缓存）；只改了场景绑定就跑 `nv sync`。
 
-## HyperFrames 硬性规则
+## 场景组件（components.css + components.js）
+
+画面优先用组件拼，**不写 CSS、不写动画 JS**。脚本.md 的「画面类型」直接写组件名。
+
+| 组件 | 用途 | 结构 |
+|---|---|---|
+| `hero` / `point` / `note` | 标题卡、正文、说明（base.css） | `<h1 class="hero">…<mark>重点</mark></h1>` |
+| `nv-duel` | 对比大字：A vs B | `.row > .label + .value`，突出的那行加 `.is-key` |
+| `nv-bubble` | 消息气泡（领导、同事、客户发来的话） | `.from` 写发送人和时间 |
+| `nv-stats` | 并排状态卡（时间、进度、数字） | `.nv-stat > .label + .value + .note`，可放 `.nv-progress > i`，突出的加 `.is-key` |
+| `nv-funnel` | 一堆东西汇入一个框（「丢给 AI」） | `.items > *` + `.target`，配合 `data-fx="flyin"` |
+| `nv-tiles` | 2-4 个并排大字概念，可聚焦其一 | `.nv-tile > .big + .sub`，配合 `dim` / `focus` |
+| `nv-feed` | 带编号的条目流（原始数据、清单） | `<span><b>01</b>内容</span>` |
+| `nv-prompt` | 提示词卡，逐行出现 | `.tag` + 多个 `.line` |
+| `nv-table` | 结果表：标签 + 数值 | `.row.head` + 多个 `.row > span + b` |
+| `nv-stamp` | 徽章（「用时 < 1 分钟」） | 单个元素 |
+| `nv-notes` | 编号要点卡（注意事项、步骤） | `.nv-note > .no + .title > small` |
+| `list` | 编号要点列表（base.css） | `ol.list > li > .num + span` |
+
+### 声明式动画
+
+| 属性 | 含义 |
+|---|---|
+| `data-enter="up\|left\|right\|pop\|fade\|mark"` | 入场方式；`mark` 用在 `<mark>` 上，表示荧光笔划线 |
+| `data-at="3"` | 第 3 句口播开始时；`"3+0.5"` 晚 0.5 秒；`"s2"` 场景 s2 开始；`"+0.3"` 所在场景开始后 0.3 秒；省略 = 所在场景开始 |
+| `data-stagger="0.3"` | 改为让子元素依次入场 |
+| `data-fx="dim\|focus\|fill\|flyin\|pulse"` + `data-fx-at` | 效果：变暗 / 聚焦高亮 / 进度条涨到 `data-fill`% / 汇入 / 跳动 |
+
+页面脚本固定为 `const tl = nvAnimate(gsap.timeline({ paused: true }));`。组件之外的特殊动画接着往 `tl` 里加，用 `nvAt("s2")`、`nvLine(3)` 取时间。**同一种画面在第二期再出现时，就把它抽成新组件**加进 components.css / components.js。
+
+示例：第 3 句时状态卡上来，第 4 句时变暗：
+
+```html
+<div class="nv-stat" data-enter="up" data-at="3" data-fx="dim" data-fx-at="4+0.6">…</div>
+```
+
+
 
 - 根元素 `#root` 带 `data-composition-id="main"`；时间轴是 `gsap.timeline({ paused: true })`，注册到 `window.__timelines["main"]`
 - 有时间的元素需要 `class="clip"` 和 `data-start` / `data-duration`
