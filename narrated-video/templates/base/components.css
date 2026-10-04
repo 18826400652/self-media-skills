@@ -199,7 +199,7 @@
 .nv-table .row {
   display: flex;
   justify-content: space-between;
-  padding: 20px 8px;
+  padding: 12px 8px; /* 行数多（8 行以上）也能放进安全区 */
   border-bottom: 2px solid var(--surface);
 }
 .nv-table .row b {
