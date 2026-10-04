@@ -34,6 +34,7 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 
 | 步骤 | 做什么 |
 |---|---|
+| `nv rec <工程>/capture/assets/rec.mp4 --prompt 提问.txt --url <AI 网址>` | （可选，强烈推荐）录真实操作：粘贴提问 → 发送 → 回答完，手机竖屏 1080×1920；同时输出用时（.json）和页面全文（.txt，写进实测记录）。录前确认已登录、新对话、模型开关与实测一致、侧边栏收起 |
 | `/faceless-explainer` | 建工程、写 BRIEF.md / STORYBOARD.md / frame.md、SCRIPT.md |
 | `nv hf-audio <工程>` | 用项目配置的 TTS 逐帧配音，带逐字时间（替代官方 TTS）。SCRIPT.md 每帧可写 `**情感:**`、`**重点词:**` |
 | `nv hf-kit <工程>` | 装入画面组件库，**写帧之前读 `references/hf-kit.md` 的选用表**，帧里用 `Kit.xxx(...)` 拼画面 |

@@ -122,6 +122,18 @@ function toCaptionWords(words, keywords) {
   });
 }
 
+/** 逐字时间里的英文可能被 TTS 改成小写（deepseek），按口播原文恢复写法（DeepSeek） */
+function restoreCase(words, text) {
+  const lower = text.toLowerCase();
+  let pos = 0;
+  return words.map((w) => {
+    const i = lower.indexOf(w.text.toLowerCase(), pos);
+    if (i < 0) return w;
+    pos = i + w.text.length;
+    return { ...w, text: text.slice(i, pos) };
+  });
+}
+
 const withIds = (words) => words.map((w, i) => ({ id: `w${i}`, text: w.text, start: w.start, end: w.end }));
 
 async function main() {
@@ -144,6 +156,7 @@ async function main() {
   for (const line of lines) {
     const lineTts = line.emotion ? { ...tts, emotion: line.emotion } : tts;
     const clip = await synthesizeClean(line, lineTts, cacheDir, pad2(line.frame));
+    clip.words = restoreCase(clip.words, line.text);
     if (!clip.words.length) throw new Error(`第 ${line.frame} 帧没有逐字时间戳（${tts.provider} 不提供），字幕无法对齐`);
     const rel = `assets/voice/${pad2(line.frame)}.wav`;
     const isLast = line === lines[lines.length - 1];

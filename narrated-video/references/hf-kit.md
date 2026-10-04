@@ -22,6 +22,7 @@
 | 指向画面里的某一处 | `Kit.arrow` 手绘箭头 | 「这里」→ 某一行 |
 | 错误问法 vs 正确问法 | `Kit.compare` 对比卡 | × 随口问 / ✓ 说清三件事 |
 | 结尾给可照抄的模板 | `Kit.template` 模板卡 | 【】里是要替换的部分 |
+| AI 真实操作过程（发送、输出） | 录屏片段（`<video>`，见下方「录屏」） | `nv rec` 录的 DeepSeek 对话，输出段落加速播放 + `Kit.number` 计时 |
 
 ## 使用规则
 
@@ -54,6 +55,20 @@
 ```
 
 宿主元素的 id 要带帧前缀（如 `f03-`），避免和别的帧重名。
+
+## 录屏（`nv rec` 录的视频）
+
+录屏不是 Kit 组件，直接在帧里放 `<video>`（HyperFrames 原生支持截取和倍速）。`rec.json` 里的 `sentAt` / `doneAt` 是视频里发送和回答结束的时刻：
+
+```html
+<video id="f03-v" class="clip" src="assets/rec.mp4" data-start="0" data-duration="3.4"
+  data-media-start="3.3" data-playback-rate="2.4" data-track-index="1" muted playsinline
+  style="position:absolute;left:95px;top:340px;width:890px;height:1582px;object-fit:cover"></video>
+```
+
+- 放在角标下方（top≈340），不要铺满整帧，否则角标和叠加文字压在录屏文字上看不清
+- 倍速播放时要在画面上注明（如「视频 2.4 倍速」），计时器显示真实用时
+- 帧里其他元素加 `z-index` 放在视频上面；叠加文字用实色底（`Kit.compare` 卡片、深色面板）
 
 ## 组件参数
 
