@@ -6,7 +6,7 @@
 // 页面模拟手机竖屏，按 2 倍像素录制（540x960 → 1080x1920，正好是抖音竖屏）。
 // 输出：<输出>.mp4、<输出>.json（发送到回答结束的秒数、发送时刻在视频里的位置）、<输出>.txt（页面全文，用于实测记录）。
 //
-// 连接：环境变量 BU_CDP_WS，或项目配置 rec.devtoolsActivePort（浏览器 DevToolsActivePort 文件的路径）。
+// 连接：环境变量 BU_CDP_WS，或项目配置 rec.cdpPort（推荐：自动化专用浏览器用 --remote-debugging-port 启动，不弹允许）/ rec.devtoolsActivePort。
 // 录之前在网页里确认：已登录、新对话、模型开关和实测记录一致、侧边栏收起（不露个人记录）。
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -30,13 +30,26 @@ function parseArgs(argv) {
   return { out: resolve(rest[0]), prompt: resolve(opts.prompt), w, h, ...opts };
 }
 
-/** BU_CDP_WS 优先；否则从 DevToolsActivePort 文件（第 1 行端口、第 2 行路径）拼出 WebSocket 地址 */
+/**
+ * 浏览器连接地址，按顺序：环境变量 BU_CDP_WS → 配置 rec.cdpPort（浏览器用 --remote-debugging-port 启动，
+ * 不弹「允许」，推荐配一个自动化专用的浏览器用户）→ 配置 rec.devtoolsActivePort（DevToolsActivePort 文件，
+ * 第 1 行端口、第 2 行路径；在 edge://inspect 勾选远程调试时用，每次新连接都要在浏览器里点允许）
+ */
 function cdpEndpoint(config) {
   if (process.env.BU_CDP_WS) return process.env.BU_CDP_WS;
+  const port = config.rec?.cdpPort;
+  if (port) {
+    try {
+      const info = JSON.parse(execFileSync("curl", ["-s", "--max-time", "3", `http://127.0.0.1:${port}/json/version`], { encoding: "utf8" }));
+      return info.webSocketDebuggerUrl;
+    } catch {
+      throw new Error(`连不上 127.0.0.1:${port}：先打开用 --remote-debugging-port=${port} 启动的浏览器（如桌面上的自动化专用快捷方式）`);
+    }
+  }
   const file = fromRoot(config, config.rec?.devtoolsActivePort);
-  if (!file || !existsSync(file)) throw new Error("连不上浏览器：设置环境变量 BU_CDP_WS，或在项目配置写 rec.devtoolsActivePort（浏览器需开启远程调试）");
-  const [port, path] = readFileSync(file, "utf8").split(/\r?\n/);
-  return `ws://127.0.0.1:${port.trim()}${path.trim()}`;
+  if (!file || !existsSync(file)) throw new Error("连不上浏览器：设置环境变量 BU_CDP_WS，或在项目配置写 rec.cdpPort / rec.devtoolsActivePort（浏览器需开启远程调试）");
+  const [p, path] = readFileSync(file, "utf8").split(/\r?\n/);
+  return `ws://127.0.0.1:${p.trim()}${path.trim()}`;
 }
 
 /** 帧（带时间戳）→ 恒定帧率 MP4 */
@@ -57,7 +70,7 @@ function main() {
   const dir = mkdtempSync(join(tmpdir(), "nv-rec-"));
   try {
     const env = {
-      ...process.env, BU_CDP_WS: cdpEndpoint(config), REC_DIR: dir, REC_PROMPT_FILE: o.prompt, REC_URL: o.url,
+      ...process.env, BU_CDP_WS: cdpEndpoint(config), REC_DIR: dir, REC_PROMPT_FILE: o.prompt, REC_URL: o.url, REC_THEME: config.rec?.theme ?? "",
       REC_W: String(o.w), REC_H: String(o.h), REC_INPUT: o.input, REC_HIDE: o.hide || config.rec?.hide || "",
     };
     const script = readFileSync(join(SKILL_DIR, "scripts", "rec", "screencast.py"), "utf8");

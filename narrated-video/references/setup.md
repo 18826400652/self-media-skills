@@ -44,6 +44,24 @@ dpkg -x <包>.deb <解压目录>
 LD_LIBRARY_PATH=~/.local/lib/chrome-deps ldd ~/.cache/hyperframes/chrome/*/linux-*/*/chrome-headless-shell | grep "not found"
 ```
 
+## 录屏（nv rec）连接浏览器
+
+推荐给自动化单独开一个浏览器用户，用固定调试端口启动（**不会弹「允许远程调试」**，也碰不到日常浏览的标签页）：
+
+```
+msedge.exe --remote-debugging-port=9333 --user-data-dir="C:\Users\<你>\EdgeAutomation" --no-first-run
+```
+
+做成桌面快捷方式，第一次打开时在里面登录要录的 AI 产品。项目配置：
+
+```json
+"rec": { "cdpPort": 9333, "theme": "dark", "hide": "<要隐藏的元素 CSS>" }
+```
+
+- `cdpPort`：从 `http://127.0.0.1:<端口>/json/version` 取连接地址（WSL 需 mirrored 网络模式）
+- `theme`：录屏时模拟系统深色 / 浅色，让不同浏览器用户录出来的样子一致
+- 备选：在日常浏览器的 `edge://inspect/#remote-debugging` 勾选远程调试，配置 `rec.devtoolsActivePort`（DevToolsActivePort 文件路径）。缺点是每次新连接都要在浏览器里点「允许」，而且页面内跳转会让连接断开
+
 ## 常见问题
 
 | 现象 | 原因与解决 |

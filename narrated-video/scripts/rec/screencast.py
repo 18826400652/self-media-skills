@@ -2,7 +2,7 @@
 # 参数通过环境变量传入，由 scripts/rec.mjs 设置：
 #   REC_DIR 帧输出目录；REC_PROMPT_FILE 要粘贴的文字；REC_URL 打开的网址（空 = 用当前标签页）
 #   REC_W / REC_H 模拟的手机视口（CSS 像素，按 2 倍像素录制）；REC_INPUT 输入框选择器；REC_HIDE 要隐藏的元素（CSS）
-#   REC_TIMEOUT 最长等待秒数
+#   REC_TIMEOUT 最长等待秒数；REC_THEME dark / light（模拟系统深浅色，空 = 不改）
 import base64, json, os, time
 
 D = os.environ["REC_DIR"]
@@ -29,6 +29,9 @@ def text_len():
 if os.environ.get("REC_URL"):
     new_tab(os.environ["REC_URL"]); wait_for_load()
 cdp("Emulation.setDeviceMetricsOverride", width=W, height=H, deviceScaleFactor=2, mobile=True)
+theme = os.environ.get("REC_THEME", "")
+if theme:  # 网页跟随系统深浅色时，统一录成同一种（不同浏览器用户的设置可能不一样）
+    cdp("Emulation.setEmulatedMedia", features=[{"name": "prefers-color-scheme", "value": theme}])
 time.sleep(1.5)
 hide = os.environ.get("REC_HIDE", "")
 if hide:
@@ -64,6 +67,8 @@ finally:
     cdp("Page.stopScreencast")
     wait(0.3)
     cdp("Emulation.clearDeviceMetricsOverride")
+    if theme:
+        cdp("Emulation.setEmulatedMedia", features=[])
 open(f"{D}/page.txt", "w", encoding="utf-8").write(js("document.body.innerText") or "")
 json.dump({"frames": frames, "marks": marks, "viewport": [W, H]}, open(f"{D}/meta.json", "w"))
 print(json.dumps({"frames": len(frames), "seconds": round(marks["done"] - marks["sent"], 2)}))
