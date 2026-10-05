@@ -154,3 +154,10 @@ test("帧模板：camera push 把内容包进推镜层（角标不动），title
   assert.doesNotMatch(buildFrame({ ...f, build: { title: { lines: ["x"] } } }), /-cam/);
   assert.throws(() => buildFrame({ ...f, build: { camera: "orbit" } }), /只支持 "push"/);
 });
+
+test("帧模板：kicker false 不显示角标", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const f = { n: 1, id: "01-hook", duration: 2, kicker: "第 1 课", tokens: { accent: "#FFD84D", bg: "#101114", font: "sans-serif" } };
+  assert.doesNotMatch(buildFrame({ ...f, build: { kicker: false } }), /p01-kicker">/);
+  assert.match(buildFrame({ ...f, build: {} }), /p01-kicker">第 1 课/);
+});

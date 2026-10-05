@@ -8,6 +8,7 @@
 //   lead:  { text, top, at }           一行灰色说明文字
 //   kit:   { name, top, width, opts }  一个 hf-kit 组件，如 { "name": "compare", "opts": {…} }；width 默认 960，"auto" 不限宽
 //   title: { label, lines, top, center }  大字标题（lines 每项一行，**词** 用强调色）；center = 居中（一句话冲击帧）
+//   kicker: false                      这一帧不显示角标（钩子帧用：第一眼不要有「上课」感）
 //   camera: "push"                     整帧缓慢推近（1 → 1.04，贯穿全帧），让落定后的静态画面不死板；录屏帧不用
 // 时间写法：数字 = 帧内秒数；"@词" = 说到这个词的时刻；"@词#2" = 第二次说到。
 // 位置都在抖音安全区内（内容 x 60–1020、y 230–1150）。
@@ -121,8 +122,7 @@ export function buildFrame(f) {
 ${css.map((c) => `      ${sub(c)}`).join("\n")}
     </style>
     <div id="${p}-ground" class="${p}-ground clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
-    <div class="${p}-kicker">${esc(f.kicker)}</div>
-${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
+${b.kicker === false ? "" : `    <div class="${p}-kicker">${esc(f.kicker)}</div>\n`}${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script src="compositions/kit/cues.js"></script>
     <script src="compositions/kit/kit.js"></script>

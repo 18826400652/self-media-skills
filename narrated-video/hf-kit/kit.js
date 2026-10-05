@@ -100,6 +100,7 @@
       ".kit-chain .ar::after{content:'';position:absolute;left:50%;bottom:-16px;margin-left:-16px;border:16px solid transparent;border-top:18px solid var(--kit-accent);border-bottom:0}",
       ".kit-tpl .ttl{font-size:46px;font-weight:900;margin-bottom:28px}",
       ".kit-tpl .ln{font-weight:500;margin:0 0 18px}",
+      ".kit-tpl .ln.key{font-weight:700;border-left:8px solid var(--kit-accent);padding-left:20px;margin-left:-28px}",
       ".kit-tpl .ph{color:var(--kit-bg);background:var(--kit-accent);padding:0 .2em;margin:0 .08em;font-weight:700}",
       ".kit-tpl .ft{font-size:30px;color:var(--kit-muted);margin-top:26px}",
     ].join("\n");
@@ -536,7 +537,7 @@
     }
   };
 
-  /** 模板卡：可截图保存的提问模板，【】里的内容高亮成要替换的部分。{ title, lines:[], at, stagger=0.25, size=40, footer } */
+  /** 模板卡：可截图保存的提问模板，【】里的内容高亮成要替换的部分。{ title, lines:[], at, stagger=0.25, size=40, footer, keys:[重点行号，从 1 开始] } */
   Kit.template = function (tl, sel, o) {
     var host = hostOf(sel);
     var T = tok(host);
@@ -545,7 +546,7 @@
     if (o.title) el("div", "ttl", card, o.title);
     inFrom(tl, card, at);
     (o.lines || []).forEach(function (text, i) {
-      var p = el("p", "ln", card);
+      var p = el("p", (o.keys || []).indexOf(i + 1) >= 0 ? "ln key" : "ln", card);
       p.style.fontSize = num(o.size, 40) + "px";
       text.split(/(【[^】]*】)/).forEach(function (part) {
         if (!part) return;
