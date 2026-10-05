@@ -62,6 +62,7 @@
       ".kit-card{background:var(--kit-surface);border:1px solid var(--kit-line);padding:32px 36px}",
       ".kit-card.good{border-color:var(--kit-accent)}",
       ".kit-card .tag{font-size:30px;font-weight:900;margin-bottom:14px}",
+      ".kit-card .body{white-space:pre-line}",
       ".kit-card .body{font-weight:500}",
       ".kit-card.bad .body{color:var(--kit-muted)}",
       ".kit-num{font-weight:900;color:var(--kit-accent);line-height:1;white-space:nowrap}",

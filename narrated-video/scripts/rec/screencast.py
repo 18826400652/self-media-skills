@@ -52,14 +52,18 @@ try:
     cdp("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13, text="\r")
     cdp("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)
     marks["sent"] = t_send = time.time()
-    # 页面文字连续 2.5 秒不变（且发送后至少 4 秒）= 回答结束
+    # 页面文字连续 2.5 秒不变（且发送后至少 4 秒）= 回答结束。
+    # 有的 AI 发送后先「思考」几秒、文字不变，所以还要求页面文字比发送前多出「提问长度 + 50 字」，
+    # 即回答已经开始出现（提问本身会先显示在对话里）
+    base = text_len() or 0
+    grown = lambda n: n is not None and n > base + len(prompt) + 50
     last, stable = None, time.time()
     while time.time() - t_send < float(os.environ.get("REC_TIMEOUT", "120")):
         wait(0.25)
         cur = text_len()
         if cur != last:
             last, stable = cur, time.time()
-        elif time.time() - stable > 2.5 and time.time() - t_send > 4:
+        elif time.time() - stable > 2.5 and time.time() - t_send > 4 and grown(cur):
             break
     marks["done"] = stable
     wait(1.5)
