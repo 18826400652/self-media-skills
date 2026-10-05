@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# browser-draft 入口：在用户已登录的浏览器里执行一个「发草稿」步骤脚本。
+#   bd run <步骤.py> [载荷.json]   载荷路径通过 BD_PAYLOAD 传给脚本
+#   bd tabs                        列出浏览器标签页（检查能否连上）
+set -euo pipefail
+SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+
+# 连接用户正在用的浏览器：优先 BU_CDP_WS；否则找最近启动的 Edge / Chrome 的 DevToolsActivePort
+resolve_ws() {
+  [[ -n "${BU_CDP_WS:-}" ]] && return
+  local candidates=(
+    "${BD_PORT_FILE:-}"
+    /mnt/c/Users/*/AppData/Local/Microsoft/Edge/"User Data"/DevToolsActivePort
+    /mnt/c/Users/*/AppData/Local/Google/Chrome/"User Data"/DevToolsActivePort
+    "$HOME/.config/microsoft-edge/DevToolsActivePort"
+    "$HOME/.config/google-chrome/DevToolsActivePort"
+    "$HOME/Library/Application Support/Microsoft Edge/DevToolsActivePort"
+    "$HOME/Library/Application Support/Google/Chrome/DevToolsActivePort"
+  )
+  local newest=""
+  for f in "${candidates[@]}"; do
+    [[ -n "$f" && -f "$f" ]] || continue
+    [[ -z "$newest" || "$f" -nt "$newest" ]] && newest="$f"
+  done
+  if [[ -z "$newest" ]]; then
+    echo "✗ 找不到浏览器的远程调试端口：在 Edge 打开 edge://inspect/#remote-debugging（Chrome 是 chrome://inspect）勾选允许远程调试" >&2
+    exit 1
+  fi
+  export BU_CDP_WS="ws://127.0.0.1:$(sed -n 1p "$newest" | tr -d '\r')$(sed -n 2p "$newest" | tr -d '\r')"
+  # WSL 里连的是 Windows 上的浏览器：上传文件时要把路径转成 Windows 能读的形式
+  [[ "$newest" == /mnt/* ]] && export BD_WINDOWS_BROWSER=1
+  return 0
+}
+
+command -v browser-harness >/dev/null || { echo "✗ 需要 browser-harness（https://github.com/browser-use/browser-harness）" >&2; exit 1; }
+
+case "${1:-}" in
+  run)
+    step="${2:?用法：bd run <步骤.py> [载荷.json]}"
+    [[ -f "$step" ]] || { echo "✗ 步骤脚本不存在：$step" >&2; exit 1; }
+    resolve_ws
+    export BD_PAYLOAD="${3:-}"
+    export BD_OUT="${BD_OUT:-${TMPDIR:-/tmp}/browser-draft}"
+    mkdir -p "$BD_OUT"
+    exec browser-harness -c "$(cat "$SKILL_DIR/lib/bd.py" "$step")"
+    ;;
+  tabs)
+    resolve_ws
+    exec browser-harness -c 'for t in list_tabs(include_chrome=False): print(t)'
+    ;;
+  *)
+    echo "用法：bd run <步骤.py> [载荷.json] | bd tabs" >&2
+    exit 1
+    ;;
+esac
