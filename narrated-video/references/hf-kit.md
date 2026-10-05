@@ -23,6 +23,9 @@
 | 错误问法 vs 正确问法 | `Kit.compare` 对比卡 | × 随口问 / ✓ 说清三件事 |
 | 结尾给可照抄的模板 | `Kit.template` 模板卡 | 【】里是要替换的部分 |
 | 「有明细才能核对」类比、清单 | `Kit.receipt` 打印小票 | 带编号的小票吐出来，标出重复的两行「扫了两次」 |
+| 拿到结果检查哪几件事、注意事项 | `Kit.checklist` 清单核对 | 「编号有没有重复」「加起来对不对」逐条勾上 |
+| 具体怎么做（2–4 步） | `Kit.steps` 步骤流程 | 01 说清你是谁 → 02 每行一条带编号 → 03 写出编号和条数 |
+| 为什么会这样（原因 → 过程 → 结果） | `Kit.chain` 因果链 | 不是一条条数的 → 一个字一个字往下写 → 第五条写了两遍 |
 | AI 真实操作过程（发送、输出） | 录屏片段（`<video>`，见下方「录屏」） | `nv rec` 录的 DeepSeek 对话，输出段落加速播放 + `Kit.number` 计时 |
 
 ## 使用规则
@@ -88,6 +91,9 @@
 | `Kit.compare` | `bad`={`tag`,`text`}、`good`={`tag`,`text`}、`at`=[上卡时间, 下卡时间]、`size`=44 |
 | `Kit.template` | `title`、`lines`=[每行，【】内高亮]、`footer`、`at`、`stagger`=0.25 行间隔、`size`=40 |
 | `Kit.receipt` | `rows`=[每行文字，自动编 01 02…]、`total` 合计、`title`=「小票」、`at` 开始打印、`dur`=1.1、`highlight`=[要标出的行号]、`highlightAt`、`tag` 标签文字、`tagAt`、`size`=46、`width`=640。宿主放在内容区左侧，给标签留位置 |
+| `Kit.checklist` | `title`、`items`=[字符串或 {`text`,`at`,`checkAt`}]、`at`、`stagger`=0.4、`size`=68。每条说到时出现并打勾；两条时内容偏少，宿主往下放或加大 `size` |
+| `Kit.steps` | `steps`=[{`title`,`desc`,`at`}]、`at`、`stagger`=0.6、`size`=76（说明文字 0.58 倍）。竖线随口播长到当前一步 |
+| `Kit.chain` | `cards`=[{`tag`,`text`,`at`}]、`at`、`stagger`=0.7、`size`=60。箭头往下长，最后一张（结果）描强调色边；只写真实的因果，不凑三段 |
 
 `Kit.shot` 的圈按推近后的画面计算位置，所以圈要安排在推近结束之后。手绘圈和圈词注释画完后会有轻微的手绘抖动（固定节奏，渲染结果可复现），持续到 `until`（默认画完后 6 秒）。
 

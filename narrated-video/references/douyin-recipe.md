@@ -17,10 +17,10 @@
 | 3 | 结果 | 快 / 准 / 惊喜的点 | 录屏加速 + `timer` 计时（注明倍速和真实用时） | 3–4 秒 |
 | 4 | 翻车 / 细节 | 指出问题在哪，用数字说清后果 | `Kit.shot` 截图推近 + 手绘圈 | 3–4 秒 |
 | 5 | 反转 / 对照 | 第二次怎样、换个问法怎样 | `Kit.shot` 第二张截图 / `Kit.compare` | 2–3 秒 |
-| 6 | **为什么** | 用大白话解开开头的悬念（来自费曼检查） | `Kit.compare`：「你以为… / 其实…」 | 4 秒 |
+| 6 | **为什么** | 用大白话解开开头的悬念（来自费曼检查） | `Kit.compare`：「你以为… / 其实…」，或 `Kit.chain` 原因 → 过程 → 结果 | 4 秒 |
 | 7 | **类比** | 一个人人见过的东西（来自费曼检查） | **手写小动画（推荐，见下）**；来不及就用 `title`：「打个比方」+ 两三行大字 | 4 秒 |
 | 8 | 方法 | 一句能照做的结论，挂上类比 | `Kit.marker` + `lead` | 3 秒 |
-| 9 | **怎么做** | 拿到结果具体看什么、做什么 | `title`：「核对两件事」+ ①② | 4 秒 |
+| 9 | **怎么做** | 拿到结果具体看什么、做什么 | 实测截图上圈出要看的地方（`Kit.shot` + ①②），或 `Kit.checklist` / `Kit.steps` | 4 秒 |
 | 10 | 收尾 | 模板在评论区 + 关注 | `Kit.template`（footer 带关注） | 4 秒 |
 
 6、7、9 三帧来自母稿的费曼检查（scenario-content 的 `费曼检查.md`）：观众会追问的「为什么」、类比、具体怎么做。**不能只给结论**，这三帧是让人记住、照做的关键。时间紧时 6 和 7 可以合成一帧，但 9 不能删。
@@ -97,7 +97,7 @@
 |---|---|---|
 | `rec` | 录屏，放在角标下方 | `src`（默认 assets/rec.mp4）、`mediaStart` 从录屏第几秒开始、`rate` 倍速、`dim` 压暗、`chip` 左上标签 |
 | `timer` | 录屏上的计时面板 | `value` 真实用时、`unit`、`note`（写明倍速） |
-| `kit` | 一个组件 | `name`（strike number marker annotate shot stream prompt arrow compare template）、`top`、`width`（默认 960，`"auto"` 不限宽）、`opts` 见 hf-kit.md |
+| `kit` | 一个组件 | `name`（strike number marker annotate shot stream prompt arrow compare template checklist steps chain）、`top`、`width`（默认 960，`"auto"` 不限宽）、`opts` 见 hf-kit.md |
 | `lead` | 一行灰色说明 | `text`（`**词**` 强调色）、`top`、`at` |
 | `title` | 大字标题 | `label`、`lines`（字符串或 `{text, at}`）、`top` |
 | `ground` | 底色 | `"accent"` = 整屏强调色（翻车帧，整片最多一次） |

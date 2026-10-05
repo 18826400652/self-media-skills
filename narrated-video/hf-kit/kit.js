@@ -80,6 +80,24 @@
       ".kit-rcpt-tag{position:absolute;white-space:nowrap;font-weight:900;color:var(--kit-bg);background:var(--kit-accent);padding:8px 18px}",
       ".kit-rcpt-tag::before{content:'';position:absolute;left:-22px;top:50%;margin-top:-12px;border:12px solid transparent;border-right:12px solid var(--kit-accent);border-left:0}",
       ".kit-tpl{background:var(--kit-surface);border-top:8px solid var(--kit-accent);padding:40px 44px}",
+      ".kit-panel{background:var(--kit-surface);border-top:8px solid var(--kit-accent);padding:40px 44px 44px}",
+      ".kit-panel .ttl{font-size:48px;font-weight:900;color:var(--kit-muted);margin-bottom:24px}",
+      ".kit-chk .it{display:flex;align-items:center;gap:.5em;font-weight:700;padding:.62em 0;border-top:1px solid var(--kit-line)}",
+      ".kit-chk .bx{position:relative;flex:none;width:1.15em;height:1.15em;border:.08em solid var(--kit-accent);border-radius:50%}",
+      ".kit-chk .bx i{position:absolute;inset:-.08em;border-radius:50%;background:var(--kit-accent);color:var(--kit-bg);font-style:normal;font-weight:900;font-size:.72em;display:grid;place-items:center}",
+      ".kit-steps{position:relative}",
+      ".kit-steps .st{position:relative;display:flex;gap:40px;padding-bottom:80px}",
+      ".kit-steps .st:last-child{padding-bottom:0}",
+      ".kit-steps .ix{position:relative;z-index:1;flex:none;width:110px;height:110px;display:grid;place-items:center;font-family:var(--kit-mono);font-size:44px;font-weight:700;color:var(--kit-bg);background:var(--kit-accent)}",
+      ".kit-steps .hd{font-weight:900;line-height:1.2;margin-top:10px}",
+      ".kit-steps .ds{font-weight:500;color:var(--kit-muted);margin-top:12px}",
+      ".kit-steps .rail{position:absolute;left:52px;width:6px}",
+      ".kit-steps .rail i{position:absolute;inset:0;background:var(--kit-accent);transform-origin:center top;transform:scaleY(0)}",
+      ".kit-chain .cd{background:var(--kit-surface);border:1px solid var(--kit-line);padding:34px 44px}",
+      ".kit-chain .cd:last-child{border-color:var(--kit-accent)}",
+      ".kit-chain .tx{font-weight:900;line-height:1.25}",
+      ".kit-chain .ar{position:relative;width:5px;height:66px;margin:0 auto 22px;background:var(--kit-accent);transform-origin:center top}",
+      ".kit-chain .ar::after{content:'';position:absolute;left:50%;bottom:-16px;margin-left:-16px;border:16px solid transparent;border-top:18px solid var(--kit-accent);border-bottom:0}",
       ".kit-tpl .ttl{font-size:46px;font-weight:900;margin-bottom:28px}",
       ".kit-tpl .ln{font-weight:500;margin:0 0 18px}",
       ".kit-tpl .ph{color:var(--kit-bg);background:var(--kit-accent);padding:0 .2em;margin:0 .08em;font-weight:700}",
@@ -585,6 +603,93 @@
     tag.style.left = box.offsetLeft + width + 28 + "px";
     tag.style.top = box.offsetTop + last.offsetTop + (last.offsetHeight - tag.offsetHeight) / 2 + "px";
     tl.fromTo(tag, { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.3, ease: EASE }, num(o.tagAt, hAt + 0.3));
+  };
+
+  // 下面三个组件的版式参考 nutllwhy/hyperframes-motion-library（MIT）的 checklist-pop、three-step-flow、cause-chain，
+  // 改成竖屏、按口播逐条出现、落定后不退场、不回弹。
+
+  // 条目可以写字符串，也可以写 { text, at }；没写 at 的按 stagger 排在上一条之后
+  function itemsWithTimes(list, at, stagger) {
+    var t = at;
+    return (list || []).map(function (it, i) {
+      var o = typeof it === "string" ? { text: it } : it;
+      t = o.at != null ? num(o.at, t) : i === 0 ? at : t + stagger;
+      return { o: o, at: t };
+    });
+  }
+
+  /**
+   * 清单核对：每条说到时出现，圆圈随即被勾上。适合「拿到结果检查哪几件事」「注意事项」。
+   * { title, items:["…" | {text, at, checkAt}], at, stagger=0.4, size=68 }
+   * 每一条都要来自口播里真实的清单，勾的顺序就是口播的顺序。
+   */
+  Kit.checklist = function (tl, sel, o) {
+    var host = hostOf(sel);
+    var at = num(o.at, 0.2);
+    var card = el("div", "kit kit-panel kit-chk", host);
+    if (o.title) el("div", "ttl", card, o.title);
+    inFrom(tl, card, at);
+    itemsWithTimes(o.items, at + 0.3, num(o.stagger, 0.4)).forEach(function (x) {
+      var row = el("div", "it", card);
+      row.style.fontSize = num(o.size, 68) + "px";
+      var bx = el("span", "bx", row);
+      var mark = el("i", "", bx, "✓");
+      el("span", "", row, x.o.text);
+      inFrom(tl, row, x.at, 18);
+      tl.fromTo(mark, { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.25, ease: EASE }, num(x.o.checkAt, x.at + 0.2));
+    });
+  };
+
+  /**
+   * 步骤流程：编号方块 + 竖线，说到哪一步，竖线长到哪一步。适合「具体怎么做」的 2–4 步。
+   * { steps:[{title, desc, at}], at, stagger=0.6, size=76 }
+   */
+  Kit.steps = function (tl, sel, o) {
+    var host = hostOf(sel);
+    var size = num(o.size, 76);
+    var box = el("div", "kit kit-steps", host);
+    var rail = el("div", "rail", box);
+    var fill = el("i", "", rail);
+    var list = itemsWithTimes(o.steps, num(o.at, 0.2), num(o.stagger, 0.6)).map(function (x, i) {
+      var st = el("div", "st", box);
+      el("div", "ix", st, String(i + 1).padStart(2, "0"));
+      var txt = el("div", "", st);
+      var hd = el("div", "hd", txt, x.o.title);
+      hd.style.fontSize = size + "px";
+      if (x.o.desc) el("div", "ds", txt, x.o.desc).style.fontSize = Math.round(size * 0.58) + "px";
+      inFrom(tl, st, x.at, 24);
+      return { node: st, at: x.at };
+    });
+    if (list.length < 2) return rail.remove();
+    var center = function (n) { return n.offsetTop + 55; };
+    var top = center(list[0].node), span = center(list[list.length - 1].node) - top;
+    rail.style.top = top + "px";
+    rail.style.height = span + "px";
+    // 竖线分段长：第 i 步出现时，线从上一步长到这一步
+    list.slice(1).forEach(function (x) {
+      var to = (center(x.node) - top) / span;
+      tl.to(fill, { scaleY: to, duration: 0.35, ease: "power2.inOut" }, x.at - 0.15);
+    });
+  };
+
+  /**
+   * 因果链：原因 → 过程 → 结果，竖着排，箭头往下长。适合「为什么会这样」。
+   * { cards:[{tag, text, at}], at, stagger=0.7, size=60 }  最后一张（结果）描强调色边。
+   * 只写真实的因果关系，不为凑三段编中间环节。
+   */
+  Kit.chain = function (tl, sel, o) {
+    var host = hostOf(sel);
+    var box = el("div", "kit kit-chain", host);
+    itemsWithTimes(o.cards, num(o.at, 0.2), num(o.stagger, 0.7)).forEach(function (x, i) {
+      if (i > 0) {
+        var ar = el("div", "ar", box);
+        tl.fromTo(ar, { opacity: 0, scaleY: 0 }, { opacity: 1, scaleY: 1, duration: 0.25, ease: EASE }, x.at - 0.2);
+      }
+      var cd = el("div", "cd", box);
+      if (x.o.tag) el("div", "kit-tag", cd, x.o.tag);
+      el("div", "tx", cd, x.o.text).style.fontSize = num(o.size, 60) + "px";
+      inFrom(tl, cd, x.at, 24);
+    });
   };
 
   window.Kit = Kit;
