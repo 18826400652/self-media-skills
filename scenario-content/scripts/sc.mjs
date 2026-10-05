@@ -10,6 +10,7 @@ const DEFAULTS = {
   voiceGuide: null,
   bannedPhrases: [],
   requiredSections: ["场景", "痛点", "实测", "解法", "可复制"],
+  feynmanCheck: "费曼检查.md", // 母稿后的「讲没讲明白」检查；设为 null 关闭
   platformFiles: {},
 };
 const BANNED = [
@@ -95,6 +96,50 @@ function checkDraft(ep, config, r) {
   return missing.length ? r.fail(`母稿缺少小节：${missing.join("、")}`) : r.pass("母稿结构完整");
 }
 
+const isPlaceholder = (cell) => !cell || cell.startsWith("（") || cell.startsWith("(");
+
+/** 读 `| a | b |` 表格：从表头含 headerWord 的那行起，返回数据行的单元格 */
+function tableRows(md, headerWord) {
+  const lines = md.split("\n");
+  const start = lines.findIndex((l) => l.trim().startsWith("|") && l.includes(headerWord));
+  if (start < 0) return [];
+  const rows = [];
+  for (const line of lines.slice(start + 2)) {
+    if (!line.trim().startsWith("|")) break;
+    rows.push(line.split("|").slice(1, -1).map((c) => c.trim()));
+  }
+  return rows;
+}
+
+/** 费曼检查.md → { questions: [{ q, answer }], terms: [], analogy, verified } */
+export function parseFeynman(md) {
+  const questions = tableRows(md, "他会问")
+    .filter(([q]) => !isPlaceholder(q))
+    .map(([q, answer = ""]) => ({ q, answer: isPlaceholder(answer) || /^没有/.test(answer.replace(/\*/g, "")) ? "" : answer }));
+  const terms = tableRows(md, "术语").map(([t]) => t).filter((t) => !isPlaceholder(t));
+  const field = (k) => md.match(new RegExp(`^- ${k}[：:]\\s*(.*)$`, "m"))?.[1]?.trim() ?? "";
+  const clean = (v) => (isPlaceholder(v) ? "" : v);
+  return { questions, terms, analogy: clean(field("类比")), verified: clean(field("检验")) };
+}
+
+function checkFeynman(ep, config, r) {
+  if (!config.feynmanCheck) return;
+  const p = join(ep, config.feynmanCheck);
+  if (!existsSync(p)) return r.fail(`缺少 ${config.feynmanCheck}（母稿写完后做费曼检查，见 references/feynman-check.md）`);
+  const f = parseFeynman(readFileSync(p, "utf8"));
+  const unanswered = f.questions.filter((x) => !x.answer).map((x) => x.q);
+  if (f.questions.length < 3) r.fail(`费曼检查：零基础的人会追问的问题只列了 ${f.questions.length} 个，至少 3 个`);
+  else if (unanswered.length) r.fail(`费曼检查：这些问题母稿里还没有大白话回答：${unanswered.join("；")}`);
+  else r.pass(`费曼检查：${f.questions.length} 个追问都有回答`);
+  if (!f.analogy || !f.verified) r.fail("费曼检查：缺少类比，或没写类比检验");
+  const draftPath = join(ep, "母稿.md");
+  if (existsSync(draftPath)) {
+    const draft = readFileSync(draftPath, "utf8");
+    const left = f.terms.filter((t) => draft.includes(t));
+    if (left.length) r.warn(`费曼检查：母稿里还有要换掉的术语：${left.join("、")}`);
+  }
+}
+
 function checkTextAll(ep, config, r) {
   const banned = [...BANNED, ...config.bannedPhrases];
   let hits = 0;
@@ -178,6 +223,7 @@ function main() {
   checkScenario(ep, r);
   checkTest(ep, r);
   checkDraft(ep, config, r);
+  checkFeynman(ep, config, r);
   checkTextAll(ep, config, r);
   checkPlatforms(ep, config, r);
 

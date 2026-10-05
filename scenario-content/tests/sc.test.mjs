@@ -18,3 +18,18 @@ test("douyinLines 读 HyperFrames SCRIPT.md：(Frame N)、缩进口播、Emotion
     { n: "2", text: "第二句。", emo: "平静" },
   ]);
 });
+
+test("parseFeynman 读追问表、术语表和类比；占位和「没有」算未回答", async () => {
+  const { parseFeynman } = await import("../scripts/sc.mjs");
+  const md = [
+    "## ② 零基础的人会追问什么", "", "| 他会问 | 母稿里的回答（大白话） |", "|---|---|",
+    "| 为什么会数错？ | 它是一个字一个字往下写的 |", "| 为什么两次不一样？ | **没有** |", "| （占位问题） | （） |", "",
+    "## ③ 术语 → 改成", "", "| 术语 | 改成 |", "|---|---|", "| 去重 | 同一条不算两次 |", "| （如：x） | （） |", "",
+    "## ④ 类比", "", "- 类比：列编号就是要小票", "- 要传达的属性：有明细才能核对", "- 检验：（）",
+  ].join("\n");
+  const f = parseFeynman(md);
+  assert.deepEqual(f.questions.map((q) => [q.q, !!q.answer]), [["为什么会数错？", true], ["为什么两次不一样？", false]]);
+  assert.deepEqual(f.terms, ["去重"]);
+  assert.equal(f.analogy, "列编号就是要小票");
+  assert.equal(f.verified, "");
+});
