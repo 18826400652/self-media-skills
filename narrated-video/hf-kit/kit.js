@@ -68,6 +68,17 @@
       ".kit-num>span{display:inline-block;line-height:1}",
       ".kit-num .u{font-size:.36em;margin-left:.12em}",
       ".kit-num-label{font-size:40px;font-weight:700;color:var(--kit-ink);margin-top:20px}",
+      ".kit-rcpt-slot{height:22px;background:#0A0B0D;border:1px solid var(--kit-line);margin:0 -20px}",
+      ".kit-rcpt-win{overflow:hidden;margin-top:-6px}",
+      ".kit-rcpt{background:#F4F1EA;color:#101114;padding:30px 40px 46px;-webkit-mask:linear-gradient(#000 0 0) top/100% calc(100% - 14px) no-repeat,conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) bottom/28px 14px repeat-x}",
+      ".kit-rcpt h4{margin:0 0 14px;text-align:center;font-size:34px;font-weight:900;letter-spacing:.4em}",
+      ".kit-rcpt .row{position:relative;display:flex;gap:26px;line-height:1.65;font-weight:500}",
+      ".kit-rcpt .row b{position:relative;z-index:1;width:2.6ch;font-family:var(--kit-mono);font-weight:700;color:#55585F}",
+      ".kit-rcpt .row span{position:relative;z-index:1;flex:1}",
+      ".kit-rcpt .row i{position:absolute;left:-10px;right:-10px;top:14%;bottom:14%;background:var(--kit-accent);transform-origin:left center;transform:scaleX(0)}",
+      ".kit-rcpt .sum{margin-top:10px;padding-top:12px;border-top:2px dashed #101114;display:flex;justify-content:space-between;font-weight:900}",
+      ".kit-rcpt-tag{position:absolute;white-space:nowrap;font-weight:900;color:var(--kit-bg);background:var(--kit-accent);padding:8px 18px}",
+      ".kit-rcpt-tag::before{content:'';position:absolute;left:-22px;top:50%;margin-top:-12px;border:12px solid transparent;border-right:12px solid var(--kit-accent);border-left:0}",
       ".kit-tpl{background:var(--kit-surface);border-top:8px solid var(--kit-accent);padding:40px 44px}",
       ".kit-tpl .ttl{font-size:46px;font-weight:900;margin-bottom:28px}",
       ".kit-tpl .ln{font-weight:500;margin:0 0 18px}",
@@ -526,6 +537,54 @@
       inFrom(tl, p, at + 0.3 + i * stagger, 16);
     });
     if (o.footer) inFrom(tl, el("div", "ft", card, o.footer), at + 0.4 + (o.lines || []).length * stagger, 0);
+  };
+
+  /**
+   * 打印小票：带编号的明细从打印口一格一格吐出来，指定的行被荧光笔标出，旁边挂一个标签。
+   * 适合「只有总数没法核对，有明细才能核对」这类类比，也可以当清单用。
+   * { title="小票", rows:["薯片 ×1", …], total:"4 件", at=打印开始, dur=1.1, size=46, width=640,
+   *   highlight:[行号从 1 开始], highlightAt, tag:"扫了两次", tagAt }
+   * 标签挂在最后一个高亮行的右边。宿主元素放在内容区左侧，给右边的标签留出位置。
+   */
+  Kit.receipt = function (tl, sel, o) {
+    var host = hostOf(sel);
+    var T = tok(host);
+    var size = num(o.size, 46), width = num(o.width, 640), at = num(o.at, 0.5);
+    var box = el("div", "kit", host);
+    box.style.width = width + "px";
+    var slot = el("div", "kit-rcpt-slot", box);
+    var win = el("div", "kit-rcpt-win", box);
+    var paper = el("div", "kit-rcpt", win);
+    el("h4", "", paper, o.title || "小票");
+    var rows = (o.rows || []).map(function (text, i) {
+      var row = el("div", "row", paper);
+      row.style.fontSize = size + "px";
+      var mark = el("i", "", row);
+      el("b", "", row, String(i + 1).padStart(2, "0"));
+      el("span", "", row, text);
+      return { row: row, mark: mark };
+    });
+    if (o.total) {
+      var sum = el("div", "sum", paper);
+      sum.style.fontSize = size + "px";
+      el("span", "", sum, "合计");
+      el("span", "", sum, o.total);
+    }
+    tl.fromTo(slot, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "none" }, Math.max(0, at - 0.25));
+    // 打印：按固定步进推出来（steps 模拟打印机走纸）
+    tl.fromTo(paper, { yPercent: -100 }, { yPercent: 0, duration: num(o.dur, 1.1), ease: "steps(" + Math.max(4, rows.length * 2 + 1) + ")" }, at);
+    var hl = (o.highlight || []).map(function (n) { return rows[n - 1]; }).filter(Boolean);
+    if (!hl.length) return;
+    var hAt = num(o.highlightAt, at + num(o.dur, 1.1) + 0.3);
+    tl.fromTo(hl.map(function (r) { return r.mark; }), { scaleX: 0 }, { scaleX: 1, duration: 0.35, ease: "power2.out", stagger: 0.15 }, hAt);
+    if (!o.tag) return;
+    var tag = el("div", "kit-rcpt-tag", host, o.tag);
+    tag.style.fontSize = Math.round(size * 0.87) + "px";
+    var last = hl[hl.length - 1].row;
+    // 挂在最后一个高亮行的右边、垂直居中（行的 offsetTop 相对小票外框 .kit 计算）
+    tag.style.left = box.offsetLeft + width + 28 + "px";
+    tag.style.top = box.offsetTop + last.offsetTop + (last.offsetHeight - tag.offsetHeight) / 2 + "px";
+    tl.fromTo(tag, { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.3, ease: EASE }, num(o.tagAt, hAt + 0.3));
   };
 
   window.Kit = Kit;

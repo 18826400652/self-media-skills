@@ -22,6 +22,7 @@
 | 指向画面里的某一处 | `Kit.arrow` 手绘箭头 | 「这里」→ 某一行 |
 | 错误问法 vs 正确问法 | `Kit.compare` 对比卡 | × 随口问 / ✓ 说清三件事 |
 | 结尾给可照抄的模板 | `Kit.template` 模板卡 | 【】里是要替换的部分 |
+| 「有明细才能核对」类比、清单 | `Kit.receipt` 打印小票 | 带编号的小票吐出来，标出重复的两行「扫了两次」 |
 | AI 真实操作过程（发送、输出） | 录屏片段（`<video>`，见下方「录屏」） | `nv rec` 录的 DeepSeek 对话，输出段落加速播放 + `Kit.number` 计时 |
 
 ## 使用规则
@@ -86,6 +87,7 @@
 | `Kit.arrow` | `from`=[x,y]、`to`=[x,y]（宿主内坐标，宿主一般铺满整帧）、`at`、`bend`=0.25 弯曲程度、`label` 起点文字 |
 | `Kit.compare` | `bad`={`tag`,`text`}、`good`={`tag`,`text`}、`at`=[上卡时间, 下卡时间]、`size`=44 |
 | `Kit.template` | `title`、`lines`=[每行，【】内高亮]、`footer`、`at`、`stagger`=0.25 行间隔、`size`=40 |
+| `Kit.receipt` | `rows`=[每行文字，自动编 01 02…]、`total` 合计、`title`=「小票」、`at` 开始打印、`dur`=1.1、`highlight`=[要标出的行号]、`highlightAt`、`tag` 标签文字、`tagAt`、`size`=46、`width`=640。宿主放在内容区左侧，给标签留位置 |
 
 `Kit.shot` 的圈按推近后的画面计算位置，所以圈要安排在推近结束之后。手绘圈和圈词注释画完后会有轻微的手绘抖动（固定节奏，渲染结果可复现），持续到 `until`（默认画完后 6 秒）。
 
