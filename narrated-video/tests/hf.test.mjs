@@ -142,3 +142,15 @@ test("sparseFrames：纵向铺开不到 55% 或面积不到 40% 的帧要警告"
   ]);
   assert.deepEqual(r.map((x) => x.file), ["b.png", "c.png"]);
 });
+
+test("帧模板：camera push 把内容包进推镜层（角标不动），title.center 居中", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const tokens = { accent: "#FFD84D", ink: "#F4F1EA", muted: "#888", bg: "#101114", surface: "#1B1D22", line: "#2C2F36", font: "sans-serif" };
+  const f = { n: 3, id: "03-punch", duration: 1.2, kicker: "K", tokens };
+  const html = buildFrame({ ...f, build: { camera: "push", title: { center: true, lines: ["**两遍**"] } } });
+  assert.match(html, /<div id="p03-cam"[^>]*>\s*<div class="p03-h p03-center"/);
+  assert.ok(html.indexOf('class="p03-kicker"') < html.indexOf('id="p03-cam"'), "角标在推镜层外面");
+  assert.match(html, /tl\.fromTo\("#p03-cam", \{ scale: 1 \}, \{ scale: 1\.04, duration: 1\.2/);
+  assert.doesNotMatch(buildFrame({ ...f, build: { title: { lines: ["x"] } } }), /-cam/);
+  assert.throws(() => buildFrame({ ...f, build: { camera: "orbit" } }), /只支持 "push"/);
+});

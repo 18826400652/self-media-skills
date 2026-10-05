@@ -58,6 +58,19 @@
 
 另外，帧模板、组件和字幕的根元素都开了中文灰度抗锯齿（`-webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility`），手写帧要照抄。
 
+## 节奏、转场和镜头
+
+学自官方发布视频的源码（[heygen-com/hyperframes-launches](https://github.com/heygen-com/hyperframes-launches)，Apache-2.0）：pr-to-video-launch（30 秒 10 个场景全部硬切）、claude-paper-launch 的 FRAME 规范、hyperframes-launch 的分镜和交接记录。
+
+1. **默认硬切**：帧和帧之间直接切，靠每帧自己的入场动画接上。转场整片最多两三处，只放在**剧情转折**（「可第一次……」用 `push-slide`）和**收尾**（`crossfade`）。不要每帧都加转场，否则节奏会变得拖沓。
+2. **长短交替**：大部分帧 3–4 秒，转折前后可以插一个 **1 秒左右的冲击帧**：一句话、居中、大字（`title` 加 `"center": true`），例如「两次不一样」「可它算错了」。官方用 0.9 秒的一行字把节奏拉紧。冲击帧要有自己的一句短口播。
+3. **开场就在动**：第一帧第 0 秒就有东西在动（录屏在播、元素正在进来），不从空画面淡入。
+4. **静态帧缓推**：落定后只剩文字和卡片的帧加 `"camera": "push"`（整帧 4 秒推近 4%，角标不动），画面不死板，观众也察觉不到「在动」。录屏帧和带 `Kit.shot` 推近的帧不用加。
+5. **版面别一直靠同一边**：官方规定连续最多两帧用同一种构图（靠左 / 居中）。我们的帧大多靠左上；冲击帧、结论帧可以用居中打破。
+6. **一眼主次**：眯眼看，最重要的元素要比第二重要的大 3–6 倍；两个东西一样大，就降一个。
+7. **结尾呼应开头**：收尾帧可以回到开头的画面或那句话（官方是镜头拉回第一幕的画布），让人有「讲完了」的感觉。
+8. **结尾不闪黑**：官方踩过子画面时间轴比分配时长短、结尾闪黑的坑。我们的版本（0.8.119）以帧时长为准，第 1 课逐帧查过没有黑帧；`nv verify` 也会查长于 0.5 秒的黑屏。
+
 ## 口播
 
 - **钩子句式**（选一种，写成口语）：
@@ -99,7 +112,8 @@
 | `timer` | 录屏上的计时面板 | `value` 真实用时、`unit`、`note`（写明倍速） |
 | `kit` | 一个组件 | `name`（strike number marker annotate shot stream prompt arrow compare template checklist steps chain）、`top`、`width`（默认 960，`"auto"` 不限宽）、`opts` 见 hf-kit.md |
 | `lead` | 一行灰色说明 | `text`（`**词**` 强调色）、`top`、`at` |
-| `title` | 大字标题 | `label`、`lines`（字符串或 `{text, at}`）、`top` |
+| `title` | 大字标题 | `label`、`lines`（字符串或 `{text, at}`）、`top`、`center`（居中，冲击帧用） |
+| `camera` | 镜头 | `"push"`：整帧缓慢推近，给落定后的静态帧用 |
 | `ground` | 底色 | `"accent"` = 整屏强调色（翻车帧，整片最多一次） |
 
 录屏的 `mediaStart`：看 `nv rec` 输出的 `.json`，`sentAt` 是发送时刻、`doneAt` 是回答结束。原速播「粘贴 + 发送」从 `pastedAt - 0.6` 开始；加速播「输出过程」从 `sentAt` 开始，`rate ≈ (doneAt - sentAt) / 这一帧时长`。

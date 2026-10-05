@@ -7,12 +7,14 @@
 //   timer: { value, unit, note }       录屏上的计时面板（数到真实用时）
 //   lead:  { text, top, at }           一行灰色说明文字
 //   kit:   { name, top, width, opts }  一个 hf-kit 组件，如 { "name": "compare", "opts": {…} }；width 默认 960，"auto" 不限宽
-//   title: { label, lines, top }       大字标题（lines 每项一行，**词** 用强调色）
+//   title: { label, lines, top, center }  大字标题（lines 每项一行，**词** 用强调色）；center = 居中（一句话冲击帧）
+//   camera: "push"                     整帧缓慢推近（1 → 1.04，贯穿全帧），让落定后的静态画面不死板；录屏帧不用
 // 时间写法：数字 = 帧内秒数；"@词" = 说到这个词的时刻；"@词#2" = 第二次说到。
 // 位置都在抖音安全区内（内容 x 60–1020、y 230–1150）。
 
 const CUE_RE = /^@(.+?)(?:#(\d+))?$/;
 const REC_BOX = { left: 95, top: 340, width: 890, height: 1582 };
+const PUSH_SCALE = 1.04; // camera: "push" 推到多大：观众察觉不到「在动」，但画面不会死
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -83,17 +85,23 @@ export function buildFrame(f) {
   if (b.title) {
     const t = b.title;
     if (t.label) {
-      body.push(`<div class="P-label" id="P-tl" style="top:${(t.top ?? 690) - 130}px">${esc(t.label)}</div>`);
+      body.push(`<div class="P-label${t.center ? " P-center" : ""}" id="P-tl" style="top:${(t.top ?? 690) - 130}px">${esc(t.label)}</div>`);
       js.push(`tl.fromTo("#P-tl", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, ${at(t.labelAt)});`);
     }
     (t.lines ?? []).forEach((line, i) => {
       const text = typeof line === "string" ? line : line.text;
       const when = typeof line === "string" ? i * 0.6 + 0.3 : line.at;
-      body.push(`<div class="P-h" id="P-h${i}" style="top:${(t.top ?? 690) + i * 140}px">${inlineAccent(text)}</div>`);
+      body.push(`<div class="P-h${t.center ? " P-center" : ""}" id="P-h${i}" style="top:${(t.top ?? 690) + i * 140}px">${inlineAccent(text)}</div>`);
       js.push(`tl.fromTo("#P-h${i}", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, ${at(when)});`);
     });
     css.push(".P-label { position: absolute; left: 60px; font-size: 44px; font-weight: 900; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 20px; }");
     css.push(".P-h { position: absolute; left: 60px; right: 60px; font-size: 104px; font-weight: 900; line-height: 1.2; text-wrap: balance; }");
+    if (t.center) css.push(".P-center { left: 60px; right: 60px; width: fit-content; margin-inline: auto; text-align: center; }");
+  }
+  if (b.camera === "push") {
+    js.push(`tl.fromTo("#P-cam", { scale: 1 }, { scale: ${PUSH_SCALE}, duration: ${f.duration}, ease: "sine.inOut" }, 0);`);
+  } else if (b.camera) {
+    throw new Error(`第 ${f.n} 帧 camera 只支持 "push"，收到 ${JSON.stringify(b.camera)}`);
   }
 
   const T = f.tokens;
@@ -114,7 +122,7 @@ ${css.map((c) => `      ${sub(c)}`).join("\n")}
     </style>
     <div id="${p}-ground" class="${p}-ground clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
     <div class="${p}-kicker">${esc(f.kicker)}</div>
-${body.map((x) => `    ${sub(x)}`).join("\n")}
+${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script src="compositions/kit/cues.js"></script>
     <script src="compositions/kit/kit.js"></script>
