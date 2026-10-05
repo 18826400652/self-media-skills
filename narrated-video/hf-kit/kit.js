@@ -52,7 +52,7 @@
       ".kit-shot-world{position:absolute;left:0;top:0;transform-origin:0 0}",
       ".kit-shot-world img{display:block}",
       ".kit-over{position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none}",
-      ".kit-stream p{margin:0;font-weight:500}",
+      ".kit-stream p{margin:0;font-weight:500;white-space:pre-line}",
       ".kit-stream .w{opacity:0}",
       ".kit-prompt{background:var(--kit-surface);border:1px solid var(--kit-line);padding:36px 40px}",
       ".kit-prompt .t{white-space:pre-wrap;font-weight:500}",
