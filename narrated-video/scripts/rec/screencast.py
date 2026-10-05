@@ -2,7 +2,7 @@
 # 参数通过环境变量传入，由 scripts/rec.mjs 设置：
 #   REC_DIR 帧输出目录；REC_PROMPT_FILE 要粘贴的文字；REC_URL 打开的网址（空 = 用当前标签页）
 #   REC_W / REC_H 模拟的手机视口（CSS 像素，按 2 倍像素录制）；REC_INPUT 输入框选择器；REC_HIDE 要隐藏的元素（CSS）
-#   REC_TIMEOUT 最长等待秒数；REC_THEME dark / light（模拟系统深浅色，空 = 不改）
+#   REC_SETUP 录之前执行的 Python 文件（可选，如关掉模型开关）；REC_TIMEOUT 最长等待秒数；REC_THEME dark / light（模拟系统深浅色，空 = 不改）
 import base64, json, os, time
 
 D = os.environ["REC_DIR"]
@@ -33,6 +33,10 @@ theme = os.environ.get("REC_THEME", "")
 if theme:  # 网页跟随系统深浅色时，统一录成同一种（不同浏览器用户的设置可能不一样）
     cdp("Emulation.setEmulatedMedia", features=[{"name": "prefers-color-scheme", "value": theme}])
 time.sleep(1.5)
+setup = os.environ.get("REC_SETUP", "")
+if setup:  # 录之前在页面里做的准备（如关掉模型开关），由调用方提供的 Python 文件，helpers 可用
+    exec(open(setup, encoding="utf-8").read())
+    time.sleep(0.5)
 hide = os.environ.get("REC_HIDE", "")
 if hide:
     js("(()=>{const s=document.createElement('style');s.textContent=" + json.dumps(hide + "{display:none!important}") + ";document.head.appendChild(s);})()")
