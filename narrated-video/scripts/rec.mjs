@@ -12,9 +12,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { SKILL_DIR, fromRoot, loadConfig } from "./lib/config.mjs";
-
-const OUT_FPS = 30;
+import { SKILL_DIR, loadConfig } from "./lib/config.mjs";
+import { cdpEndpoint, encode } from "./lib/rec-common.mjs";
 
 function parseArgs(argv) {
   const opts = { size: "540x960", input: "textarea", hide: "", url: "" };
@@ -28,39 +27,6 @@ function parseArgs(argv) {
   const [w, h] = opts.size.split("x").map(Number);
   if (!w || !h) throw new Error(`--size 写法应为 宽x高：${opts.size}`);
   return { out: resolve(rest[0]), prompt: resolve(opts.prompt), w, h, ...opts };
-}
-
-/**
- * 浏览器连接地址，按顺序：环境变量 BU_CDP_WS → 配置 rec.cdpPort（浏览器用 --remote-debugging-port 启动，
- * 不弹「允许」，推荐配一个自动化专用的浏览器用户）→ 配置 rec.devtoolsActivePort（DevToolsActivePort 文件，
- * 第 1 行端口、第 2 行路径；在 edge://inspect 勾选远程调试时用，每次新连接都要在浏览器里点允许）
- */
-function cdpEndpoint(config) {
-  if (process.env.BU_CDP_WS) return process.env.BU_CDP_WS;
-  const port = config.rec?.cdpPort;
-  if (port) {
-    try {
-      const info = JSON.parse(execFileSync("curl", ["-s", "--max-time", "3", `http://127.0.0.1:${port}/json/version`], { encoding: "utf8" }));
-      return info.webSocketDebuggerUrl;
-    } catch {
-      throw new Error(`连不上 127.0.0.1:${port}：先打开用 --remote-debugging-port=${port} 启动的浏览器（如桌面上的自动化专用快捷方式）`);
-    }
-  }
-  const file = fromRoot(config, config.rec?.devtoolsActivePort);
-  if (!file || !existsSync(file)) throw new Error("连不上浏览器：设置环境变量 BU_CDP_WS，或在项目配置写 rec.cdpPort / rec.devtoolsActivePort（浏览器需开启远程调试）");
-  const [p, path] = readFileSync(file, "utf8").split(/\r?\n/);
-  return `ws://127.0.0.1:${p.trim()}${path.trim()}`;
-}
-
-/** 帧（带时间戳）→ 恒定帧率 MP4 */
-function encode(dir, meta, out) {
-  const ts = meta.frames;
-  if (!ts.length) throw new Error("没有录到画面（页面没有变化，或浏览器没响应）");
-  const list = ts.map((t, i) => `file 'f${String(i).padStart(5, "0")}.jpg'\nduration ${Math.max((ts[i + 1] ?? t + 1) - t, 0.001).toFixed(4)}`);
-  list.push(`file 'f${String(ts.length - 1).padStart(5, "0")}.jpg'`);
-  writeFileSync(join(dir, "list.txt"), `${list.join("\n")}\n`);
-  execFileSync("ffmpeg", ["-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", join(dir, "list.txt"),
-    "-vf", `fps=${OUT_FPS},format=yuv420p`, "-c:v", "libx264", "-crf", "18", out]);
 }
 
 function main() {
@@ -77,7 +43,7 @@ function main() {
     console.log("● 录制中：粘贴 → 发送 → 等回答结束……");
     const res = execFileSync("browser-harness", ["-c", script], { env, encoding: "utf8", timeout: 300000 });
     const meta = JSON.parse(readFileSync(join(dir, "meta.json"), "utf8"));
-    encode(dir, meta, o.out);
+    encode(dir, meta.frames, o.out);
     const t0 = meta.frames[0];
     const info = {
       seconds: Math.round((meta.marks.done - meta.marks.sent) * 100) / 100,
