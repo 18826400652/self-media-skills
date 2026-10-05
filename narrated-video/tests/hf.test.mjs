@@ -92,3 +92,25 @@ test("Kit.cue 按词取时间：支持第几次出现、忽略大小写、跨多
   assert.throws(() => Kit.cue(5, "整理", 3), /第 3 次/);
   assert.throws(() => Kit.cue(9, "x"), /没有第 9 帧/);
 });
+
+test("帧模板：@词 转成按词取时间，build 解析与生成", async () => {
+  const { toJs, parseStoryboardFrames, buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  assert.equal(toJs({ at: ["@两遍", "@整理#2", 1.5], s: "x" }), '{ "at": [C("两遍"), C("整理", 2), 1.5], "s": "x" }');
+  const md = [
+    "---", "kicker: 普通人的 AI 课 · 第 1 课", "---",
+    "## Frame 1 — 钩子", "- duration: 3.2s", "- src: compositions/frames/01-hook.html",
+    '- build: {"rec":{"mediaStart":4,"rate":1.5,"dim":true},"kit":{"name":"compare","opts":{"at":["@两遍"]}}}',
+    "## Frame 2 — 手写", "- duration: 2s", "- src: compositions/frames/02-x.html",
+  ].join("\n");
+  const { kicker, frames } = parseStoryboardFrames(md);
+  assert.equal(kicker, "普通人的 AI 课 · 第 1 课");
+  assert.deepEqual(frames.map((f) => [f.n, f.id, f.duration, !!f.build]), [[1, "01-hook", 3.2, true], [2, "02-x", 2, false]]);
+  const tokens = { accent: "#FFD84D", ink: "#F4F1EA", muted: "#888", bg: "#101114", surface: "#1B1D22", line: "#2C2F36", font: '"Noto Sans SC", sans-serif' };
+  const html = buildFrame({ ...frames[0], kicker, tokens });
+  assert.match(html, /data-composition-id="01-hook"/);
+  assert.match(html, /data-media-start="4" data-playback-rate="1.5"/);
+  assert.match(html, /Kit\.compare\(tl, "#p01-k", \{ "at": \[C\("两遍"\)\] \}\)/);
+  assert.match(html, /Kit\.cue\(1, w, n\)/);
+  assert.throws(() => parseStoryboardFrames("## Frame 1\n- build: {坏"), /不是合法 JSON/);
+  assert.throws(() => buildFrame({ ...frames[0], kicker, tokens, build: { kit: {} } }), /缺少 name/);
+});

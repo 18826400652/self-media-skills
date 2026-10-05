@@ -8,6 +8,7 @@
 #   nv hf-sfx <HyperFrames 工程>        按 STORYBOARD 的 sfx（可写 @关键词）放音效
 #   nv hf-fonts <HyperFrames 工程>      把画面用到的中文字体按需打包进工程
 #   nv hf-kit <HyperFrames 工程>        装入画面组件库（kit.js，带项目品牌色）
+#   nv hf-frames <HyperFrames 工程>     按 STORYBOARD 每帧的 build 生成画面（帧模板）
 #   nv hf-build <HyperFrames 工程> [--snap]  一键组装：音效、素材、字体、字幕、index、转场、检查
 #   nv rec <输出.mp4> --prompt <文件>   录 AI 对话实测：粘贴 → 发送 → 回答完（手机竖屏）
 #   nv render <视频目录> [参数]         渲染到 <视频目录>/renders/
@@ -32,7 +33,7 @@ cmd="${1:-help}"
 shift || true
 
 case "$cmd" in
-  new | voice | sync | rec | hf-audio | hf-sfx | hf-fonts | hf-kit | hf-build)
+  new | voice | sync | rec | hf-audio | hf-sfx | hf-fonts | hf-kit | hf-frames | hf-build)
     exec node "$SKILL_DIR/scripts/$cmd.mjs" "$@"
     ;;
   render)
@@ -46,7 +47,7 @@ case "$cmd" in
     exec "$HF" render "$dir" -o "$dir/renders/$name.mp4" "$@"
     ;;
   help | -h | --help)
-    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
     ;;
   *)
     exec "$HF" "$cmd" "$@"

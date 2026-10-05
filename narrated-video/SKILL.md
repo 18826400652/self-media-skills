@@ -30,7 +30,9 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 
 ## 另一条路：HyperFrames 官方 faceless-explainer 工作流（抖音竖屏推荐）
 
-画面质量更高，分镜、动效规范按官方 `/faceless-explainer` 来；本 skill 补上中文配音、音效、字体和固定画面组件：
+画面质量更高，分镜、动效规范按官方 `/faceless-explainer` 来；本 skill 补上中文配音、音效、字体和固定画面组件。
+
+**AI 实测类视频先读 `references/douyin-recipe.md`（分镜配方）**：8 帧左右、冲突放开头、真实录屏、证据可追溯，每帧用帧模板（STORYBOARD 的 `- build:`）生成画面。
 
 | 步骤 | 做什么 |
 |---|---|
@@ -38,8 +40,8 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 | `/faceless-explainer` | 建工程、写 BRIEF.md / STORYBOARD.md / frame.md、SCRIPT.md |
 | `nv hf-audio <工程>` | 用项目配置的 TTS 逐帧配音，带逐字时间（替代官方 TTS）。SCRIPT.md 每帧可写 `**情感:**`、`**重点词:**` |
 | `nv hf-kit <工程>` | 装入画面组件库，**写帧之前读 `references/hf-kit.md` 的选用表**，帧里用 `Kit.xxx(...)` 拼画面 |
-| 写 `compositions/frames/NN-*.html` | 每帧用 `Kit.xxx(...)`，时间用 `Kit.cue(帧号, "词")`（说到这个词的时刻），不手写秒数 |
-| `nv hf-build <工程> --snap` | 一键组装：组件库和逐字时间 → 帧时长 → 音效（STORYBOARD `- sfx: error @数错了`）→ 素材 → 中文字体 → 字幕 → index → 转场 → lint/check → 每帧截图拼成 `snapshots/sheet.jpg` |
+| STORYBOARD 每帧 `- build: {…}` | 帧模板：录屏、计时、组件、说明、标题自由组合，时间写 `"@词"`；`nv hf-build` 自动生成画面（见 douyin-recipe.md）。放不下的画面才手写 `compositions/frames/NN-*.html`（`Kit.xxx(...)` + `Kit.cue`） |
+| `nv hf-build <工程> --snap` | 一键组装：组件库和逐字时间 → 帧时长 → 按 build 生成画面 → 音效（STORYBOARD `- sfx: error @数错了`）→ 素材 → 中文字体 → 字幕 → index → 转场 → lint/check → 每帧截图拼成 `snapshots/sheet.jpg` |
 | 看 `snapshots/sheet.jpg` → `nv render <工程>` | 看图确认后渲染 |
 
 改了口播或语速：重跑 `nv hf-audio` 和 `nv hf-build`，画面时间会跟着 `Kit.cue` 自动对齐。单独的 `nv hf-sfx`、`nv hf-fonts`、`nv hf-kit` 一般不用手动跑。

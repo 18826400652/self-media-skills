@@ -1,5 +1,7 @@
 # 抖音 / 视频号口播短视频
 
+「我用 AI 做了某事」这类实测内容，结构直接用 narrated-video 的 `references/douyin-recipe.md`（8 帧、冲突开头、真实录屏）。
+
 成品制作交给 narrated-video：一句口播 = 一个画面。用 HyperFrames 官方流程时口播写在 `SCRIPT.md`（每句一个 `## … (Frame N)`），用旧流程时写在 `脚本.md` 的分镜表。
 
 ## 结构

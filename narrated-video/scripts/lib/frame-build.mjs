@@ -1,0 +1,155 @@
+// 帧模板：STORYBOARD 里一行 `- build: {…}` → 一帧画面（compositions/frames/NN-*.html）。
+// 纯函数，不读写文件；hf-frames.mjs 负责读 STORYBOARD 和写文件。
+//
+// build 参数（JSON，都可选，按需组合；元素从上到下叠放）：
+//   ground: "bg" | "accent"            底色；accent = 整屏强调色（「翻车」帧），文字自动换成深色
+//   rec:   { src, mediaStart, rate, dim, chip }   录屏（nv rec 录的视频），放在角标下方
+//   timer: { value, unit, note }       录屏上的计时面板（数到真实用时）
+//   lead:  { text, top, at }           一行灰色说明文字
+//   kit:   { name, top, width, opts }  一个 hf-kit 组件，如 { "name": "compare", "opts": {…} }；width 默认 960，"auto" 不限宽
+//   title: { label, lines, top }       大字标题（lines 每项一行，**词** 用强调色）
+// 时间写法：数字 = 帧内秒数；"@词" = 说到这个词的时刻；"@词#2" = 第二次说到。
+// 位置都在抖音安全区内（内容 x 60–1020、y 230–1150）。
+
+const CUE_RE = /^@(.+?)(?:#(\d+))?$/;
+const REC_BOX = { left: 95, top: 340, width: 890, height: 1582 };
+
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/** "@词" / "@词#2" → JS 表达式 C("词", 2)；其他值原样转成 JS 字面量 */
+export function toJs(value) {
+  if (typeof value === "string") {
+    const m = value.match(CUE_RE);
+    if (m) return m[2] ? `C(${JSON.stringify(m[1])}, ${m[2]})` : `C(${JSON.stringify(m[1])})`;
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(toJs).join(", ")}]`;
+  if (value && typeof value === "object") {
+    return `{ ${Object.entries(value).map(([k, v]) => `${JSON.stringify(k)}: ${toJs(v)}`).join(", ")} }`;
+  }
+  return JSON.stringify(value);
+}
+
+const at = (v, fallback = 0) => toJs(v ?? fallback);
+
+/** **词** → 强调色 span */
+const inlineAccent = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="P-acc">$1</span>');
+
+function recPart(b, dur) {
+  const r = b.rec;
+  const v = `<video id="P-v" class="clip" src="${esc(r.src ?? "assets/rec.mp4")}" data-start="0" data-duration="${dur}" data-media-start="${r.mediaStart ?? 0}" data-playback-rate="${r.rate ?? 1}" data-track-index="1" muted playsinline style="position:absolute;left:${REC_BOX.left}px;top:${REC_BOX.top}px;width:${REC_BOX.width}px;height:${REC_BOX.height}px;object-fit:cover;border:1px solid var(--kit-line)"></video>`;
+  const parts = [v];
+  if (r.dim) parts.push('<div class="P-dim"></div>');
+  if (r.chip) parts.push(`<div class="P-chip">${esc(r.chip)}</div>`);
+  return parts;
+}
+
+/**
+ * @param {{ n: number, id: string, duration: number, kicker: string, tokens: object, build: object }} f
+ *   tokens：品牌色和字体（hf-kit 的 TOKENS 合并项目配置），翻转底色时要用具体色值
+ * @returns {string} 帧的 HTML（<template> 子合成）
+ */
+export function buildFrame(f) {
+  const b = f.build ?? {};
+  const p = `p${String(f.n).padStart(2, "0")}`;
+  const accent = b.ground === "accent";
+  const body = [];
+  const js = [];
+  const css = [];
+
+  if (b.rec) {
+    body.push(...recPart(b, f.duration));
+    css.push(".P-dim { position: absolute; inset: 0; background: color-mix(in srgb, var(--kit-bg) 62%, transparent); z-index: 2; }");
+    css.push(".P-chip { position: absolute; left: 60px; top: 292px; z-index: 5; font-size: 26px; font-weight: 700; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 16px; }");
+  }
+  if (b.timer) {
+    const t = b.timer;
+    body.push(`<div class="P-panel"><div id="P-n"></div>${t.note ? `<div class="P-note">${esc(t.note)}</div>` : ""}</div>`);
+    css.push(".P-panel { position: absolute; left: 60px; top: 860px; z-index: 5; padding: 24px 36px; background: color-mix(in srgb, var(--kit-bg) 90%, transparent); border-left: 8px solid var(--kit-accent); }");
+    css.push(".P-note { font-size: 30px; font-weight: 500; color: var(--kit-muted); margin-top: 48px; }");
+    js.push(`Kit.number(tl, "#P-n", ${toJs({ value: t.value, unit: t.unit ?? "秒", countFrom: 0, countDur: t.countDur ?? Math.max(0.5, f.duration - 0.3), at: 0.05, size: t.size ?? 150 })});`);
+  }
+  if (b.lead) {
+    body.push(`<div class="P-lead" id="P-l" style="top:${b.lead.top ?? 600}px">${inlineAccent(b.lead.text)}</div>`);
+    js.push(`tl.fromTo("#P-l", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, ${at(b.lead.at)});`);
+  }
+  if (b.kit) {
+    const k = b.kit;
+    if (!k.name) throw new Error(`第 ${f.n} 帧 build.kit 缺少 name（如 "compare"）`);
+    const width = k.width === "auto" ? "" : `width:${k.width ?? 960}px;`; // auto：不限宽（划掉换新这类短词，按字号显示）
+    body.push(`<div id="P-k" style="position:absolute;left:60px;top:${k.top ?? 560}px;${width}z-index:5"></div>`);
+    js.push(`Kit.${k.name}(tl, "#P-k", ${toJs(k.opts ?? {})});`);
+  }
+  if (b.title) {
+    const t = b.title;
+    if (t.label) {
+      body.push(`<div class="P-label" id="P-tl" style="top:${(t.top ?? 690) - 130}px">${esc(t.label)}</div>`);
+      js.push(`tl.fromTo("#P-tl", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, ${at(t.labelAt)});`);
+    }
+    (t.lines ?? []).forEach((line, i) => {
+      const text = typeof line === "string" ? line : line.text;
+      const when = typeof line === "string" ? i * 0.6 + 0.3 : line.at;
+      body.push(`<div class="P-h" id="P-h${i}" style="top:${(t.top ?? 690) + i * 140}px">${inlineAccent(text)}</div>`);
+      js.push(`tl.fromTo("#P-h${i}", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, ${at(when)});`);
+    });
+    css.push(".P-label { position: absolute; left: 60px; font-size: 44px; font-weight: 900; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 20px; }");
+    css.push(".P-h { position: absolute; left: 60px; font-size: 104px; font-weight: 900; line-height: 1.2; }");
+  }
+
+  const T = f.tokens;
+  // 强调色底：这一帧里的文字、组件改用深色（组件颜色读 --kit-*，在根元素上覆盖）
+  const ground = accent ? T.accent : "var(--kit-bg)";
+  const rootVars = accent ? ` --kit-ink: ${T.bg}; --kit-accent: ${T.bg}; --kit-muted: color-mix(in srgb, ${T.bg} 50%, transparent);` : "";
+  const sub = (s) => s.replace(/P-/g, `${p}-`);
+  return `<!-- 由 nv hf-frames 根据 STORYBOARD.md 第 ${f.n} 帧的 build 生成，改 STORYBOARD 后重跑；要手写这一帧就删掉 build 行 -->
+<template>
+  <div id="${p}-root" data-composition-id="${f.id}" data-start="0" data-duration="${f.duration}" data-width="1080" data-height="1920">
+    <style>
+      #${p}-root { position: relative; width: 1080px; height: 1920px; overflow: hidden; container-type: size; font-family: ${T.font}; color: var(--kit-ink);${rootVars} }
+      .${p}-ground { position: absolute; inset: 0; background: ${ground}; }
+      .${p}-kicker { position: absolute; left: 60px; top: 250px; z-index: 5; font-size: 30px; font-weight: 700; letter-spacing: 0.12em; color: ${accent ? `color-mix(in srgb, ${T.bg} 55%, transparent)` : "var(--kit-accent)"}; }
+      .${p}-lead { position: absolute; left: 60px; z-index: 5; font-size: 52px; font-weight: 500; color: var(--kit-muted); }
+      .${p}-acc { color: var(--kit-accent); }
+${css.map((c) => `      ${sub(c)}`).join("\n")}
+    </style>
+    <div id="${p}-ground" class="${p}-ground clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
+    <div class="${p}-kicker">${esc(f.kicker)}</div>
+${body.map((x) => `    ${sub(x)}`).join("\n")}
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="compositions/kit/cues.js"></script>
+    <script src="compositions/kit/kit.js"></script>
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+        var E = "power3.out";
+        var C = function (w, n) { return Kit.cue(${f.n}, w, n) - 0.05; }; // 说到这个词（提前一点点出现）
+${js.map((x) => `        ${sub(x)}`).join("\n")}
+        window.__timelines = window.__timelines || {};
+        window.__timelines["${f.id}"] = tl;
+      })();
+    </script>
+  </div>
+</template>
+`;
+}
+
+/** STORYBOARD.md → [{ n, id, src, duration, build }]（只读需要的字段） */
+export function parseStoryboardFrames(md) {
+  const kicker = md.match(/^kicker:\s*(.+)$/m)?.[1]?.trim().replace(/^["']|["']$/g, "") ?? "";
+  const frames = md.split(/^## Frame /m).slice(1).map((block) => {
+    const n = Number(block.match(/^(\d+)/)?.[1]);
+    const field = (k) => block.match(new RegExp(`^- ${k}:\\s*(.+)$`, "m"))?.[1]?.trim();
+    const src = field("src");
+    const raw = field("build");
+    let build = null;
+    if (raw) {
+      try {
+        build = JSON.parse(raw);
+      } catch (err) {
+        throw new Error(`第 ${n} 帧的 build 不是合法 JSON：${err.message}`);
+      }
+    }
+    return { n, src, id: src?.match(/frames\/([^/]+)\.html$/)?.[1], duration: Number(field("duration")?.replace(/s$/, "")), build };
+  });
+  return { kicker, frames };
+}

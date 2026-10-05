@@ -2,7 +2,7 @@
 // 用法：nv hf-build <HyperFrames 工程目录> [--no-check] [--snap]
 //
 // 配音（nv hf-audio）和画面（compositions/frames/）都写好之后，一条命令把工程组装成可渲染的状态：
-//   组件库 + 逐字时间 → 同步帧时长 → 音效 → 素材 → 字体 → 字幕 → 组装 index → 转场 → lint / check
+//   组件库 + 逐字时间 → 同步帧时长 → 按 build 生成画面 → 音效 → 素材 → 字体 → 字幕 → 组装 index → 转场 → lint / check
 // --snap：再按每帧结尾截图，拼成 snapshots/sheet.jpg，用来看图检查。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
 import { execFileSync } from "node:child_process";
@@ -90,6 +90,7 @@ function main() {
 
   node("组件库 + 逐字时间", self("hf-kit"), [dir], dir);
   node("同步帧时长", join(FE, "audio.mjs"), ["sync-durations", "--audio-meta", "./audio_meta.json", ...sb], dir);
+  node("帧模板（STORYBOARD 的 build）", self("hf-frames"), [dir], dir);
   node("音效", self("hf-sfx"), [dir], dir);
   console.log("\n▸ 素材");
   stageAssets(dir);
