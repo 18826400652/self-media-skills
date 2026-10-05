@@ -24,7 +24,7 @@ def wait(sec):
         pump(); time.sleep(0.03)
 
 def text_len():
-    return js("document.body.innerText.length")
+    return js("document.documentElement.innerText.length")
 
 if os.environ.get("REC_URL"):
     new_tab(os.environ["REC_URL"]); wait_for_load()
@@ -69,6 +69,6 @@ finally:
     cdp("Emulation.clearDeviceMetricsOverride")
     if theme:
         cdp("Emulation.setEmulatedMedia", features=[])
-open(f"{D}/page.txt", "w", encoding="utf-8").write(js("document.body.innerText") or "")
+open(f"{D}/page.txt", "w", encoding="utf-8").write(js("document.documentElement.innerText") or "")
 json.dump({"frames": frames, "marks": marks, "viewport": [W, H]}, open(f"{D}/meta.json", "w"))
 print(json.dumps({"frames": len(frames), "seconds": round(marks["done"] - marks["sent"], 2)}))
