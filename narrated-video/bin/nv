@@ -11,7 +11,8 @@
 #   nv hf-frames <HyperFrames 工程>     按 STORYBOARD 每帧的 build 生成画面（帧模板）
 #   nv hf-build <HyperFrames 工程> [--snap]  一键组装：音效、素材、字体、字幕、index、转场、检查
 #   nv rec <输出.mp4> --prompt <文件>   录 AI 对话实测：粘贴 → 发送 → 回答完（手机竖屏）
-#   nv render <视频目录> [参数]         渲染到 <视频目录>/renders/
+#   nv render <视频目录> [参数]         渲染到 <视频目录>/renders/，完成后自动做成片检查
+#   nv verify <成片.mp4>                成片检查：帧数、时长、声音、尺寸、黑屏
 #   nv <其他>                           透传给 hyperframes（check/snapshot/preview/doctor/lint…）
 set -euo pipefail
 
@@ -33,7 +34,7 @@ cmd="${1:-help}"
 shift || true
 
 case "$cmd" in
-  new | voice | sync | rec | hf-audio | hf-sfx | hf-fonts | hf-kit | hf-frames | hf-build)
+  new | voice | sync | rec | verify | hf-audio | hf-sfx | hf-fonts | hf-kit | hf-frames | hf-build)
     exec node "$SKILL_DIR/scripts/$cmd.mjs" "$@"
     ;;
   render)
@@ -44,10 +45,11 @@ case "$cmd" in
     # 视频目录是作品下的平台子目录（如 03-周报/抖音、2026-10-08-xxx/抖音）时，用作品名命名
     [[ "$parent" =~ ^[0-9]+- ]] && name="$parent"
     mkdir -p "$dir/renders"
-    exec "$HF" render "$dir" -o "$dir/renders/$name.mp4" "$@"
+    "$HF" render "$dir" -o "$dir/renders/$name.mp4" "$@"
+    exec node "$SKILL_DIR/scripts/verify.mjs" "$dir/renders/$name.mp4" --project "$dir"
     ;;
   help | -h | --help)
-    sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
     ;;
   *)
     exec "$HF" "$cmd" "$@"

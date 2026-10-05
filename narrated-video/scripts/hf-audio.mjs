@@ -74,18 +74,22 @@ export function parseHfScript(md) {
 
 // 中文标点 → 英文标点：HyperFrames 的字幕分组只认英文标点为「句末」，一个分句就成为一屏字幕
 const ASCII_PUNCT = { "，": ",", "、": ",", "。": ".", "！": "!", "？": "?", "：": ":", "；": ";", "…": "." };
+const CLAUSE_BREAK = /[，。！？、；：,.!?;:…]/; // 断句的标点；引号、括号、空格等不断句
 const KEYWORD_MARK = "*"; // 字幕「词」以 * 开头 = 重点词（项目字幕皮肤据此高亮，显示时去掉）
 
 /** 逐字时间戳 → 按分句切开（遇标点断句） */
 function toClauses(words) {
   const clauses = [];
   let cur = [];
+  // TTS 的时间戳有时把标点和相邻的字并成一个（如「？AI」），所以按单个字符判断是否断句
   for (const w of words) {
-    if (PUNCTUATION.test(w.text)) {
-      if (cur.length) clauses.push({ chars: cur, punct: ASCII_PUNCT[w.text] ?? w.text });
-      cur = [];
-    } else {
-      cur.push(...[...w.text].map((ch) => ({ text: ch, start: w.start, end: w.end })));
+    for (const ch of w.text) {
+      if (CLAUSE_BREAK.test(ch)) {
+        if (cur.length) clauses.push({ chars: cur, punct: ASCII_PUNCT[ch] ?? ch });
+        cur = [];
+      } else {
+        cur.push({ text: ch, start: w.start, end: w.end });
+      }
     }
   }
   if (cur.length) clauses.push({ chars: cur, punct: "" });

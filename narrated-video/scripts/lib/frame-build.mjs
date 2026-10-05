@@ -93,7 +93,7 @@ export function buildFrame(f) {
       js.push(`tl.fromTo("#P-h${i}", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, ${at(when)});`);
     });
     css.push(".P-label { position: absolute; left: 60px; font-size: 44px; font-weight: 900; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 20px; }");
-    css.push(".P-h { position: absolute; left: 60px; font-size: 104px; font-weight: 900; line-height: 1.2; }");
+    css.push(".P-h { position: absolute; left: 60px; right: 60px; font-size: 104px; font-weight: 900; line-height: 1.2; text-wrap: balance; }");
   }
 
   const T = f.tokens;
@@ -108,7 +108,7 @@ export function buildFrame(f) {
       #${p}-root { position: relative; width: 1080px; height: 1920px; overflow: hidden; container-type: size; font-family: ${T.font}; color: var(--kit-ink);${rootVars} }
       .${p}-ground { position: absolute; inset: 0; background: ${ground}; }
       .${p}-kicker { position: absolute; left: 60px; top: 250px; z-index: 5; font-size: 30px; font-weight: 700; letter-spacing: 0.12em; color: ${accent ? `color-mix(in srgb, ${T.bg} 55%, transparent)` : "var(--kit-accent)"}; }
-      .${p}-lead { position: absolute; left: 60px; z-index: 5; font-size: 52px; font-weight: 500; color: var(--kit-muted); }
+      .${p}-lead { position: absolute; left: 60px; right: 60px; z-index: 5; font-size: 52px; font-weight: 500; color: var(--kit-muted); text-wrap: balance; }
       .${p}-acc { color: var(--kit-accent); }
 ${css.map((c) => `      ${sub(c)}`).join("\n")}
     </style>

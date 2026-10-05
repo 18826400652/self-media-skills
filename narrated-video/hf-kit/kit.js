@@ -35,7 +35,7 @@
     var vars = Object.keys(TOKENS).map(function (k) { return "--kit-" + k + ":" + TOKENS[k] + ";"; }).join("");
     var css = [
       ":root{" + vars + "}",
-      ".kit{position:relative;font-family:var(--kit-font);color:var(--kit-ink);line-height:1.25}",
+      ".kit{position:relative;font-family:var(--kit-font);color:var(--kit-ink);line-height:1.25;text-wrap:balance}",
       ".kit svg{overflow:visible}",
       ".kit-acc{color:var(--kit-accent)}",
       ".kit-muted{color:var(--kit-muted)}",

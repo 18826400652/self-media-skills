@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// 用法：nv hf-build <HyperFrames 工程目录> [--no-check] [--snap]
+// 用法：nv hf-build <HyperFrames 工程目录> [--no-check] [--snap | --motion]
 //
 // 配音（nv hf-audio）和画面（compositions/frames/）都写好之后，一条命令把工程组装成可渲染的状态：
 //   组件库 + 逐字时间 → 同步帧时长 → 按 build 生成画面 → 音效 → 素材 → 字体 → 字幕 → 组装 index → 转场 → lint / check
 // --snap：再按每帧结尾截图，拼成 snapshots/sheet.jpg，用来看图检查。
+// --motion：每帧截入场、中段、落定三张（动画过程），检查元素是否按时出现、过程中有没有穿帮。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
@@ -16,6 +17,7 @@ const FE = join(process.env.FACELESS_DIR || join(homedir(), ".claude", "skills",
 const HF = join(SKILL_DIR, "node_modules", ".bin", "hyperframes");
 const ASSET_SOURCES = ["capture/assets", "public"];
 const SNAP_BEFORE_END = 0.3; // 截每帧结尾前 0.3 秒：动画已落定
+const MOTION_ENTRANCE = 0.35; // 入场时刻：帧开始后 0.35 秒
 
 function run(label, cmd, args, cwd) {
   console.log(`\n▸ ${label}`);
@@ -66,15 +68,29 @@ export function frameEndTimes(dir) {
   });
 }
 
-function snapshotSheet(dir) {
-  const times = frameEndTimes(dir);
+/** 动画过程：每帧取入场、中段、落定三个时刻（借鉴 HyperFrames-RenderKit「看连续帧，不只看结果」） */
+export function frameMotionTimes(dir) {
+  const ends = frameEndTimes(dir);
+  const html = readFileSync(join(dir, "index.html"), "utf8");
+  const starts = [...html.matchAll(/<div[^>]*data-composition-src="compositions\/frames\/[^"]+"[^>]*>/g)]
+    .map((m) => Number(m[0].match(/data-start="([\d.]+)"/)?.[1]))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  const r2 = (x) => Math.round(x * 100) / 100;
+  return starts.flatMap((start, i) => [r2(start + MOTION_ENTRANCE), r2((start + ends[i]) / 2), ends[i]]);
+}
+
+function snapshotSheet(dir, motion) {
+  const times = motion ? frameMotionTimes(dir) : frameEndTimes(dir);
   if (!times.length) throw new Error("index.html 里没找到帧，无法截图");
   rmSync(join(dir, "snapshots"), { recursive: true, force: true });
   run(`截图（${times.length} 帧）`, HF, ["snapshot", ".", "--at", times.join(","), "--no-end"], dir);
-  const cols = Math.min(7, times.length);
+  const cols = motion ? 6 : Math.min(7, times.length); // 动画过程：每行两帧，每帧「入场 / 中段 / 落定」
   execFileSync("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", "snapshots/frame-*.png",
     "-vf", `scale=300:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=6:color=0x444444`, "-frames:v", "1", "snapshots/sheet.jpg"], { cwd: dir });
-  console.log("  ✓ snapshots/sheet.jpg（每帧结尾一张，看图检查断行、遮挡、安全区）");
+  console.log(motion
+    ? "  ✓ snapshots/sheet.jpg（每帧三张：入场 / 中段 / 落定，看元素是否按时出现、过程中有没有穿帮）"
+    : "  ✓ snapshots/sheet.jpg（每帧结尾一张，看图检查断行、遮挡、安全区）");
 }
 
 function main() {
@@ -103,7 +119,7 @@ function main() {
     run("lint", HF, ["lint", "."], dir);
     run("check", HF, ["check", "."], dir);
   }
-  if (args.includes("--snap")) snapshotSheet(dir);
+  if (args.includes("--snap") || args.includes("--motion")) snapshotSheet(dir, args.includes("--motion"));
   console.log("\n✓ 组装完成。看完截图后：nv render <工程>");
 }
 
