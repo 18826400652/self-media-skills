@@ -105,7 +105,7 @@ export function buildFrame(f) {
 <template>
   <div id="${p}-root" data-composition-id="${f.id}" data-start="0" data-duration="${f.duration}" data-width="1080" data-height="1920">
     <style>
-      #${p}-root { position: relative; width: 1080px; height: 1920px; overflow: hidden; container-type: size; font-family: ${T.font}; color: var(--kit-ink);${rootVars} }
+      #${p}-root { position: relative; width: 1080px; height: 1920px; overflow: hidden; container-type: size; font-family: ${T.font}; color: var(--kit-ink); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;${rootVars} }
       .${p}-ground { position: absolute; inset: 0; background: ${ground}; }
       .${p}-kicker { position: absolute; left: 60px; top: 250px; z-index: 5; font-size: 30px; font-weight: 700; letter-spacing: 0.12em; color: ${accent ? `color-mix(in srgb, ${T.bg} 55%, transparent)` : "var(--kit-accent)"}; }
       .${p}-lead { position: absolute; left: 60px; right: 60px; z-index: 5; font-size: 52px; font-weight: 500; color: var(--kit-muted); text-wrap: balance; }

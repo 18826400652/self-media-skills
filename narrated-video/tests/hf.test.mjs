@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { parseHfScript, restoreCase, toCaptionWords } from "../scripts/hf-audio.mjs";
-import { frameEndTimes } from "../scripts/hf-build.mjs";
+import { frameEndTimes, sparseFrames } from "../scripts/hf-build.mjs";
 import { mergeTokens } from "../scripts/hf-kit.mjs";
 import { parseStoryboardSfx } from "../scripts/hf-sfx.mjs";
 import { writeCues } from "../scripts/lib/cues.mjs";
@@ -132,4 +132,13 @@ test("verify.evaluate：帧数、时长、声音、尺寸逐项判断", async ()
   assert.match(msgs, /✗时长 34.60 秒，工程是 30 秒/);
   assert.match(msgs, /✗没有声音流/);
   assert.match(msgs, /⚠有 1 段纯黑画面/);
+});
+
+test("sparseFrames：纵向铺开不到 55% 或面积不到 40% 的帧要警告", () => {
+  const r = sparseFrames([
+    { file: "a.png", occupancy: 0.85, spanX: 0.96, spanY: 0.88 },
+    { file: "b.png", occupancy: 0.41, spanX: 0.89, spanY: 0.46 },
+    { file: "c.png", occupancy: 0.35, spanX: 0.5, spanY: 0.7 },
+  ]);
+  assert.deepEqual(r.map((x) => x.file), ["b.png", "c.png"]);
 });

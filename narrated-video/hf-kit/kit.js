@@ -35,7 +35,7 @@
     var vars = Object.keys(TOKENS).map(function (k) { return "--kit-" + k + ":" + TOKENS[k] + ";"; }).join("");
     var css = [
       ":root{" + vars + "}",
-      ".kit{position:relative;font-family:var(--kit-font);color:var(--kit-ink);line-height:1.25;text-wrap:balance}",
+      ".kit{position:relative;font-family:var(--kit-font);color:var(--kit-ink);line-height:1.25;text-wrap:balance;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}",
       ".kit svg{overflow:visible}",
       ".kit-acc{color:var(--kit-accent)}",
       ".kit-muted{color:var(--kit-muted)}",
@@ -382,14 +382,14 @@
         fill: "none", stroke: T.accent, "stroke-width": 3.5, "stroke-linecap": "round",
       }, over);
       conn.style.opacity = 0;
-      drawOn(tl, conn, end - 0.1, 0.3);
+      drawOn(tl, conn, at + 0.2, 0.25); // 圈、连线、注释几乎同时到位（重点时刻一起命中），不等圈画完再出字
       var label = el("div", "kit-note", stage, m.label);
       label.style.fontSize = num(m.labelSize, 48) + "px";
       var tf = side === "left" ? "translate(-100%,-50%)" : side === "right" ? "translate(0,-50%)" : side === "above" ? "translate(-50%,-100%)" : "translate(-50%,0)";
       label.style.left = lx + "px";
       label.style.top = ly + "px";
       label.style.transform = tf;
-      tl.fromTo(label, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: EASE }, end + 0.12);
+      tl.fromTo(label, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: EASE }, at + 0.3);
     });
   };
 
