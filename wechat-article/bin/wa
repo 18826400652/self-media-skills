@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# wechat-article 入口：wa preview|render|publish <文章.md>
+# wechat-article 入口：wa preview|render|draft|publish <文章.md>
 set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 exec node "$SKILL_DIR/scripts/wa.mjs" "$@"

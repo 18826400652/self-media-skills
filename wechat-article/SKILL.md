@@ -11,17 +11,21 @@ description: >
 ```bash
 wa preview <文章.md>   # 生成同目录的 预览.html：手机宽度预览 + 「复制到公众号」按钮
 wa render  <文章.md>   # 公众号 HTML 输出到标准输出
-wa publish <文章.md>   # 上传图片 + 创建草稿（需要凭据，见 references/publish.md）
+wa draft   <文章.md>   # 用已登录的浏览器存进公众号草稿箱（推荐，任何账号都能用）
+wa publish <文章.md>   # 用接口上传图片 + 创建草稿（需要凭据和接口权限，见 references/publish.md）
 ```
 
-## 两种发布方式
+## 三种发布方式
 
 | 方式 | 步骤 | 适合 |
 |---|---|---|
-| **复制粘贴** | `wa preview` → 浏览器打开 预览.html → 点「复制到公众号」→ 在公众号编辑器粘贴 | 没配 API；文章没有本地图片，或图片手动上传 |
-| **草稿箱 API** | `wa publish` → 到公众号后台草稿箱检查并发布 | 已配置 AppID、AppSecret 和 IP 白名单；本地图片自动上传 |
+| **浏览器发草稿（推荐）** | `wa draft` → 到后台草稿箱「预览」发到手机 → 确认后发表 | 任何账号，包括没有草稿接口的个人号。需要 browser-draft（`bd`），浏览器已登录公众号后台 |
+| **复制粘贴** | `wa preview` → 浏览器打开 预览.html → 点「复制到公众号」→ 在编辑器粘贴 | 不想自动操作浏览器时；本地图片要手动上传 |
+| **草稿箱 API** | `wa publish` → 到后台草稿箱检查并发表 | 已认证账号，配置了 AppID、AppSecret、IP 白名单 |
 
-两种方式都只进草稿或编辑器，**最终发布由人在公众号后台确认**。
+三种方式都只进草稿或编辑器，**最终发表由人在公众号后台确认**。
+
+`wa draft` 会：填标题和作者（作者最多 8 个字）→ 粘贴正文（本地图片内联后自动转存到微信图床）→ 用 frontmatter 的 `cover` 设置封面 → 保存草稿。粘贴时公众号的「内容结构检测」提示会打印出来，它们只是建议，脚本会继续插入（已知规律见 references/publish.md）。
 
 ## 文章格式
 
@@ -59,20 +63,36 @@ source_url: https://…     # 可选，「阅读原文」链接
 
 ## 主题
 
-`wechat-article.config.json` 的 `theme` 有两种写法：
-- 文颜内置主题 ID：`default`、`orangeheart`、`rainbow`、`lapis`、`pie`、`maize`、`purple`、`phycat`
+`wechat-article.config.json` 的 `theme` 有三种写法（按这个顺序查找）：
 - 自定义主题 `.css` 文件路径（相对配置文件）
+- 本 skill 自带主题名（`themes/<名字>.css`）：
+  - `grace`：移植自 [doocs/md](https://github.com/doocs/md)（13k★，WTFPL）的 grace 主题，墨色主色；二级标题是墨色圆角色块配荧光黄字，加粗是荧光笔效果；代码块自动换行、表格适配手机宽度
+  - `highlighter`：自写的「荧光笔学习笔记」，更素：二级标题是荧光笔划线，没有色块
+- 文颜内置主题 ID：`default`、`orangeheart`、`rainbow`、`lapis`、`pie`、`maize`、`purple`、`phycat`
+
+### 从 doocs/md 导入主题
+
+doocs/md 是国内用得最多的公众号 Markdown 编辑器，主题有 `default`、`grace`、`simple`。它的 CSS 不是给文颜写的，用脚本转换：
+
+```bash
+python3 scripts/doocs-theme.py grace --primary '#1f2024' --extra themes/src/grace.extra.css > themes/grace.css
+```
+
+- `--primary` 是主色（二级标题色块、引用竖线等）；`--extra` 是追加在最后的适配 CSS，品牌色和手机阅读的修正写在这里（`themes/src/grace.extra.css`），不要直接改生成的 `themes/grace.css`
+- 脚本会把 `var()`、`calc()`、`color-mix()` 算成具体值（公众号编辑器不认），并恢复列表符号（doocs 靠它的渲染器插入，文颜没有）
+- 引用的 doocs 版本固定在脚本的 `REF`，升级时改它再重新生成，截图检查
 
 自定义主题的写法：
 - 选择器都以 `#wenyan` 开头（如 `#wenyan h2 span`、`#wenyan strong`）。
 - 可以用 CSS 变量，文颜渲染时会解析成具体值。
 - 公众号不支持外部 CSS、`position`、动画；伪元素的支持也不稳定。装饰效果尽量用 `background`、`border` 实现。
+- 代码块（`pre` / `code.hljs`）的底色、字色、`code` 内边距会被代码高亮主题（`highlight`）覆盖：文颜最后应用它，主题里写的不生效。代码块的留白写在 `pre` 的 `padding` 上。
 - 写完后用 `wa preview` 截图检查。
 
 ## 项目配置 wechat-article.config.json（可选，向上查找）
 
 ```json
-{ "theme": "品牌/wechat-theme.css", "highlight": "solarized-light", "envFile": ".env", "macStyle": false }
+{ "theme": "grace", "highlight": "solarized-light", "envFile": ".env", "macStyle": false }
 ```
 
 - `highlight`：代码高亮主题

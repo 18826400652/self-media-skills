@@ -1,5 +1,5 @@
 /* 公众号排版主题「荧光笔学习笔记」（文颜自定义主题）。
-   公众号是浅色阅读界面，所以用纸白底 + 墨色字，荧光黄只做重点标记。品牌规范见 视觉规范.md。 */
+   公众号是浅色阅读界面，所以用纸白底 + 墨色字，荧光黄只做重点标记。颜色都在开头的变量里，换品牌色改这几个变量即可。 */
 
 #wenyan {
   --ink: #1f2024;
@@ -120,16 +120,19 @@
 /* 代码块：提示词、代码 */
 #wenyan pre {
   margin: 1.4em 0;
-  padding: 1em;
+  padding: 0.75em 0.85em;
   border-radius: 8px;
   background: var(--paper-deep);
   border: 1px solid var(--line);
-  font-size: 13px;
-  line-height: 1.7;
+  font-size: 14px;
+  line-height: 1.75;
 }
 
+/* 代码块里多是中文提示词：用正文字体，等宽字体下中文字距发散。
+   底色、字色由代码高亮主题（config 的 highlight）覆盖，文颜最后应用它，这里改不了 */
 #wenyan pre code {
-  font-family: Menlo, Consolas, "Noto Sans Mono CJK SC", monospace;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC",
+    "Microsoft YaHei", Menlo, Consolas, monospace;
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -152,7 +155,8 @@
   width: 100%;
   margin: 1.4em 0;
   border-collapse: collapse;
-  font-size: 0.92em;
+  font-size: 0.88em;
+  line-height: 1.6;
 }
 
 #wenyan th {
@@ -162,7 +166,7 @@
 
 #wenyan th,
 #wenyan td {
-  padding: 0.6em 0.8em;
+  padding: 0.5em 0.55em;
   border: 1px solid var(--line);
   text-align: left;
 }

@@ -2,11 +2,13 @@
 // 用法：
 //   wa preview <文章.md>     生成 预览.html（手机宽度 + 「复制到公众号」按钮），路径打印出来
 //   wa render  <文章.md>     输出公众号 HTML 到标准输出
-//   wa publish <文章.md>     上传图片并发布到公众号草稿箱（需要 AppID/AppSecret 与 IP 白名单）
+//   wa draft   <文章.md>     用已登录的浏览器把文章存进公众号草稿箱（任何账号可用，依赖 browser-draft 的 bd）
+//   wa publish <文章.md>     用接口上传图片并存草稿（需要 AppID/AppSecret、IP 白名单和草稿接口权限，个人号没有）
 // 主题、凭据文件等来自项目配置 wechat-article.config.json（向上查找）。
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -27,7 +29,7 @@ function loadConfig(start) {
   return { ...DEFAULTS, ...JSON.parse(readFileSync(path, "utf8")), root: dirname(path) };
 }
 
-/** theme 既可以是文颜内置主题 ID，也可以是 .css 文件路径（相对配置文件） */
+/** theme 可以是：.css 文件路径（相对配置文件）、本 skill themes/ 下的主题名、文颜内置主题 ID */
 function themeArgs(config) {
   const args = ["-h", config.highlight, config.macStyle ? "--mac-style" : "--no-mac-style"];
   if (config.theme.endsWith(".css")) {
@@ -35,6 +37,8 @@ function themeArgs(config) {
     if (!existsSync(css)) throw new Error(`主题文件不存在：${css}`);
     return [...args, "-c", css];
   }
+  const bundled = join(SKILL_DIR, "themes", `${config.theme}.css`);
+  if (existsSync(bundled)) return [...args, "-c", bundled];
   return [...args, "-t", config.theme];
 }
 
@@ -47,9 +51,43 @@ function render(file, config) {
   return wenyan(["render", "-f", file, ...themeArgs(config)]);
 }
 
-function frontmatterTitle(file) {
-  const m = readFileSync(file, "utf8").match(/^---\n[\s\S]*?^title:\s*(.+)$/m);
-  return m ? m[1].trim().replace(/^["']|["']$/g, "") : basename(file, ".md");
+function frontmatterField(file, field) {
+  const m = readFileSync(file, "utf8").match(new RegExp(`^---\\n[\\s\\S]*?^${field}:\\s*(.+)$`, "m"));
+  return m ? m[1].trim().replace(/^["']|["']$/g, "") : "";
+}
+
+const frontmatterTitle = (file) => frontmatterField(file, "title") || basename(file, ".md");
+
+const MIME = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp" };
+
+/** 本地图片转成 data: 内联：粘贴进公众号编辑器后会自动转存到微信图床 */
+function inlineLocalImages(html, baseDir) {
+  let count = 0;
+  const out = html.replace(/src="([^"]+)"/g, (whole, src) => {
+    if (/^(https?:|data:)/.test(src)) return whole;
+    const path = resolve(baseDir, decodeURIComponent(src));
+    const mime = MIME[extname(path).toLowerCase()];
+    if (!mime || !existsSync(path)) throw new Error(`正文图片不存在或格式不支持：${path}`);
+    count += 1;
+    return `src="data:${mime};base64,${readFileSync(path).toString("base64")}"`;
+  });
+  return { html: out, count };
+}
+
+function draft(file, config) {
+  const { html, count } = inlineLocalImages(render(file, config), dirname(file));
+  const coverField = frontmatterField(file, "cover");
+  const cover = coverField ? resolve(dirname(file), coverField) : "";
+  if (cover && !existsSync(cover)) throw new Error(`封面不存在：${cover}`);
+  const payload = { title: frontmatterTitle(file), author: frontmatterField(file, "author"), html, cover, images: count };
+  const payloadFile = join(mkdtempSync(join(tmpdir(), "wa-draft-")), "payload.json");
+  writeFileSync(payloadFile, JSON.stringify(payload));
+  try {
+    execFileSync("bd", ["run", join(SKILL_DIR, "scripts", "draft_wechat.py"), payloadFile], { stdio: "inherit" });
+  } catch (err) {
+    if (err.code === "ENOENT") throw new Error("需要 browser-draft 的 bd 命令（skills/browser-draft，软链接到 PATH）");
+    throw new Error("发草稿失败，看上面的输出");
+  }
 }
 
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -75,9 +113,9 @@ function publish(file, config) {
 
 function main() {
   const [cmd, file] = process.argv.slice(2);
-  const commands = { preview, publish, render: (f, c) => process.stdout.write(render(f, c)) };
+  const commands = { preview, draft, publish, render: (f, c) => process.stdout.write(render(f, c)) };
   if (!commands[cmd] || !file) {
-    console.error("用法：wa preview|render|publish <文章.md>");
+    console.error("用法：wa preview|render|draft|publish <文章.md>");
     process.exit(1);
   }
   const path = resolve(file);

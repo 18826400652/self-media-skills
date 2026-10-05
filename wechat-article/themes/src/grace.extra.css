@@ -1,0 +1,61 @@
+/* ===== 适配：荧光笔品牌 + 手机阅读修正（doocs-theme.py --extra 追加在最后，覆盖前面的规则） =====
+   注意：line-height 会被脚本按 16px 换算成 px（公众号只认 px 行高），所以这里的数字是「16px 的倍数」，
+   不是相对本元素字号。例如 14px 的代码块写 1.55 → 25px。 */
+
+/* 二级标题：墨色块配荧光黄字，和视频的深色画面呼应 */
+#wenyan h2 {
+  padding: 0.3em 0.8em;
+  font-size: 19px;
+  color: #ffd84d;
+}
+
+/* 加粗 = 荧光笔划过（doocs 原本是主色文字）。
+   用纯色底而不是「下半截渐变」：公众号检测会报文字背景渐变（深色模式下显示异常） */
+#wenyan strong {
+  padding: 0 0.1em;
+  color: #0a0a0a;
+  background: #fff1b8;
+}
+
+/* 引用：中文没有真斜体，浏览器硬拉的斜体难看 */
+#wenyan blockquote {
+  font-style: normal;
+  border-left-color: #ffd84d;
+  background: #f7f7f7;
+}
+
+/* 代码块：多是给读者复制的中文提示词，必须自动换行（doocs 默认不换行，手机上会截断）；
+   用正文字体，等宽字体下中文字距发散 */
+#wenyan pre {
+  padding: 0.75em 0.85em !important;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+#wenyan pre code {
+  display: block;
+  padding: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC",
+    "Microsoft YaHei", Menlo, Consolas, monospace;
+}
+
+/* 表格：手机宽度下 4 列要放得下；doocs 的 keep-all 会让中文不换行、把表撑出屏幕 */
+#wenyan table {
+  margin: 1em 0;
+  font-size: 0.88em;
+  line-height: 1.45;
+}
+
+#wenyan th,
+#wenyan td {
+  padding: 0.5em 0.55em;
+  word-break: normal;
+}
+
+/* 表头不折行：「类别」这种两字表头在窄列里会被挤成竖排 */
+#wenyan th {
+  white-space: nowrap;
+  background: #fff1b8;
+}
