@@ -2,7 +2,8 @@
 
 讲解类竖屏视频的固定画面组件。目的是**少而固定**：观众看几期就能认出每种画面代表什么，AI 写分镜时也只在这张表里选。
 
-- 组件源码：`hf-kit/kit.js`（一个文件，10 个组件）
+- 组件源码：`hf-kit/kit.js`（14 个基础组件）、`hf-kit/kit-scenes.js`（场景组件 `chat`、`answer`）、`hf-kit/kit-glow.js`（glow 质感层和玻璃皮肤）
+- 视觉风格：项目配置 `hfKit.look`：`"flat"`（默认，纯色底）或 `"glow"`（光晕颗粒底色、HUD 四角和进度条、玻璃卡片、荧光笔笔触）。帧模板会按配置自动引用 `kit-glow.js`；**手写的帧要自己加** `<script src="compositions/kit/kit-glow.js"></script>`（放在 kit.js 之后），并给底色元素加 `class="kit-atmo"`
 - 装进工程：`nv hf-kit <工程>`（`nv hf-build` 会自动做）→ `compositions/kit/kit.js`（写入项目品牌色）和 `cues.js`（逐字时间）
 - 品牌色：项目配置 `narrated-video.config.json` 的 `hfKit.tokens`（`accent ink muted bg surface line font mono`）。单帧要换色时，在该帧根元素上覆盖 `--kit-accent` 等 CSS 变量
 
@@ -16,6 +17,8 @@
 | 一个关键数字（用时、条数、倍数、比例） | `Kit.number` 大数字 | 「8 秒」从 0 数上来 |
 | 结论、要观众记住的一句话 | `Kit.marker` 荧光笔 | 「一定让它**列编号**」 |
 | AI 出错了、要指出问题在哪 | `Kit.annotate` 圈词加注释 | 圈住「数错了」，注「第 5 条算了两次」 |
+| 开头的工作场景（领导 @你、同事回消息） | `Kit.chat` 聊天界面 | 群里刘总 @你要纪要 → 你发出 AI 写的纪要 → 阿杰「？？」（默认标「情景演绎」） |
+| AI 的回答（尤其是表格），要指出其中某一行 | `Kit.answer` 重建 AI 回答 | DeepSeek 待办表，推近到「王杰」那一行，圈出并贴「其实是王姐」 |
 | 真实截图里的证据 | `Kit.shot` 截图证据 | 截图推近，手绘圈圈住两个「5」 |
 | 引用 AI 的原话 | `Kit.stream` 逐段出现 | DeepSeek 回答原文 |
 | 演示怎么问（提示词） | `Kit.prompt` 打字 | 实测用的提示词原文 |
@@ -35,6 +38,7 @@
 3. **放在内容区**：宿主元素放在安全区内（抖音竖屏：x 60–1020，y 230–1150），宽度用 `width:960px`。字幕区和平台遮挡区不放组件。
 4. **截图只用实测的真实截图**，坐标用**原图像素**（截图工具量出来的位置），不用换算。
 5. **文字必须是真实内容**：AI 的原话、提示词、结果都来自实测记录，不编。
+5a. `Kit.chat` 是**演示场景**，默认显示「情景演绎」；只有对话全部来自真实记录时才写 `staged: false`。**不要用 chat 伪造 AI 的回答**，AI 的回答用 `Kit.answer` 放实测原文，`source` 写清是第几轮实测。
 6. 字体里没有的符号会显示成方块：用 `×` `✓`，不要用 `✗` `✘` `✔`。`nv hf-fonts` 会列出缺字。
 7. 同一组件在一帧里、一个视频里都可以用多次。
 
@@ -94,6 +98,8 @@
 | `Kit.checklist` | `title`、`items`=[字符串或 {`text`,`at`,`checkAt`}]、`at`、`stagger`=0.4、`size`=68。每条说到时出现并打勾；两条时内容偏少，宿主往下放或加大 `size` |
 | `Kit.steps` | `steps`=[{`title`,`desc`,`at`}]、`at`、`stagger`=0.6、`size`=76（说明文字 0.58 倍）。竖线随口播长到当前一步 |
 | `Kit.chain` | `cards`=[{`tag`,`text`,`at`}]、`at`、`stagger`=0.7、`size`=60。箭头往下长，最后一张（结果）描强调色边；只写真实的因果，不凑三段 |
+| `Kit.chat` | `title` 群名、`count` 人数、`staged`=true、`at`=0、`stagger`=0.5、`height`=760（面板总高，消息超出时自动上推）、`size`=34、`messages`=[{`from`,`text`,`me`,`tone`:`"bad"`,`doc`:{`title`,`tag`,`head`,`rows`,`mark`:{`row`,`col`,`at`}},`at`}]。`text` 里的 `@某人` 自动高亮；`mark` 的行列从 0 数 |
+| `Kit.answer` | `source`（必填，出处）、`app`=`"DeepSeek"`、`blocks`=[{`h`}\|{`p`}\|{`table`:{`head`,`rows`}}]、`at`=0、`size`=27、`focus`={`row`（第一个表格的数据行，从 0 数）,`col`,`at`,`note`,`noteAt`}。`focus` 时面板虚化、那一行放大浮出 |
 
 `Kit.shot` 的圈按推近后的画面计算位置，所以圈要安排在推近结束之后。手绘圈和圈词注释画完后会有轻微的手绘抖动（固定节奏，渲染结果可复现），持续到 `until`（默认画完后 6 秒）。
 

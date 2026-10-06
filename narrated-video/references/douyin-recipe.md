@@ -118,6 +118,11 @@
 - build: {"kit":{"name":"template","top":480,"opts":{"title":"提问模板 · 截图保存","lines":["你是一名【你的岗位】。"],"at":0.05}}}
 - build: {"title":{"label":"下一课","lines":[{"text":"为啥 AI 写方案，","at":"@为啥"},{"text":"总是**一堆废话**？","at":"@总是"}]}}
 - build: {"ground":"accent","lead":{"text":"DeepSeek 原话","top":440},"kit":{"name":"stream","top":520,"opts":{"text":"……","at":"@说好"}}}
+
+**钩子帧优先用 `chat`**：把痛点演成上班族熟悉的聊天（默认标「情景演绎」）。**实测结果优先用 `answer`**（实测原文重建，字清楚、能推近到一行），只有要证明「真的跑过」时才放录屏或截图。项目配置 `hfKit.look: "glow"` 时所有帧自动带光晕底色、HUD 和玻璃卡片。
+
+- build: {"kicker":false,"kit":{"name":"chat","top":300,"opts":{"title":"双十一筹备群","count":5,"height":820,"messages":[{"from":"刘总","text":"@你 十分钟后把会议纪要发群里","at":0.1},{"from":"我","me":true,"doc":{"title":"双十一筹备会纪要","tag":"AI 整理","head":["事项","负责人","截止"],"rows":[["提货点海报重做","阿杰","未明确"]],"mark":{"row":0,"col":1,"at":"@派给了"}},"at":"@AI"},{"from":"阿杰","text":"？？海报我啥时候认领的","tone":"bad","at":"@同事"}]}}}
+- build: {"lead":{"text":"它踩了 **3 个坑**","top":300},"kit":{"name":"answer","top":400,"opts":{"source":"DeepSeek 原话 · 实测第 1 轮","blocks":[{"h":"二、待办事项"},{"table":{"head":["事项","负责人","截止时间"],"rows":[["……实测原文……"]]}}],"focus":{"row":2,"col":1,"at":"@抄错","note":"其实是「王姐」"}}}}
 ```
 
 可用部件（可组合，按需写）：
