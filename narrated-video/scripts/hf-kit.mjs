@@ -12,7 +12,7 @@ import { isMain } from "./lib/is-main.mjs";
 
 const SRC = join(SKILL_DIR, "hf-kit", "kit.js");
 /** 和 kit.js 一起装进工程的文件（不需要写入 token） */
-export const KIT_FILES = ["kit-glow.js"];
+export const KIT_FILES = ["kit-glow.js", "kit-scenes.js"];
 const TOKENS_RE = /\/\*KIT_TOKENS\*\/([\s\S]*?)\/\*END_KIT_TOKENS\*\//;
 const TOKEN_KEYS = ["accent", "ink", "muted", "bg", "surface", "line", "danger", "font", "mono"];
 

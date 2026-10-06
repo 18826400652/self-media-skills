@@ -221,3 +221,11 @@ test("帧模板 glow：accent 底不加光晕；kicker false 只去掉角标；g
   assert.match(noKicker, /class="kit-hud"><i class="c tl">/);
   assert.throws(() => buildFrame({ ...f, total: undefined, build: {} }), /glow 需要 total/);
 });
+
+test("帧模板：每帧都引用 kit-scenes.js（在 kit.js 之后）", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const html = buildFrame({ n: 1, id: "01-h", duration: 2, kicker: "K", tokens: FLAT_TOKENS, build: {} });
+  assert.match(html, /<script src="compositions\/kit\/kit\.js"><\/script>\s*<script src="compositions\/kit\/kit-scenes\.js"><\/script>/);
+  const glow = buildFrame({ n: 1, id: "01-h", duration: 2, kicker: "K", tokens: FLAT_TOKENS, build: {}, look: "glow", total: 2 });
+  assert.match(glow, /kit\.js"><\/script>\s*<script src="compositions\/kit\/kit-glow\.js"><\/script>\s*<script src="compositions\/kit\/kit-scenes\.js"><\/script>/);
+});

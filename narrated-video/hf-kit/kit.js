@@ -703,6 +703,8 @@
   };
 
   Kit.look = "flat"; // 加载 kit-glow.js 后变成 "glow"，组件按它切换笔触
+  // 给 kit-scenes.js 等扩展文件复用的内部工具（不是对外接口，帧里不要直接用）
+  Kit._u = { EASE: EASE, el: el, svgEl: svgEl, tok: tok, hostOf: hostOf, num: num, inFrom: inFrom, drawOn: drawOn, boil: boil, wobblyEllipse: wobblyEllipse, hashText: hashText, itemsWithTimes: itemsWithTimes };
 
   window.Kit = Kit;
 })();

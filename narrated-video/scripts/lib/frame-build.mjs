@@ -144,7 +144,8 @@ ${glow ? `    ${hudPart(f.n, f.total)}\n` : ""}${b.kicker === false ? "" : `    
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script src="compositions/kit/cues.js"></script>
     <script src="compositions/kit/kit.js"></script>
-${glow ? '    <script src="compositions/kit/kit-glow.js"></script>\n' : ""}    <script>
+${glow ? '    <script src="compositions/kit/kit-glow.js"></script>\n' : ""}    <script src="compositions/kit/kit-scenes.js"></script>
+    <script>
       (function () {
         var tl = gsap.timeline({ paused: true });
         var E = "power3.out";

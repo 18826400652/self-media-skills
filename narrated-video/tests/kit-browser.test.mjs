@@ -60,3 +60,61 @@ test("marker：glow 下是不透明笔触，涂完关键词变深色字", opt, a
     await k.close();
   }
 });
+
+const CHAT = {
+  title: "双十一筹备群", count: 5, at: 0, stagger: 0.5,
+  messages: [
+    { from: "刘总", text: "@你 十分钟后把会议纪要发群里" },
+    { from: "我", me: true, doc: { title: "双十一筹备会纪要", tag: "AI 整理", head: ["事项", "负责人", "截止"], rows: [["活动页上线", "小林", "周五"], ["提货点海报重做", "阿杰", "未明确"]], mark: { row: 1, col: 1, at: 1.6 } } },
+    { from: "阿杰", text: "？？<b>海报</b> & 我啥时候认领的", tone: "bad" },
+  ],
+};
+
+test("Kit.chat：消息依次出现，@人高亮，文档卡画红圈，默认标「情景演绎」", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-scenes.js"] });
+  try {
+    const r = await k.page.evaluate((o) => {
+      const tl = gsap.timeline({ paused: true });
+      Kit.chat(tl, "#host", o);
+      const vis = () => [...document.querySelectorAll(".kit-chat .msg")].map((m) => Number(getComputedStyle(m).opacity) > 0.5);
+      tl.seek(0.3);
+      const early = vis();
+      tl.seek(4);
+      return {
+        early, late: vis(),
+        staged: document.querySelector(".kit-chat-staged")?.textContent,
+        mention: document.querySelector(".kit-chat .bub .kit-acc")?.textContent,
+        ring: Number(getComputedStyle(document.querySelector(".kit-chat .doc td .kit-ring path")).opacity),
+        bad: document.querySelector(".kit-chat .msg.bad .bub").textContent,
+        badHtml: document.querySelector(".kit-chat .msg.bad .bub b") === null,
+      };
+    }, CHAT);
+    assert.deepEqual(r.early, [true, false, false]);
+    assert.deepEqual(r.late, [true, true, true]);
+    assert.equal(r.staged, "情景演绎");
+    assert.equal(r.mention, "@你");
+    assert.equal(r.ring, 1);
+    assert.equal(r.bad, "？？<b>海报</b> & 我啥时候认领的");
+    assert.equal(r.badHtml, true, "消息文字不当成 HTML");
+  } finally {
+    await k.close();
+  }
+});
+
+test("Kit.chat：staged false 不显示标签；消息超出高度时整体上推，最后一条在面板里", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-scenes.js"] });
+  try {
+    const r = await k.page.evaluate(() => {
+      const tl = gsap.timeline({ paused: true });
+      const messages = Array.from({ length: 12 }, (_, i) => ({ from: i % 2 ? "小林" : "刘总", text: "第 " + (i + 1) + " 条消息，内容稍微长一点占两行也没关系" }));
+      Kit.chat(tl, "#host", { title: "群", staged: false, height: 600, stagger: 0.4, messages });
+      tl.seek(10);
+      const view = document.querySelector(".kit-chat .view").getBoundingClientRect();
+      const last = [...document.querySelectorAll(".kit-chat .msg")].pop().getBoundingClientRect();
+      return { staged: !!document.querySelector(".kit-chat-staged"), inside: last.bottom <= view.bottom + 1 && last.top >= view.top };
+    });
+    assert.deepEqual(r, { staged: false, inside: true });
+  } finally {
+    await k.close();
+  }
+});
