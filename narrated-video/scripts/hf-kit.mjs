@@ -4,13 +4,15 @@
 // 把画面组件库 hf-kit/kit.js 装进工程（compositions/kit/kit.js），
 // 并把项目配置 hfKit.tokens 里的品牌色、字体写进去。组件的用法和选用表见 references/hf-kit.md。
 // 改了品牌配置或升级了组件库后重跑即可（会覆盖工程里的 kit.js）。
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { SKILL_DIR, loadConfig } from "./lib/config.mjs";
 import { writeCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
 
 const SRC = join(SKILL_DIR, "hf-kit", "kit.js");
+/** 和 kit.js 一起装进工程的文件（不需要写入 token） */
+export const KIT_FILES = ["kit-glow.js"];
 const TOKENS_RE = /\/\*KIT_TOKENS\*\/([\s\S]*?)\/\*END_KIT_TOKENS\*\//;
 const TOKEN_KEYS = ["accent", "ink", "muted", "bg", "surface", "line", "danger", "font", "mono"];
 
@@ -38,7 +40,8 @@ function main() {
   mkdirSync(outDir, { recursive: true });
   const out = join(outDir, "kit.js");
   writeFileSync(out, source.replace(TOKENS_RE, `/*KIT_TOKENS*/ ${JSON.stringify(tokens)} /*END_KIT_TOKENS*/`));
-  console.log(`✓ compositions/kit/kit.js（品牌色：${Object.keys(overrides).length ? "项目配置 hfKit.tokens" : "默认配色"}）`);
+  for (const f of KIT_FILES) copyFileSync(join(SKILL_DIR, "hf-kit", f), join(outDir, f));
+  console.log(`✓ compositions/kit/kit.js + ${KIT_FILES.join("、")}（品牌色：${Object.keys(overrides).length ? "项目配置 hfKit.tokens" : "默认配色"}）`);
   const cueFrames = writeCues(dir);
   console.log(cueFrames ? `✓ compositions/kit/cues.js（${cueFrames} 帧的逐字时间）` : "  还没有配音（audio_meta.json），cues.js 等 nv hf-audio 之后生成");
   console.log("  在帧里引用：<script src=\"compositions/kit/kit.js\"></script>，用法见 references/hf-kit.md");

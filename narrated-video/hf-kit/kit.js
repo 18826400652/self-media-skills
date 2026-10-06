@@ -289,19 +289,27 @@
     if (!key) return;
     key.classList.add("kit-acc");
     var under = o.style === "underline";
+    var glow = Kit.look === "glow" && !under; // glow：不透明荧光笔笔触，涂完后关键词变深色字
     var svg = svgEl("svg", { viewBox: "0 0 100 40", preserveAspectRatio: "none" }, key);
     svg.style.cssText = under
       ? "left:-2%;width:104%;top:88%;height:18%"
-      : "left:-4%;width:108%;top:50%;height:45%";
+      : glow
+        ? "left:-6%;width:112%;top:8%;height:96%;transform:rotate(-1.2deg)"
+        : "left:-4%;width:108%;top:50%;height:45%";
     var path = svgEl("path", {
-      d: under ? "M 2 20 C 24 14, 52 26, 98 16" : "M 2 22 C 26 17, 58 26, 98 19",
+      d: under ? "M 2 20 C 24 14, 52 26, 98 16" : glow ? "M 3 21 C 30 17, 62 24, 97 18" : "M 2 22 C 26 17, 58 26, 98 19",
       fill: "none",
       stroke: T.accent,
-      "stroke-width": under ? 9 : 36,
+      "stroke-width": under ? 9 : glow ? 32 : 36,
       "stroke-linecap": "round",
     }, svg);
     path.style.opacity = 0;
-    drawOn(tl, path, at, 0.5, under ? 1 : 0.32);
+    if (glow) {
+      path.style.filter = "drop-shadow(0 0 14px " + T.accent + ")";
+      key.style.textShadow = "none";
+    }
+    drawOn(tl, path, at, 0.5, under ? 1 : glow ? 0.92 : 0.32);
+    if (glow) tl.fromTo(key, { color: T.accent }, { color: T.bg, duration: 0.2, ease: "none" }, at + 0.15);
   };
 
   /** 圈词加注释：圈出关键词，引线连到一句说明。{ text, key, note, at, inAt=0, size=96, seed } */
@@ -693,6 +701,8 @@
       inFrom(tl, cd, x.at, 24);
     });
   };
+
+  Kit.look = "flat"; // 加载 kit-glow.js 后变成 "glow"，组件按它切换笔触
 
   window.Kit = Kit;
 })();

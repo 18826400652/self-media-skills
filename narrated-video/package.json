@@ -2,11 +2,12 @@
   "name": "narrated-video",
   "private": true,
   "type": "module",
-  "description": "\u914d\u97f3\u8bb2\u89e3\u89c6\u9891\u5de5\u5177\uff1a\u811a\u672c \u2192 AI \u914d\u97f3 \u2192 \u65f6\u95f4\u8f74\u540c\u6b65 \u2192 HyperFrames \u52a8\u753b \u2192 MP4",
+  "description": "配音讲解视频工具：脚本 → AI 配音 → 时间轴同步 → HyperFrames 动画 → MP4",
   "bin": {
     "nv": "bin/nv"
   },
   "devDependencies": {
+    "gsap": "3.14.2",
     "hyperframes": "0.8.119",
     "yauzl": "^3.4.0"
   },
