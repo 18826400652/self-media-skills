@@ -6,7 +6,7 @@
 // nv hf-build 会自动调用本命令。
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { SKILL_DIR, loadConfig } from "./lib/config.mjs";
+import { SKILL_DIR, loadConfig, resolveLook } from "./lib/config.mjs";
 import { buildFrame, parseStoryboardFrames } from "./lib/frame-build.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { mergeTokens } from "./hf-kit.mjs";
@@ -19,18 +19,20 @@ function main() {
     process.exit(1);
   }
   const { kicker, frames } = parseStoryboardFrames(readFileSync(sbPath, "utf8"));
-  const tokens = mergeTokens(readFileSync(join(SKILL_DIR, "hf-kit", "kit.js"), "utf8"), loadConfig(dir).hfKit?.tokens ?? {});
+  const config = loadConfig(dir);
+  const tokens = mergeTokens(readFileSync(join(SKILL_DIR, "hf-kit", "kit.js"), "utf8"), config.hfKit?.tokens ?? {});
+  const look = resolveLook(config);
   mkdirSync(join(dir, "compositions", "frames"), { recursive: true });
   let built = 0;
   for (const f of frames) {
     if (!f.build) continue;
     if (!f.id) throw new Error(`第 ${f.n} 帧缺少 src（如 compositions/frames/0${f.n}-hook.html）`);
     if (!(f.duration > 0)) throw new Error(`第 ${f.n} 帧缺少 duration（先运行 nv hf-audio，再由 nv hf-build 同步时长）`);
-    writeFileSync(join(dir, f.src), buildFrame({ ...f, kicker, tokens }));
+    writeFileSync(join(dir, f.src), buildFrame({ ...f, kicker, tokens, look, total: frames.length }));
     built++;
   }
   const manual = frames.filter((f) => !f.build).map((f) => f.n);
-  console.log(`✓ 按 build 生成 ${built} 帧${manual.length ? `；手写的帧：${manual.join("、")}` : ""}`);
+  console.log(`✓ 按 build 生成 ${built} 帧（${look}）${manual.length ? `；手写的帧：${manual.join("、")}` : ""}`);
 }
 
 if (isMain(import.meta.url)) {

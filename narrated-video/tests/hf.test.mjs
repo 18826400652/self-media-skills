@@ -174,3 +174,50 @@ test("mergeTokens 认识 danger，kit.js 默认值是 #FF5A5F", () => {
   assert.equal(mergeTokens(KIT_SRC, {}).danger, "#FF5A5F");
   assert.equal(mergeTokens(KIT_SRC, { danger: "#E00" }).danger, "#E00");
 });
+
+const FLAT_TOKENS = { accent: "#FFD84D", ink: "#F4F1EA", muted: "#888", bg: "#101114", surface: "#1B1D22", line: "#2C2F36", font: "sans-serif" };
+const FLAT_BUILD = { camera: "push", rec: { mediaStart: 1, chip: "录屏" }, timer: { value: 2, note: "原速" }, lead: { text: "**x**" }, kit: { name: "compare", opts: { at: [0, 1] } }, title: { label: "L", lines: ["a"] } };
+
+test("帧模板 flat：输出和改动前逐字一致", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const html = buildFrame({ n: 2, id: "02-x", duration: 3, kicker: "K", tokens: FLAT_TOKENS, build: FLAT_BUILD, look: "flat", total: 5 })
+    + buildFrame({ n: 3, id: "03-y", duration: 2, kicker: "K", tokens: FLAT_TOKENS, build: { ground: "accent", title: { lines: ["b"] } }, total: 5 });
+  assert.equal(html, readFileSync(new URL("./fixtures/frame-flat.html", import.meta.url), "utf8"));
+});
+
+test("progressSegments：封顶 8 段，第一帧至少一段，最后一帧全亮", async () => {
+  const { progressSegments } = await import("../scripts/lib/frame-build.mjs");
+  assert.deepEqual(progressSegments(1, 5), { count: 5, lit: 1 });
+  assert.deepEqual(progressSegments(3, 5), { count: 5, lit: 3 });
+  assert.deepEqual(progressSegments(1, 19), { count: 8, lit: 1 });
+  assert.deepEqual(progressSegments(10, 19), { count: 8, lit: 4 });
+  assert.deepEqual(progressSegments(19, 19), { count: 8, lit: 8 });
+});
+
+test("帧模板 glow：底色层、HUD、进度条、kit-glow.js、样式钩子", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const f = { n: 2, id: "02-x", duration: 3, kicker: "K", tokens: FLAT_TOKENS, look: "glow", total: 4 };
+  const html = buildFrame({ ...f, build: FLAT_BUILD });
+  assert.match(html, /class="p02-ground kit-atmo clip"/);
+  assert.match(html, /\.p02-ground \{ position: absolute; inset: 0; background-color: var\(--kit-bg\); \}/);
+  assert.match(html, /<div class="kit-hud"><i class="c tl"><\/i><i class="c tr"><\/i><i class="c bl"><\/i><i class="c br"><\/i><div class="kit-progress"><i class="on"><\/i><i class="on"><\/i><i><\/i><i><\/i><\/div><\/div>/);
+  assert.match(html, /class="p02-kicker kit-kicker">K/);
+  assert.match(html, /class="p02-chip kit-chip"/);
+  assert.match(html, /class="p02-panel kit-glass-panel"/);
+  assert.match(html, /class="p02-label kit-label"/);
+  assert.match(html, /<script src="compositions\/kit\/kit\.js"><\/script>\s*<script src="compositions\/kit\/kit-glow\.js"><\/script>/);
+  assert.ok(html.indexOf('class="kit-hud"') < html.indexOf('id="p02-cam"'), "HUD 在推镜层外面，不跟着推");
+});
+
+test("帧模板 glow：accent 底不加光晕；kicker false 只去掉角标；glow 必须给 total", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const f = { n: 1, id: "01-h", duration: 2, kicker: "K", tokens: FLAT_TOKENS, look: "glow", total: 3 };
+  const accent = buildFrame({ ...f, build: { ground: "accent", title: { lines: ["b"] } } });
+  assert.match(accent, /class="p01-ground kit-atmo is-accent clip"/);
+  assert.match(accent, /background-color: #FFD84D;/);
+  assert.match(accent, /--kit-ink: #101114;/);
+  const noKicker = buildFrame({ ...f, build: { kicker: false } });
+  assert.doesNotMatch(noKicker, /class="p01-kicker/);
+  assert.match(noKicker, /class="kit-hud"><i class="c tl">/);
+  assert.throws(() => buildFrame({ ...f, total: undefined, build: {} }), /glow 需要 total/);
+});

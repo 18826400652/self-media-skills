@@ -1,0 +1,77 @@
+<!-- 由 nv hf-frames 根据 STORYBOARD.md 第 2 帧的 build 生成，改 STORYBOARD 后重跑；要手写这一帧就删掉 build 行 -->
+<template>
+  <div id="p02-root" data-composition-id="02-x" data-start="0" data-duration="3" data-width="1080" data-height="1920">
+    <style>
+      #p02-root { position: relative; width: 1080px; height: 1920px; overflow: hidden; container-type: size; font-family: sans-serif; color: var(--kit-ink); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+      .p02-ground { position: absolute; inset: 0; background: var(--kit-bg); }
+      .p02-kicker { position: absolute; left: 60px; top: 250px; z-index: 5; font-size: 30px; font-weight: 700; letter-spacing: 0.12em; color: var(--kit-accent); }
+      .p02-lead { position: absolute; left: 60px; right: 60px; z-index: 5; font-size: 52px; font-weight: 500; color: var(--kit-muted); text-wrap: balance; }
+      .p02-acc { color: var(--kit-accent); }
+      .p02-dim { position: absolute; inset: 0; background: color-mix(in srgb, var(--kit-bg) 62%, transparent); z-index: 2; }
+      .p02-chip { position: absolute; left: 60px; top: 292px; z-index: 5; font-size: 26px; font-weight: 700; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 16px; }
+      .p02-panel { position: absolute; left: 60px; top: 860px; z-index: 5; padding: 24px 36px; background: color-mix(in srgb, var(--kit-bg) 90%, transparent); border-left: 8px solid var(--kit-accent); }
+      .p02-note { font-size: 30px; font-weight: 500; color: var(--kit-muted); margin-top: 48px; }
+      .p02-label { position: absolute; left: 60px; font-size: 44px; font-weight: 900; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 20px; }
+      .p02-h { position: absolute; left: 60px; right: 60px; font-size: 104px; font-weight: 900; line-height: 1.2; text-wrap: balance; }
+    </style>
+    <div id="p02-ground" class="p02-ground clip" data-start="0" data-duration="3" data-track-index="0"></div>
+    <div class="p02-kicker">K</div>
+    <div id="p02-cam" style="position:absolute;inset:0;transform-origin:50% 40%">
+      <video id="p02-v" class="clip" src="assets/rec.mp4" data-start="0" data-duration="3" data-media-start="1" data-playback-rate="1" data-track-index="1" muted playsinline style="position:absolute;left:95px;top:340px;width:890px;height:1582px;object-fit:cover;border:1px solid var(--kit-line)"></video>
+      <div class="p02-chip">录屏</div>
+      <div class="p02-panel"><div id="p02-n"></div><div class="p02-note">原速</div></div>
+      <div class="p02-lead" id="p02-l" style="top:600px"><span class="p02-acc">x</span></div>
+      <div id="p02-k" style="position:absolute;left:60px;top:560px;width:960px;z-index:5"></div>
+      <div class="p02-label" id="p02-tl" style="top:560px">L</div>
+      <div class="p02-h" id="p02-h0" style="top:690px">a</div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="compositions/kit/cues.js"></script>
+    <script src="compositions/kit/kit.js"></script>
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+        var E = "power3.out";
+        var C = function (w, n) { return Kit.cue(2, w, n) - 0.05; }; // 说到这个词（提前一点点出现）
+        Kit.number(tl, "#p02-n", { "value": 2, "unit": "秒", "countFrom": 0, "countDur": 2.7, "at": 0.05, "size": 150 });
+        tl.fromTo("#p02-l", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 0);
+        Kit.compare(tl, "#p02-k", { "at": [0, 1] });
+        tl.fromTo("#p02-tl", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 0);
+        tl.fromTo("#p02-h0", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, 0.3);
+        tl.fromTo("#p02-cam", { scale: 1 }, { scale: 1.04, duration: 3, ease: "sine.inOut" }, 0);
+        window.__timelines = window.__timelines || {};
+        window.__timelines["02-x"] = tl;
+      })();
+    </script>
+  </div>
+</template>
+<!-- 由 nv hf-frames 根据 STORYBOARD.md 第 3 帧的 build 生成，改 STORYBOARD 后重跑；要手写这一帧就删掉 build 行 -->
+<template>
+  <div id="p03-root" data-composition-id="03-y" data-start="0" data-duration="2" data-width="1080" data-height="1920">
+    <style>
+      #p03-root { position: relative; width: 1080px; height: 1920px; overflow: hidden; container-type: size; font-family: sans-serif; color: var(--kit-ink); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; --kit-ink: #101114; --kit-accent: #101114; --kit-muted: color-mix(in srgb, #101114 50%, transparent); }
+      .p03-ground { position: absolute; inset: 0; background: #FFD84D; }
+      .p03-kicker { position: absolute; left: 60px; top: 250px; z-index: 5; font-size: 30px; font-weight: 700; letter-spacing: 0.12em; color: color-mix(in srgb, #101114 55%, transparent); }
+      .p03-lead { position: absolute; left: 60px; right: 60px; z-index: 5; font-size: 52px; font-weight: 500; color: var(--kit-muted); text-wrap: balance; }
+      .p03-acc { color: var(--kit-accent); }
+      .p03-label { position: absolute; left: 60px; font-size: 44px; font-weight: 900; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 20px; }
+      .p03-h { position: absolute; left: 60px; right: 60px; font-size: 104px; font-weight: 900; line-height: 1.2; text-wrap: balance; }
+    </style>
+    <div id="p03-ground" class="p03-ground clip" data-start="0" data-duration="2" data-track-index="0"></div>
+    <div class="p03-kicker">K</div>
+    <div class="p03-h" id="p03-h0" style="top:690px">b</div>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="compositions/kit/cues.js"></script>
+    <script src="compositions/kit/kit.js"></script>
+    <script>
+      (function () {
+        var tl = gsap.timeline({ paused: true });
+        var E = "power3.out";
+        var C = function (w, n) { return Kit.cue(3, w, n) - 0.05; }; // 说到这个词（提前一点点出现）
+        tl.fromTo("#p03-h0", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, 0.3);
+        window.__timelines = window.__timelines || {};
+        window.__timelines["03-y"] = tl;
+      })();
+    </script>
+  </div>
+</template>

@@ -10,6 +10,7 @@
 //   title: { label, lines, top, center }  大字标题（lines 每项一行，**词** 用强调色）；center = 居中（一句话冲击帧）
 //   kicker: false                      这一帧不显示角标（钩子帧用：第一眼不要有「上课」感）
 //   camera: "push"                     整帧缓慢推近（1 → 1.04，贯穿全帧），让落定后的静态画面不死板；录屏帧不用
+// 视觉风格 f.look（项目配置 hfKit.look）："flat" 纯色底（默认）；"glow" 光晕颗粒底色 + HUD 四角和进度条 + 玻璃卡片（样式在 hf-kit/kit-glow.js）。
 // 时间写法：数字 = 帧内秒数；"@词" = 说到这个词的时刻；"@词#2" = 第二次说到。
 // 位置都在抖音安全区内（内容 x 60–1020、y 230–1150）。
 
@@ -35,15 +36,29 @@ export function toJs(value) {
 
 const at = (v, fallback = 0) => toJs(v ?? fallback);
 
+const MAX_SEGMENTS = 8; // 进度条最多几段：帧多时一段代表几帧
+
+/** 第 n 帧（共 total 帧）的进度条：几段、亮几段（第一帧至少亮一段，最后一帧全亮） */
+export function progressSegments(n, total, max = MAX_SEGMENTS) {
+  const count = Math.min(total, max);
+  return { count, lit: Math.max(1, Math.round((n / total) * count)) };
+}
+
+function hudPart(n, total) {
+  const { count, lit } = progressSegments(n, total);
+  const bars = Array.from({ length: count }, (_, i) => (i < lit ? '<i class="on"></i>' : "<i></i>")).join("");
+  return `<div class="kit-hud"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i><div class="kit-progress">${bars}</div></div>`;
+}
+
 /** **词** → 强调色 span */
 const inlineAccent = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="P-acc">$1</span>');
 
-function recPart(b, dur) {
+function recPart(b, dur, hook) {
   const r = b.rec;
   const v = `<video id="P-v" class="clip" src="${esc(r.src ?? "assets/rec.mp4")}" data-start="0" data-duration="${dur}" data-media-start="${r.mediaStart ?? 0}" data-playback-rate="${r.rate ?? 1}" data-track-index="1" muted playsinline style="position:absolute;left:${REC_BOX.left}px;top:${REC_BOX.top}px;width:${REC_BOX.width}px;height:${REC_BOX.height}px;object-fit:cover;border:1px solid var(--kit-line)"></video>`;
   const parts = [v];
   if (r.dim) parts.push('<div class="P-dim"></div>');
-  if (r.chip) parts.push(`<div class="P-chip">${esc(r.chip)}</div>`);
+  if (r.chip) parts.push(`<div class="P-chip${hook("kit-chip")}">${esc(r.chip)}</div>`);
   return parts;
 }
 
@@ -56,18 +71,21 @@ export function buildFrame(f) {
   const b = f.build ?? {};
   const p = `p${String(f.n).padStart(2, "0")}`;
   const accent = b.ground === "accent";
+  const glow = (f.look ?? "flat") === "glow";
+  if (glow && !(f.total > 0)) throw new Error(`第 ${f.n} 帧：glow 需要 total（总帧数）`);
+  const hook = (cls) => (glow ? ` ${cls}` : ""); // glow 时给元素加 kit-glow.js 认的类名；flat 输出保持原样
   const body = [];
   const js = [];
   const css = [];
 
   if (b.rec) {
-    body.push(...recPart(b, f.duration));
+    body.push(...recPart(b, f.duration, hook));
     css.push(".P-dim { position: absolute; inset: 0; background: color-mix(in srgb, var(--kit-bg) 62%, transparent); z-index: 2; }");
     css.push(".P-chip { position: absolute; left: 60px; top: 292px; z-index: 5; font-size: 26px; font-weight: 700; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 16px; }");
   }
   if (b.timer) {
     const t = b.timer;
-    body.push(`<div class="P-panel"><div id="P-n"></div>${t.note ? `<div class="P-note">${esc(t.note)}</div>` : ""}</div>`);
+    body.push(`<div class="P-panel${hook("kit-glass-panel")}"><div id="P-n"></div>${t.note ? `<div class="P-note">${esc(t.note)}</div>` : ""}</div>`);
     css.push(".P-panel { position: absolute; left: 60px; top: 860px; z-index: 5; padding: 24px 36px; background: color-mix(in srgb, var(--kit-bg) 90%, transparent); border-left: 8px solid var(--kit-accent); }");
     css.push(".P-note { font-size: 30px; font-weight: 500; color: var(--kit-muted); margin-top: 48px; }");
     js.push(`Kit.number(tl, "#P-n", ${toJs({ value: t.value, unit: t.unit ?? "秒", countFrom: 0, countDur: t.countDur ?? Math.max(0.5, f.duration - 0.3), at: 0.05, size: t.size ?? 150 })});`);
@@ -86,7 +104,7 @@ export function buildFrame(f) {
   if (b.title) {
     const t = b.title;
     if (t.label) {
-      body.push(`<div class="P-label${t.center ? " P-center" : ""}" id="P-tl" style="top:${(t.top ?? 690) - 130}px">${esc(t.label)}</div>`);
+      body.push(`<div class="P-label${hook("kit-label")}${t.center ? " P-center" : ""}" id="P-tl" style="top:${(t.top ?? 690) - 130}px">${esc(t.label)}</div>`);
       js.push(`tl.fromTo("#P-tl", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, ${at(t.labelAt)});`);
     }
     (t.lines ?? []).forEach((line, i) => {
@@ -115,18 +133,18 @@ export function buildFrame(f) {
   <div id="${p}-root" data-composition-id="${f.id}" data-start="0" data-duration="${f.duration}" data-width="1080" data-height="1920">
     <style>
       #${p}-root { position: relative; width: 1080px; height: 1920px; overflow: hidden; container-type: size; font-family: ${T.font}; color: var(--kit-ink); -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;${rootVars} }
-      .${p}-ground { position: absolute; inset: 0; background: ${ground}; }
+      .${p}-ground { position: absolute; inset: 0; ${glow ? "background-color" : "background"}: ${ground}; }
       .${p}-kicker { position: absolute; left: 60px; top: 250px; z-index: 5; font-size: 30px; font-weight: 700; letter-spacing: 0.12em; color: ${accent ? `color-mix(in srgb, ${T.bg} 55%, transparent)` : "var(--kit-accent)"}; }
       .${p}-lead { position: absolute; left: 60px; right: 60px; z-index: 5; font-size: 52px; font-weight: 500; color: var(--kit-muted); text-wrap: balance; }
       .${p}-acc { color: var(--kit-accent); }
 ${css.map((c) => `      ${sub(c)}`).join("\n")}
     </style>
-    <div id="${p}-ground" class="${p}-ground clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
-${b.kicker === false ? "" : `    <div class="${p}-kicker">${esc(f.kicker)}</div>\n`}${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
+    <div id="${p}-ground" class="${p}-ground${glow ? ` kit-atmo${accent ? " is-accent" : ""}` : ""} clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
+${glow ? `    ${hudPart(f.n, f.total)}\n` : ""}${b.kicker === false ? "" : `    <div class="${p}-kicker${hook("kit-kicker")}">${esc(f.kicker)}</div>\n`}${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script src="compositions/kit/cues.js"></script>
     <script src="compositions/kit/kit.js"></script>
-    <script>
+${glow ? '    <script src="compositions/kit/kit-glow.js"></script>\n' : ""}    <script>
       (function () {
         var tl = gsap.timeline({ paused: true });
         var E = "power3.out";
