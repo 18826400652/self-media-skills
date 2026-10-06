@@ -3,13 +3,15 @@
 //   check   检查 research.json、SCRIPT.md 的依据、qa.json（存在时）。有 ✗ 退出码 1
 //   brief   research.json → 研究简报.md（给人在确认节点 ① 看）
 //   status  当前阶段、下一步、还没通过的确认节点
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { renderBrief } from "./lib/brief.mjs";
+import { loadConfig } from "./lib/config.mjs";
 import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
+import { detectStatus } from "./lib/status.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
 const USAGE = "用法：kv check|brief|status <作品目录>";
@@ -96,6 +98,57 @@ function writeBrief(dir) {
   return 0;
 }
 
+const GATE_LABEL = { script: "① 研究简报 + 脚本", storyboard: "② 分镜总览图", final: "③ 成片" };
+const TYPE_LABEL = { concept: "概念科普", practical: "实用技巧" };
+
+function hasFileIn(dir, sub, re) {
+  const p = join(dir, sub);
+  return existsSync(p) && readdirSync(p).some((f) => re.test(f));
+}
+
+/** 读作品目录里的文件和 run.json，交给 detectStatus */
+export function collectFacts(dir) {
+  const run = readRun(dir);
+  const type = episodeType(run);
+  const gate = (k) => run?.gates?.[k]?.passed === true;
+  const qaPath = join(dir, FILES.qa);
+  let qa = null;
+  if (existsSync(qaPath)) {
+    try {
+      qa = { passed: JSON.parse(readFileSync(qaPath, "utf8")).passed === true };
+    } catch {
+      qa = { passed: false };
+    }
+  }
+  return {
+    type,
+    hasBrief: existsSync(join(dir, FILES.brief)),
+    hasEvidence: existsSync(join(dir, type === "practical" ? "实测记录.md" : FILES.research)),
+    hasScript: existsSync(join(dir, FILES.script)),
+    checkOk: !runCheck(dir).issues.some((i) => i.level === "error"),
+    hasStoryboard: existsSync(join(dir, "抖音/STORYBOARD.md")),
+    hasSheet: existsSync(join(dir, "抖音/snapshots/sheet.jpg")),
+    hasRender: hasFileIn(dir, "抖音/renders", /\.mp4$/),
+    qa,
+    gates: { script: gate("script"), storyboard: gate("storyboard"), final: gate("final") },
+  };
+}
+
+function printStatus(dir) {
+  const f = collectFacts(dir);
+  const s = detectStatus(f);
+  console.log(`类型：${TYPE_LABEL[f.type]}`);
+  console.log(`阶段：${s.stage}`);
+  console.log(`下一步：${s.next}`);
+  if (s.waitingFor) console.log(`等用户确认：${GATE_LABEL[s.waitingFor]}`);
+  console.log(`确认节点：${Object.entries(f.gates).map(([k, v]) => `${GATE_LABEL[k]} ${v ? "✓" : "·"}`).join("  ")}`);
+  if (s.stage === "done") {
+    const cfg = loadConfig(dir);
+    console.log(`经验库：${join(cfg.root, cfg.experienceDir)}`);
+  }
+  return 0;
+}
+
 function main(argv) {
   const [cmd, target] = argv;
   if (!target || !["check", "brief", "status"].includes(cmd)) {
@@ -109,8 +162,7 @@ function main(argv) {
   }
   if (cmd === "check") return printCheck(dir);
   if (cmd === "brief") return writeBrief(dir);
-  console.error(`kv ${cmd} 还没有实现`);
-  return 1;
+  return printStatus(dir);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

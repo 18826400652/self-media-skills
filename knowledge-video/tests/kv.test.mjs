@@ -75,3 +75,13 @@ test("kv brief：写出研究简报.md；research.json 有错时拒绝", async (
   assert.equal(bad.status, 1);
   assert.match(bad.stdout, /research\.json 有错误，先修好（kv check）/);
 });
+
+test("kv status：没有 run.json 也能按文件判断；脚本写好后等确认 ①", () => {
+  const fresh = kv("status", episode({ "brief.md": "x" }));
+  assert.equal(fresh.status, 0, fresh.stderr);
+  assert.match(fresh.stdout, /类型：概念科普/);
+  assert.match(fresh.stdout, /阶段：research/);
+  const waiting = kv("status", episode({ "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, "run.json": { type: "concept", gates: { script: { passed: false } } } }));
+  assert.match(waiting.stdout, /阶段：script/);
+  assert.match(waiting.stdout, /等用户确认：① 研究简报 \+ 脚本/);
+});
