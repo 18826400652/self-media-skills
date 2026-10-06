@@ -118,3 +118,67 @@ test("Kit.chat：staged false 不显示标签；消息超出高度时整体上�
     await k.close();
   }
 });
+
+const ANSWER = {
+  source: "DeepSeek 原话 · 实测第 1 轮",
+  blocks: [
+    { h: "二、待办事项" },
+    { table: { head: ["事项", "负责人", "截止时间"], rows: [["活动页出图", "阿杰", "周四下午（最晚）"], ["活动页上线", "小林", "周五"], ["向供应商确认猪肉能否保证量", "王杰", "尽快（未明确具体时间）"]] } },
+  ],
+  at: 0,
+  focus: { row: 2, col: 1, at: 1, note: "其实是「王姐」" },
+};
+
+test("Kit.answer：focus 之后面板虚化、那一行放大浮出、圈出单元格、贴便签", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-scenes.js"] });
+  try {
+    const r = await k.page.evaluate((o) => {
+      const tl = gsap.timeline({ paused: true });
+      Kit.answer(tl, "#host", o);
+      const lensOp = () => Number(getComputedStyle(document.querySelector(".kit-ans-lens")).opacity);
+      tl.seek(0.6);
+      const before = { lens: lensOp(), filter: getComputedStyle(document.querySelector(".kit-ans")).filter };
+      tl.seek(4);
+      return {
+        before,
+        lens: lensOp(),
+        filter: getComputedStyle(document.querySelector(".kit-ans")).filter,
+        lensText: document.querySelector(".kit-ans-lens .line").textContent,
+        source: document.querySelector(".kit-ans-lens .src").textContent,
+        ring: Number(getComputedStyle(document.querySelector(".kit-ans-lens .kit-ring path")).opacity),
+        note: document.querySelector(".kit-ans-note").textContent,
+      };
+    }, ANSWER);
+    assert.equal(r.before.lens, 0);
+    assert.doesNotMatch(r.before.filter, /blur\(1\.6px\)/); // fromTo 会先把 filter 设成起点值 blur(0px)
+    assert.equal(r.lens, 1);
+    assert.match(r.filter, /blur\(1\.6px\)/);
+    assert.equal(r.lensText, "向供应商确认猪肉能否保证量王杰尽快（未明确具体时间）");
+    assert.match(r.source, /DeepSeek 原话 · 实测第 1 轮/);
+    assert.equal(r.ring, 1);
+    assert.equal(r.note, "其实是「王姐」");
+  } finally {
+    await k.close();
+  }
+});
+
+test("Kit.answer：缺 source、focus 行超出、focus 但没有表格，都报中文错误", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-scenes.js"] });
+  try {
+    const errs = await k.page.evaluate((o) => {
+      const run = (opts) => { try { Kit.answer(gsap.timeline({ paused: true }), "#host", opts); return "ok"; } catch (e) { return e.message; } };
+      return [
+        run({ ...o, source: undefined }),
+        run({ ...o, focus: { row: 3, at: 1 } }),
+        run({ source: "x", blocks: [{ p: "一段话" }], focus: { row: 0, at: 1 } }),
+        run({ source: "x", blocks: [{ p: "没有 focus 也可以" }] }),
+      ];
+    }, ANSWER);
+    assert.match(errs[0], /缺少 source/);
+    assert.match(errs[1], /focus\.row 超出表格行数（共 3 行，从 0 数）/);
+    assert.match(errs[2], /focus 需要 blocks 里有表格/);
+    assert.equal(errs[3], "ok");
+  } finally {
+    await k.close();
+  }
+});

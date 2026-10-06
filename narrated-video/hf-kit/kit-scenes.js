@@ -1,6 +1,7 @@
 /*
  * hf-kit 场景组件：还原上班族熟悉的界面。在 kit.js 之后引用（帧模板自动引用）。
  *   Kit.chat    聊天界面（群聊、@人、文档卡、红圈）——演示场景用，默认标「情景演绎」
+ *   Kit.answer  重建 AI 回答（实测原文，可推近到表格某一行）
  * 只用 fromTo / set，颜色读 --kit-*，渲染可复现。用法和参数见 references/hf-kit.md。
  */
 (function () {
@@ -37,6 +38,21 @@
       ".kit-chat .doc th{text-align:left;font-size:25px;font-weight:500;color:var(--kit-muted);padding:0 6px 8px}",
       ".kit-chat .doc td{position:relative;padding:11px 6px;border-top:1px solid color-mix(in srgb,var(--kit-ink) 10%,transparent)}",
       ".kit-ring{position:absolute;left:-14%;top:-22%;width:128%;height:144%;overflow:visible;pointer-events:none}",
+      ".kit-ans-stage{position:relative;perspective:2200px}",
+      ".kit-ans{position:relative;font-family:var(--kit-font);color:var(--kit-ink);background:var(--kit-surface);border:1px solid var(--kit-line);border-radius:32px;overflow:hidden;transform:rotateX(6deg) rotateY(-8deg) scale(.96);transform-origin:50% 0}",
+      ".kit-ans .bar{height:84px;display:flex;align-items:center;gap:14px;padding:0 30px;border-bottom:1px solid var(--kit-line);font-weight:700}",
+      ".kit-ans .logo,.kit-ans-lens .logo{flex:none;width:40px;height:40px;border-radius:50%}",
+      ".kit-ans .body{padding:26px 34px 30px;line-height:1.6}",
+      ".kit-ans h4{margin:6px 0 12px;font-size:1.2em}",
+      ".kit-ans p{margin:0 0 12px;white-space:pre-line}",
+      ".kit-ans table{width:100%;border-collapse:collapse}",
+      ".kit-ans td,.kit-ans th{text-align:left;padding:12px 8px;border-bottom:1px solid color-mix(in srgb,var(--kit-ink) 10%,transparent)}",
+      ".kit-ans th{color:var(--kit-muted);font-weight:500}",
+      ".kit-ans-lens{position:absolute;left:20px;right:0;padding:28px 34px 34px;border-radius:32px;background:var(--kit-surface);border:2px solid color-mix(in srgb,var(--kit-accent) 55%,transparent);box-shadow:0 0 0 10px color-mix(in srgb,var(--kit-accent) 6%,transparent),0 0 80px color-mix(in srgb,var(--kit-accent) 18%,transparent),0 50px 120px rgb(0 0 0/.7)}",
+      ".kit-ans-lens .src{display:flex;align-items:center;gap:12px;font-size:27px;color:var(--kit-muted);letter-spacing:.06em}",
+      ".kit-ans-lens .line{display:grid;gap:20px;align-items:center;margin-top:18px;font-size:44px;font-weight:700;line-height:1.35}",
+      ".kit-ans-lens .line>span{position:relative}",
+      ".kit-ans-note{position:absolute;right:-6px;top:-74px;transform:rotate(4deg);background:var(--kit-danger);color:#fff;font-size:30px;font-weight:900;padding:10px 22px;border-radius:14px;white-space:nowrap}",
     ].join("\n");
     var style = document.createElement("style");
     style.setAttribute("data-kit-scenes", "");
@@ -142,6 +158,82 @@
         shift = need;
       }
     });
+  };
+
+  var APPS = { DeepSeek: "#4D6BFE" }; // 头部 logo 色；新增应用在这里加
+
+  function answerBlocks(body, blocks) {
+    var table = null;
+    blocks.forEach(function (b) {
+      if (b.h != null) el("h4", "", body, b.h);
+      else if (b.p != null) el("p", "", body, b.p);
+      else if (b.table) {
+        var t = el("table", "", body);
+        if (b.table.head) {
+          var hr = el("tr", "", t);
+          b.table.head.forEach(function (h) { el("th", "", hr, h); });
+        }
+        var rows = b.table.rows.map(function (r) {
+          var tr = el("tr", "", t);
+          r.forEach(function (c) { el("td", "", tr, c); });
+          return tr;
+        });
+        if (!table) table = { el: t, rows: rows, data: b.table.rows };
+      }
+    });
+    return table;
+  }
+
+  /**
+   * 重建 AI 回答：用实测记录里的原文排成清楚的回答界面；focus 时面板虚化，那一行放大浮出并圈出单元格。
+   * { app="DeepSeek", source（必填）, blocks:[{h}|{p}|{table:{head,rows}}], at=0, size=27,
+   *   focus:{ row（从 0 数）, col, at, note, noteAt } }
+   * 文字必须是实测原文，source 写清出处（如「DeepSeek 原话 · 实测第 1 轮」）。
+   */
+  Kit.answer = function (tl, sel, o) {
+    if (!o.source) throw new Error("Kit.answer: 缺少 source（写明出处，如「DeepSeek 原话 · 实测第 1 轮」）");
+    var host = U.hostOf(sel);
+    var T = U.tok(host);
+    var app = o.app || "DeepSeek";
+    var logoColor = APPS[app] || T.accent;
+    var at = num(o.at, 0);
+    var stage = el("div", "kit kit-ans-stage", host);
+    var panel = el("div", "kit-ans", stage);
+    panel.style.fontSize = num(o.size, 27) + "px";
+    var bar = el("div", "bar", panel);
+    el("i", "logo", bar).style.background = logoColor;
+    el("span", "", bar, app);
+    var table = answerBlocks(el("div", "body", panel), o.blocks || []);
+    U.inFrom(tl, panel, at, 40);
+    if (!o.focus) return;
+
+    var f = o.focus;
+    if (!table) throw new Error("Kit.answer: focus 需要 blocks 里有表格");
+    var data = table.data[f.row];
+    if (!data) throw new Error("Kit.answer: focus.row 超出表格行数（共 " + table.data.length + " 行，从 0 数）");
+    var fAt = num(f.at, at + 1);
+    tl.fromTo(panel, { filter: "blur(0px) brightness(1)" }, { filter: "blur(1.6px) brightness(0.62)", duration: 0.4, ease: "none" }, fAt);
+
+    var lens = el("div", "kit-ans-lens", stage);
+    var rowEl = table.rows[f.row];
+    lens.style.top = Math.max(0, table.el.offsetTop + rowEl.offsetTop - 60) + "px"; // table 相对面板（已含头部高度），tr 相对 table；浮在原来那一行附近
+    var src = el("div", "src", lens);
+    el("i", "logo", src).style.background = logoColor;
+    el("span", "", src, o.source);
+    var line = el("div", "line", lens);
+    line.style.gridTemplateColumns = "1fr" + " auto".repeat(data.length - 1);
+    var cells = data.map(function (c) { return el("span", "", line, c); });
+    tl.fromTo(lens, { opacity: 0, scale: 0.92, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.45, ease: U.EASE }, fAt + 0.1);
+    if (f.col != null) {
+      var cell = cells[f.col];
+      if (!cell) throw new Error("Kit.answer: focus.col 超出列数（共 " + data.length + " 列，从 0 数）");
+      cell.style.color = T.danger;
+      ringAround(tl, cell, T.danger, fAt + 0.5, U.hashText(cell.textContent));
+    }
+    if (f.note) {
+      var note = el("div", "kit-ans-note", lens, f.note);
+      tl.fromTo(note, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: U.EASE }, num(f.noteAt, fAt + 0.7));
+    }
   };
 
   Kit._scenes = { ringAround: ringAround };
