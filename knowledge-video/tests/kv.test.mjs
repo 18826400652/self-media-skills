@@ -64,3 +64,14 @@ test("kv：用法错误时提示并退出码 1", () => {
   assert.equal(r.status, 1);
   assert.match(r.stderr, /用法：kv check\|brief\|status <作品目录>/);
 });
+
+test("kv brief：写出研究简报.md；research.json 有错时拒绝", async () => {
+  const { readFileSync } = await import("node:fs");
+  const dir = episode({ "research.json": { topic: "RAG", claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT });
+  const r = kv("brief", dir);
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(readFileSync(join(dir, "研究简报.md"), "utf8"), /第 1 句「它先翻资料再回答。」/);
+  const bad = kv("brief", episode({ "research.json": { claims: [{ id: "c01" }] } }));
+  assert.equal(bad.status, 1);
+  assert.match(bad.stdout, /research\.json 有错误，先修好（kv check）/);
+});

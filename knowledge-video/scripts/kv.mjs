@@ -3,9 +3,10 @@
 //   check   检查 research.json、SCRIPT.md 的依据、qa.json（存在时）。有 ✗ 退出码 1
 //   brief   research.json → 研究简报.md（给人在确认节点 ① 看）
 //   status  当前阶段、下一步、还没通过的确认节点
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { renderBrief } from "./lib/brief.mjs";
 import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
@@ -76,6 +77,25 @@ function printCheck(dir) {
   return issues.some((i) => i.level === "error") ? 1 : 0;
 }
 
+const BRIEF_OUT = "研究简报.md";
+
+function writeBrief(dir) {
+  const r = readJson(dir, FILES.research, validateResearch);
+  if (r.missing) {
+    console.log("✗ 还没有 research.json");
+    return 1;
+  }
+  if (r.issues.some((i) => i.level === "error")) {
+    console.log("✗ research.json 有错误，先修好（kv check）");
+    return 1;
+  }
+  const scriptPath = join(dir, FILES.script);
+  const lines = existsSync(scriptPath) ? parseScriptBasis(readFileSync(scriptPath, "utf8")) : [];
+  writeFileSync(join(dir, BRIEF_OUT), renderBrief(r.data, lines));
+  console.log(`✓ ${BRIEF_OUT}（${r.data.claims.length} 条事实，${lines.length} 句口播）`);
+  return 0;
+}
+
 function main(argv) {
   const [cmd, target] = argv;
   if (!target || !["check", "brief", "status"].includes(cmd)) {
@@ -88,6 +108,7 @@ function main(argv) {
     return 1;
   }
   if (cmd === "check") return printCheck(dir);
+  if (cmd === "brief") return writeBrief(dir);
   console.error(`kv ${cmd} 还没有实现`);
   return 1;
 }
