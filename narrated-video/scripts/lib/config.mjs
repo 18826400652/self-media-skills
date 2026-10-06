@@ -53,3 +53,12 @@ export function loadPreset(name) {
   if (!existsSync(file)) throw new Error(`未知的平台预设：${name}（见 ${join(SKILL_DIR, "presets")}）`);
   return JSON.parse(readFileSync(file, "utf8"));
 }
+
+const LOOKS = ["glow", "flat"];
+
+/** 帧的视觉风格：hfKit.look，不填是 flat（纯色底，旧样式） */
+export function resolveLook(config) {
+  const look = config.hfKit?.look ?? "flat";
+  if (!LOOKS.includes(look)) throw new Error(`hfKit.look 只能是 "glow" 或 "flat"，收到 ${JSON.stringify(look)}`);
+  return look;
+}

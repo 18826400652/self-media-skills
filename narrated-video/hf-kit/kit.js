@@ -21,7 +21,7 @@
   if (window.Kit) return;
 
   // 默认值是中性配色；nv hf-kit 复制时会把下面这一行替换成项目配置
-  var TOKENS = /*KIT_TOKENS*/ { accent: "#5B8CFF", ink: "#F5F5F5", muted: "#8A8A8A", bg: "#111111", surface: "#1C1C1C", line: "#2E2E2E", font: '"Noto Sans SC", sans-serif', mono: '"JetBrains Mono", "Noto Sans SC", monospace' } /*END_KIT_TOKENS*/;
+  var TOKENS = /*KIT_TOKENS*/ { accent: "#5B8CFF", ink: "#F5F5F5", muted: "#8A8A8A", bg: "#111111", surface: "#1C1C1C", line: "#2E2E2E", danger: "#FF5A5F", font: '"Noto Sans SC", sans-serif', mono: '"JetBrains Mono", "Noto Sans SC", monospace' } /*END_KIT_TOKENS*/;
 
   var EASE = "power3.out";
   var SVG_NS = "http://www.w3.org/2000/svg";

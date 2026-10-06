@@ -161,3 +161,16 @@ test("帧模板：kicker false 不显示角标", async () => {
   assert.doesNotMatch(buildFrame({ ...f, build: { kicker: false } }), /p01-kicker">/);
   assert.match(buildFrame({ ...f, build: {} }), /p01-kicker">第 1 课/);
 });
+
+test("resolveLook：不填是 flat，只接受 glow / flat", async () => {
+  const { resolveLook } = await import("../scripts/lib/config.mjs");
+  assert.equal(resolveLook({}), "flat");
+  assert.equal(resolveLook({ hfKit: {} }), "flat");
+  assert.equal(resolveLook({ hfKit: { look: "glow" } }), "glow");
+  assert.throws(() => resolveLook({ hfKit: { look: "neon" } }), /hfKit\.look 只能是 "glow" 或 "flat"，收到 "neon"/);
+});
+
+test("mergeTokens 认识 danger，kit.js 默认值是 #FF5A5F", () => {
+  assert.equal(mergeTokens(KIT_SRC, {}).danger, "#FF5A5F");
+  assert.equal(mergeTokens(KIT_SRC, { danger: "#E00" }).danger, "#E00");
+});

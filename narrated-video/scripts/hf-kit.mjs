@@ -12,7 +12,7 @@ import { isMain } from "./lib/is-main.mjs";
 
 const SRC = join(SKILL_DIR, "hf-kit", "kit.js");
 const TOKENS_RE = /\/\*KIT_TOKENS\*\/([\s\S]*?)\/\*END_KIT_TOKENS\*\//;
-const TOKEN_KEYS = ["accent", "ink", "muted", "bg", "surface", "line", "font", "mono"];
+const TOKEN_KEYS = ["accent", "ink", "muted", "bg", "surface", "line", "danger", "font", "mono"];
 
 /** 默认 token（kit.js 里写的）+ 项目配置覆盖 */
 export function mergeTokens(source, overrides) {
