@@ -1,6 +1,21 @@
 // 一期视频走到哪了：按「文件有没有 + 确认节点过没过」找第一个没完成的阶段。
 // 阶段：brief → research → script → storyboard → render → review → done；确认节点：script ①、storyboard ②、final ③
+import { parseScriptBasis } from "./script.mjs";
+
 const step = (stage, next, waitingFor = null) => ({ stage, next, waitingFor });
+const DONE_TEST_RE = /状态[:：]\s*已实测/; // scenario-content 的实测记录：做完把状态改成「已实测」
+const PLACEHOLDER_RE = /^（.*）$/; // 模板里的占位口播，如「（一句话抛出冲突）」
+
+/** 求真产物是不是真的做了（新建作品时的空模板不算）：实用技巧要「已实测」，概念科普有 research.json 即可 */
+export function isEvidenceFilled(type, text) {
+  return type === "practical" ? DONE_TEST_RE.test(text) : true;
+}
+
+/** SCRIPT.md 是不是真的写了：至少一句口播，且没有剩下模板的占位口播 */
+export function isScriptFilled(md) {
+  const lines = parseScriptBasis(md);
+  return lines.length > 0 && lines.every((l) => !PLACEHOLDER_RE.test(l.text));
+}
 
 /** @returns {{ stage: string, next: string, waitingFor: "script"|"storyboard"|"final"|null }} */
 export function detectStatus(f) {

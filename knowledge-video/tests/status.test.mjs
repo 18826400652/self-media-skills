@@ -28,3 +28,14 @@ test("分镜、渲染、QA、成片确认", () => {
   assert.equal(at({}).stage, "done");
   assert.match(at({}).next, /经验库/);
 });
+
+test("空模板不算完成：实测记录要「已实测」，SCRIPT 不能还是占位口播", async () => {
+  const { isEvidenceFilled, isScriptFilled } = await import("../scripts/lib/status.mjs");
+  assert.equal(isEvidenceFilled("practical", "# 实测记录\n\n- 状态：待实测\n"), false);
+  assert.equal(isEvidenceFilled("practical", "- 状态：已实测\n"), true);
+  assert.equal(isEvidenceFilled("concept", "{}"), true);
+  const tpl = "## Line 1 — 钩子 (Frame 1)\n\n**重点词:** \n\n    （一句话抛出冲突）\n";
+  assert.equal(isScriptFilled(tpl), false);
+  assert.equal(isScriptFilled("# 空\n"), false);
+  assert.equal(isScriptFilled("## Line 1 — 钩子 (Frame 1)\n\n    它先翻资料再回答。\n"), true);
+});

@@ -85,3 +85,23 @@ test("kv status：没有 run.json 也能按文件判断；脚本写好后等确�
   assert.match(waiting.stdout, /阶段：script/);
   assert.match(waiting.stdout, /等用户确认：① 研究简报 \+ 脚本/);
 });
+
+test("kv check / status：claims 写成对象时给中文错误，不报内部错误", () => {
+  const dir = episode({ "brief.md": "x", "research.json": { claims: {} }, "抖音/SCRIPT.md": SCRIPT });
+  const r = kv("check", dir);
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /✗ research\.json 的 claims 必须是数组/);
+  assert.doesNotMatch(r.stdout + r.stderr, /is not a function/);
+  const s = kv("status", dir);
+  assert.equal(s.status, 0, s.stdout + s.stderr);
+  assert.match(s.stdout, /先修好 kv check 报的 ✗/);
+});
+
+test("kv status：new-episode 生成的空模板不算做完（实用技巧仍在实测，概念科普仍要写脚本）", () => {
+  const tplScript = "## Line 1 — 钩子 (Frame 1)\n\n**重点词:** \n\n    （一句话抛出冲突）\n";
+  const practical = kv("status", episode({ "brief.md": "x", "run.json": { type: "practical" }, "实测记录.md": "- 状态：待实测\n", "抖音/SCRIPT.md": tplScript }));
+  assert.match(practical.stdout, /阶段：research/);
+  const concept = kv("status", episode({ "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": tplScript }));
+  assert.match(concept.stdout, /阶段：script/);
+  assert.match(concept.stdout, /下一步：按类型档案的结构配方写/);
+});

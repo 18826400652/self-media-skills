@@ -18,7 +18,7 @@ description: >
 
 | 阶段 | 做什么 | 产物 | 停下来 |
 |---|---|---|---|
-| 0. 理解任务 | 判断内容类型（读 `types/`），复制 `templates/brief.md`、`templates/run.json` 到作品目录 | `brief.md`、`run.json` | — |
+| 0. 理解任务 | 按项目约定创建作品目录（项目说明里写的新建作品方式），判断内容类型（读 `types/`），复制 `templates/brief.md`、`templates/run.json` 到作品目录。新建时预放的空模板（未填的实测记录、占位口播的 SCRIPT）`kv status` 不算完成 | `brief.md`、`run.json` | — |
 | 1. 求真 | 按类型档案：概念科普查资料（`references/research.md`），实用技巧做实测 | `research.json` 或 `实测记录.md` | — |
 | 2. 脚本 | 按类型档案的结构配方写 `抖音/SCRIPT.md`（narrated-video 格式），每句标依据（`references/script.md`）；费曼检查写进 brief.md；`kv check` 无 ✗ | `抖音/SCRIPT.md` | **① `kv brief` 生成研究简报，请用户确认简报和脚本** |
 | 3. 分镜 | 按 narrated-video 写 STORYBOARD 的 build 行 → `nv hf-audio` → `nv hf-build --snap` | `抖音/STORYBOARD.md`、`抖音/snapshots/sheet.jpg` | **② 请用户看总览图** |

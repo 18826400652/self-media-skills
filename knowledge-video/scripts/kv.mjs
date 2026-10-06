@@ -11,7 +11,7 @@ import { loadConfig } from "./lib/config.mjs";
 import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
-import { detectStatus } from "./lib/status.mjs";
+import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
 const USAGE = "用法：kv check|brief|status <作品目录>";
@@ -54,7 +54,8 @@ export function runCheck(dir) {
     if (r.missing) notes.push("· 还没有 research.json（求真阶段的产物）");
     else if (!r.issues.some((i) => i.level === "error")) notes.push(`✓ research.json：${r.data.claims.length} 条事实都有来源`);
     issues.push(...r.issues);
-    research = r.data;
+    // research.json 有错时不拿它核对 claim（格式不对会让核对本身出错）；只检查依据行存在和写法
+    research = r.issues.some((i) => i.level === "error") ? null : r.data;
   }
   const scriptPath = join(dir, FILES.script);
   if (!existsSync(scriptPath)) notes.push(`· 还没有 ${FILES.script}`);
@@ -106,6 +107,11 @@ function hasFileIn(dir, sub, re) {
   return existsSync(p) && readdirSync(p).some((f) => re.test(f));
 }
 
+/** 文件存在、且不是没填的模板（新建作品脚本会预先放好空模板） */
+function fileFilled(path, filled) {
+  return existsSync(path) && filled(readFileSync(path, "utf8"));
+}
+
 /** 读作品目录里的文件和 run.json，交给 detectStatus */
 export function collectFacts(dir) {
   const run = readRun(dir);
@@ -123,8 +129,8 @@ export function collectFacts(dir) {
   return {
     type,
     hasBrief: existsSync(join(dir, FILES.brief)),
-    hasEvidence: existsSync(join(dir, type === "practical" ? "实测记录.md" : FILES.research)),
-    hasScript: existsSync(join(dir, FILES.script)),
+    hasEvidence: fileFilled(join(dir, type === "practical" ? "实测记录.md" : FILES.research), (t) => isEvidenceFilled(type, t)),
+    hasScript: fileFilled(join(dir, FILES.script), isScriptFilled),
     checkOk: !runCheck(dir).issues.some((i) => i.level === "error"),
     hasStoryboard: existsSync(join(dir, "抖音/STORYBOARD.md")),
     hasSheet: existsSync(join(dir, "抖音/snapshots/sheet.jpg")),
