@@ -229,3 +229,12 @@ test("帧模板：每帧都引用 kit-scenes.js（在 kit.js 之后）", async (
   const glow = buildFrame({ n: 1, id: "01-h", duration: 2, kicker: "K", tokens: FLAT_TOKENS, build: {}, look: "glow", total: 2 });
   assert.match(glow, /kit\.js"><\/script>\s*<script src="compositions\/kit\/kit-glow\.js"><\/script>\s*<script src="compositions\/kit\/kit-scenes\.js"><\/script>/);
 });
+
+test("toJs：只有时间字段（at、xxxAt）里的 @词 才转成按词取时间，文字里的 @人 原样保留", async () => {
+  const { toJs } = await import("../scripts/lib/frame-build.mjs");
+  assert.equal(
+    toJs({ messages: [{ from: "刘总", text: "@你 十分钟后发群里", at: "@十分钟" }], focus: { noteAt: "@王姐", note: "@某人" } }),
+    '{ "messages": [{ "from": "刘总", "text": "@你 十分钟后发群里", "at": C("十分钟") }], "focus": { "noteAt": C("王姐"), "note": "@某人" } }',
+  );
+  assert.equal(toJs({ at: ["@两遍", "@整理#2", 1.5] }), '{ "at": [C("两遍"), C("整理", 2), 1.5] }');
+});

@@ -212,6 +212,8 @@
     var data = table.data[f.row];
     if (!data) throw new Error("Kit.answer: focus.row 超出表格行数（共 " + table.data.length + " 行，从 0 数）");
     var fAt = num(f.at, at + 1);
+    // 放大卡片故意盖在虚化的面板上：被盖住的每个文字元素都要标记（hyperframes check 只看元素自己，不继承）
+    panel.querySelectorAll("td,th,h4,p").forEach(function (n) { n.setAttribute("data-layout-allow-overlap", ""); });
     tl.fromTo(panel, { filter: "blur(0px) brightness(1)" }, { filter: "blur(1.6px) brightness(0.62)", duration: 0.4, ease: "none" }, fAt);
 
     var lens = el("div", "kit-ans-lens", stage);

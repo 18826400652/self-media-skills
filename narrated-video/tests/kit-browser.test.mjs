@@ -147,6 +147,7 @@ test("Kit.answer：focus 之后面板虚化、那一行放大浮出、圈出单�
         source: document.querySelector(".kit-ans-lens .src").textContent,
         ring: Number(getComputedStyle(document.querySelector(".kit-ans-lens .kit-ring path")).opacity),
         note: document.querySelector(".kit-ans-note").textContent,
+        allowOverlap: [...document.querySelectorAll(".kit-ans td, .kit-ans th, .kit-ans h4")].every((n) => n.hasAttribute("data-layout-allow-overlap")),
       };
     }, ANSWER);
     assert.equal(r.before.lens, 0);
@@ -157,6 +158,7 @@ test("Kit.answer：focus 之后面板虚化、那一行放大浮出、圈出单�
     assert.match(r.source, /DeepSeek 原话 · 实测第 1 轮/);
     assert.equal(r.ring, 1);
     assert.equal(r.note, "其实是「王姐」");
+    assert.equal(r.allowOverlap, true, "放大卡片故意盖在表格上：被盖住的文字要逐个标记（hyperframes check 不继承父元素的标记）");
   } finally {
     await k.close();
   }

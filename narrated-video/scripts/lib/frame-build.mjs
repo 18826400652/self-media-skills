@@ -20,21 +20,26 @@ const PUSH_SCALE = 1.04; // camera: "push" 推到多大：观众察觉不到「�
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-/** "@词" / "@词#2" → JS 表达式 C("词", 2)；其他值原样转成 JS 字面量 */
-export function toJs(value) {
+const TIME_KEY_RE = /^(at|[a-z]+At)$/; // 时间字段：at、inAt、noteAt、checkAt……
+
+/**
+ * 转成 JS 字面量；时间字段（at、xxxAt，及其数组）里的 "@词" / "@词#2" → C("词", 2)。
+ * 只认时间字段：聊天文字「@你 十分钟后……」这类内容原样保留。time = true 表示 value 本身就是时间。
+ */
+export function toJs(value, time = false) {
   if (typeof value === "string") {
-    const m = value.match(CUE_RE);
+    const m = time ? value.match(CUE_RE) : null;
     if (m) return m[2] ? `C(${JSON.stringify(m[1])}, ${m[2]})` : `C(${JSON.stringify(m[1])})`;
     return JSON.stringify(value);
   }
-  if (Array.isArray(value)) return `[${value.map(toJs).join(", ")}]`;
+  if (Array.isArray(value)) return `[${value.map((v) => toJs(v, time)).join(", ")}]`;
   if (value && typeof value === "object") {
-    return `{ ${Object.entries(value).map(([k, v]) => `${JSON.stringify(k)}: ${toJs(v)}`).join(", ")} }`;
+    return `{ ${Object.entries(value).map(([k, v]) => `${JSON.stringify(k)}: ${toJs(v, TIME_KEY_RE.test(k))}`).join(", ")} }`;
   }
   return JSON.stringify(value);
 }
 
-const at = (v, fallback = 0) => toJs(v ?? fallback);
+const at = (v, fallback = 0) => toJs(v ?? fallback, true);
 
 const MAX_SEGMENTS = 8; // 进度条最多几段：帧多时一段代表几帧
 
