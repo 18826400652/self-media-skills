@@ -1,0 +1,8 @@
+{
+  "name": "knowledge-video",
+  "private": true,
+  "type": "module",
+  "description": "AI 知识短视频生产流程：类型档案、研究来源检查、脚本依据核对、阶段进度",
+  "bin": { "kv": "bin/kv" },
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}

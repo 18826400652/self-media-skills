@@ -1,0 +1,66 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+
+const KV = fileURLToPath(new URL("../scripts/kv.mjs", import.meta.url));
+const claim = (id) => ({ id, text: "事实", kind: "fact", confidence: "high", sources: [{ title: "T", url: "https://a.com", type: "official", quote: "原文", accessed: "2026-10-07" }] });
+const SCRIPT = "## Line 1 — 钩子 (Frame 1)\n\n**依据:** c01\n\n    它先翻资料再回答。\n";
+
+/** 建一个作品目录：files = { 相对路径: 内容（对象自动转 JSON） } */
+export function episode(files) {
+  const dir = mkdtempSync(join(tmpdir(), "kv-"));
+  for (const [p, v] of Object.entries(files)) {
+    mkdirSync(join(dir, p, ".."), { recursive: true });
+    writeFileSync(join(dir, p), typeof v === "string" ? v : JSON.stringify(v));
+  }
+  return dir;
+}
+const kv = (...args) => spawnSync(process.execPath, [KV, ...args], { encoding: "utf8" });
+
+test("kv check：研究和脚本都合格 → 退出码 0", () => {
+  const r = kv("check", episode({ "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT }));
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /✓ research\.json：1 条事实/);
+  assert.match(r.stdout, /✓ 抖音\/SCRIPT\.md：1 句口播都标了依据/);
+});
+
+test("kv check：引用不存在的 claim、research.json 坏了 → 退出码 1", () => {
+  const r = kv("check", episode({ "research.json": { claims: [claim("c02")] }, "抖音/SCRIPT.md": SCRIPT }));
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /✗ 第 1 句：引用的 c01 不在 research\.json 里/);
+  assert.match(r.stdout, /⚠ c02 没被脚本用到/);
+  const bad = kv("check", episode({ "research.json": "{坏", "抖音/SCRIPT.md": SCRIPT }));
+  assert.equal(bad.status, 1);
+  assert.match(bad.stdout, /✗ research\.json 不是合法 JSON/);
+});
+
+test("kv check：research.json 内容是 null 也要报错", () => {
+  const r = kv("check", episode({ "research.json": "null" }));
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /✗ research\.json 必须是一个对象/);
+});
+
+test("kv check：SCRIPT 一句都读不到 → 报错；qa.json 存在时一起检查", () => {
+  const r = kv("check", episode({ "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": "# 空\n", "qa.json": { passed: true, checked: [], issues: [] } }));
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /✗ SCRIPT\.md 里没有读到口播/);
+  assert.match(r.stdout, /✗ qa\.json 的 checked 缺少/);
+});
+
+test("kv check：实用技巧类不要求 research.json；还没写的文件只提示", () => {
+  const r = kv("check", episode({ "run.json": { type: "practical" }, "抖音/SCRIPT.md": "## Line 1 — a (Frame 1)\n\n**依据:** R1\n\n    口播。\n" }));
+  assert.equal(r.status, 0, r.stdout);
+  const empty = kv("check", episode({ "brief.md": "x" }));
+  assert.equal(empty.status, 0);
+  assert.match(empty.stdout, /还没有 research\.json/);
+});
+
+test("kv：用法错误时提示并退出码 1", () => {
+  const r = kv("check");
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /用法：kv check\|brief\|status <作品目录>/);
+});
