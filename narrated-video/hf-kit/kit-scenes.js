@@ -223,7 +223,10 @@
     el("i", "logo", src).style.background = logoColor;
     el("span", "", src, o.source);
     var line = el("div", "line", lens);
-    line.style.gridTemplateColumns = "1fr" + " auto".repeat(data.length - 1);
+    // 第一列（事项）最宽，中间列按内容，最后一列（常是长说明）可折行
+    line.style.gridTemplateColumns = data.length > 2
+      ? "minmax(0,1.5fr)" + " auto".repeat(data.length - 2) + " minmax(0,1fr)"
+      : "minmax(0,1fr)" + (data.length > 1 ? " auto" : "");
     var cells = data.map(function (c) { return el("span", "", line, c); });
     tl.fromTo(lens, { opacity: 0, scale: 0.92, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.45, ease: U.EASE }, fAt + 0.1);
     if (f.col != null) {
