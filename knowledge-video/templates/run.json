@@ -1,0 +1,9 @@
+{
+  "type": "concept",
+  "stage": "brief",
+  "gates": {
+    "script": { "passed": false, "at": null, "edits": [] },
+    "storyboard": { "passed": false, "at": null, "edits": [] },
+    "final": { "passed": false, "at": null, "edits": [] }
+  }
+}

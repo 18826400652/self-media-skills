@@ -1,0 +1,22 @@
+{
+  "topic": "示例：RAG 是什么",
+  "question": "示例：为什么问公司知识库时，AI 能答得比直接问它准？",
+  "claims": [
+    {
+      "id": "c01",
+      "text": "RAG 把检索到的外部资料和大模型结合起来生成回答",
+      "kind": "fact",
+      "confidence": "high",
+      "sources": [
+        {
+          "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+          "url": "https://arxiv.org/abs/2005.11401",
+          "type": "paper",
+          "quote": "示例：把这里换成来源原文里证明这条事实的句子",
+          "accessed": "2026-10-07"
+        }
+      ]
+    }
+  ],
+  "open_questions": []
+}
