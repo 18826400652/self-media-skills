@@ -47,7 +47,7 @@
 ```html
 <div id="f03-shot" style="position:absolute;left:60px;top:540px;width:960px"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<script src="compositions/kit/gsap.min.js"></script>
 <script src="compositions/kit/cues.js"></script>
 <script src="compositions/kit/kit.js"></script>
 <script>
@@ -63,6 +63,8 @@
 ```
 
 宿主元素的 id 要带帧前缀（如 `f03-`），避免和别的帧重名。
+
+GSAP 用本地文件 `compositions/kit/gsap.min.js`（`nv hf-kit` 复制进工程），不要写 CDN 地址：国内访问 jsdelivr 常常十几秒，会让截图、检查、渲染超时。写错了也没关系，`nv hf-build` 组装时会把 CDN 地址统一换成本地。
 
 ## 录屏（`nv rec` 录的视频）
 

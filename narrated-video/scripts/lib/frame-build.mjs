@@ -14,6 +14,8 @@
 // 时间写法：数字 = 帧内秒数；"@词" = 说到这个词的时刻；"@词#2" = 第二次说到。
 // 位置都在抖音安全区内（内容 x 60–1020、y 230–1150）。
 
+import { LOCAL_GSAP } from "./localize.mjs";
+
 const CUE_RE = /^@(.+?)(?:#(\d+))?$/;
 const REC_BOX = { left: 95, top: 340, width: 890, height: 1582 };
 const PUSH_SCALE = 1.04; // camera: "push" 推到多大：观众察觉不到「在动」，但画面不会死
@@ -149,7 +151,7 @@ ${css.map((c) => `      ${sub(c)}`).join("\n")}
     </style>
     <div id="${p}-ground" class="${p}-ground${glow ? ` kit-atmo${accent ? " is-accent" : ""}` : ""} clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
 ${glow ? `    ${hudPart(f.n, f.total, b.kicker !== false)}\n` : ""}${b.kicker === false ? "" : `    <div class="${p}-kicker${hook("kit-kicker")}">${esc(f.kicker)}</div>\n`}${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
-    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="${LOCAL_GSAP}"></script>
     <script src="compositions/kit/cues.js"></script>
     <script src="compositions/kit/kit.js"></script>
 ${glow ? '    <script src="compositions/kit/kit-glow.js"></script>\n' : ""}    <script src="compositions/kit/kit-scenes.js"></script>

@@ -2,16 +2,17 @@
 // 用法：nv hf-build <HyperFrames 工程目录> [--no-check] [--snap | --motion]
 //
 // 配音（nv hf-audio）和画面（compositions/frames/）都写好之后，一条命令把工程组装成可渲染的状态：
-//   组件库 + 逐字时间 → 同步帧时长 → 按 build 生成画面 → 音效 → 素材 → 字体 → 字幕 → 组装 index → 转场 → lint / check
+//   组件库 + 逐字时间 → 同步帧时长 → 按 build 生成画面 → 音效 → 素材 → 字体 → 字幕 → 组装 index → 转场 → GSAP 本地化 → lint / check
 // --snap：再按每帧结尾截图，拼成 snapshots/sheet.jpg，用来看图检查；并量每帧内容铺开多少，偏空的帧给出警告。
 // --motion：每帧截入场、中段、落定三张（动画过程），检查元素是否按时出现、过程中有没有穿帮。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { SKILL_DIR } from "./lib/config.mjs";
 import { isMain } from "./lib/is-main.mjs";
+import { localizeGsap } from "./lib/localize.mjs";
 
 const FE = join(process.env.FACELESS_DIR || join(homedir(), ".claude", "skills", "faceless-explainer"), "scripts");
 const HF = join(SKILL_DIR, "node_modules", ".bin", "hyperframes");
@@ -22,6 +23,8 @@ const MOTION_ENTRANCE = 0.35; // 入场时刻：帧开始后 0.35 秒
 const MIN_SPAN_Y = 0.55; // 纵向至少铺开内容区的 55%（第 1 课校准：空的两帧是 0.46、0.50，正常帧 ≥ 0.6）
 const MIN_OCCUPANCY = 0.4;
 const PYTHON = join(SKILL_DIR, ".venv", "bin", "python");
+
+const gsapVersion = () => JSON.parse(readFileSync(join(SKILL_DIR, "node_modules", "gsap", "package.json"), "utf8")).version;
 
 function run(label, cmd, args, cwd) {
   console.log(`\n▸ ${label}`);
@@ -103,6 +106,29 @@ function checkOccupancy(dir) {
   for (const r of sparse) console.log(`  ⚠ ${basename(r.file)}：内容只铺了纵向 ${Math.round(r.spanY * 100)}%，下半屏偏空（放大字号、加一个图形或把元素往下排）`);
 }
 
+function htmlFiles(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) return htmlFiles(p);
+    return e.name.endsWith(".html") ? [p] : [];
+  });
+}
+
+/** index.html 和 compositions/ 下所有 HTML：CDN 上的 GSAP 换成本地 compositions/kit/gsap.min.js */
+export function localizeProject(dir, gsapVersion) {
+  const files = [join(dir, "index.html"), ...(existsSync(join(dir, "compositions")) ? htmlFiles(join(dir, "compositions")) : [])].filter(existsSync);
+  const result = { files: 0, tags: 0, mismatched: [] };
+  for (const f of files) {
+    const r = localizeGsap(readFileSync(f, "utf8"), gsapVersion);
+    if (!r.count) continue;
+    writeFileSync(f, r.html);
+    result.files++;
+    result.tags += r.count;
+    for (const v of r.mismatched) if (!result.mismatched.includes(v)) result.mismatched.push(v);
+  }
+  return result;
+}
+
 function snapshotSheet(dir, motion) {
   const times = motion ? frameMotionTimes(dir) : frameEndTimes(dir);
   if (!times.length) throw new Error("index.html 里没找到帧，无法截图");
@@ -139,6 +165,10 @@ function main() {
   node("组装 index.html", join(FE, "assemble-index.mjs"), [...sb, "--hyperframes", "."], dir);
   node("转场", join(FE, "transitions.mjs"), ["inject", ...sb, "--hyperframes", "."], dir);
   node("转场校验", join(FE, "transitions.mjs"), ["verify", ...sb, "--index", "./index.html"], dir);
+  console.log("\n▸ GSAP 换成本地文件（不走 CDN）");
+  const loc = localizeProject(dir, gsapVersion());
+  console.log(loc.tags ? `  ✓ ${loc.files} 个文件、${loc.tags} 处` : "  ✓ 已经都是本地文件");
+  if (loc.mismatched.length) console.log(`  ⚠ 有文件写的是 GSAP ${loc.mismatched.join("、")}，本地是 ${gsapVersion()}，已统一用本地版本`);
   if (check) {
     run("lint", HF, ["lint", "."], dir);
     run("check", HF, ["check", "."], dir);

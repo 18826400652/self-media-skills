@@ -244,3 +244,64 @@ test("toJs：until 和带大写的 xxxYyyAt 也是时间字段", async () => {
   const { toJs } = await import("../scripts/lib/frame-build.mjs");
   assert.equal(toJs({ until: "@讲完", zoomInAt: "@推近", label: "@不是时间" }), '{ "until": C("讲完"), "zoomInAt": C("推近"), "label": "@不是时间" }');
 });
+
+test("localizeGsap：CDN 地址换成本地，去掉 integrity / crossorigin，别的链接不动", async () => {
+  const { localizeGsap, LOCAL_GSAP } = await import("../scripts/lib/localize.mjs");
+  assert.equal(LOCAL_GSAP, "compositions/kit/gsap.min.js");
+  const html = [
+    '<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js" integrity="sha384-abc" crossorigin="anonymous"></script>',
+    '<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>',
+    '<link href="https://fonts.googleapis.com/css2?family=X" rel="stylesheet">',
+  ].join("\n");
+  const r = localizeGsap(html, "3.14.2");
+  assert.equal(r.count, 2);
+  assert.deepEqual(r.mismatched, []);
+  assert.equal(r.html, [
+    '<script src="compositions/kit/gsap.min.js"></script>',
+    '<script src="compositions/kit/gsap.min.js"></script>',
+    '<link href="https://fonts.googleapis.com/css2?family=X" rel="stylesheet">',
+  ].join("\n"));
+  assert.deepEqual(localizeGsap("<p>无脚本</p>", "3.14.2"), { html: "<p>无脚本</p>", count: 0, mismatched: [] });
+});
+
+test("localizeGsap：版本和本地不一致时照样换，但报出来", async () => {
+  const { localizeGsap } = await import("../scripts/lib/localize.mjs");
+  const r = localizeGsap('<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>', "3.14.2");
+  assert.equal(r.count, 1);
+  assert.deepEqual(r.mismatched, ["3.12.5"]);
+});
+
+test("帧模板直接引用本地 GSAP", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const html = buildFrame({ n: 1, id: "01-h", duration: 2, kicker: "K", tokens: FLAT_TOKENS, build: {} });
+  assert.match(html, /<script src="compositions\/kit\/gsap\.min\.js"><\/script>/);
+  assert.doesNotMatch(html, /cdn\.jsdelivr/);
+});
+
+test("installGsap：把 nv 自带的 GSAP 复制到工程的 compositions/kit/，返回版本", async () => {
+  const { installGsap } = await import("../scripts/hf-kit.mjs");
+  const { mkdtempSync, existsSync, statSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const out = mkdtempSync(join(tmpdir(), "kit-"));
+  const version = installGsap(out);
+  assert.equal(version, "3.14.2");
+  assert.ok(existsSync(join(out, "gsap.min.js")));
+  assert.ok(statSync(join(out, "gsap.min.js")).size > 50000);
+});
+
+test("localizeProject：index.html 和 compositions 下所有 HTML 都换成本地 GSAP", async () => {
+  const { localizeProject } = await import("../scripts/hf-build.mjs");
+  const { mkdirSync, mkdtempSync } = await import("node:fs");
+  const dir = mkdtempSync(join(tmpdir(), "proj-"));
+  const cdn = '<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js" integrity="sha384-x" crossorigin="anonymous"></script>';
+  mkdirSync(join(dir, "compositions", "frames"), { recursive: true });
+  writeFileSync(join(dir, "index.html"), cdn);
+  writeFileSync(join(dir, "compositions", "captions.html"), cdn);
+  writeFileSync(join(dir, "compositions", "frames", "01-a.html"), cdn + cdn);
+  writeFileSync(join(dir, "compositions", "frames", "notes.txt"), cdn);
+  const r = localizeProject(dir, "3.14.2");
+  assert.deepEqual(r, { files: 3, tags: 4, mismatched: [] });
+  assert.equal(readFileSync(join(dir, "compositions", "frames", "01-a.html"), "utf8"), '<script src="compositions/kit/gsap.min.js"></script>'.repeat(2));
+  assert.equal(readFileSync(join(dir, "compositions", "frames", "notes.txt"), "utf8"), cdn, "只改 HTML");
+  assert.deepEqual(localizeProject(dir, "3.14.2"), { files: 0, tags: 0, mismatched: [] }, "再跑一次没有可换的");
+});

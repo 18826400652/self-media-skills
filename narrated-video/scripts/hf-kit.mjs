@@ -13,6 +13,15 @@ import { isMain } from "./lib/is-main.mjs";
 const SRC = join(SKILL_DIR, "hf-kit", "kit.js");
 /** 和 kit.js 一起装进工程的文件（不需要写入 token） */
 export const KIT_FILES = ["kit-glow.js", "kit-scenes.js"];
+const GSAP_DIR = join(SKILL_DIR, "node_modules", "gsap");
+
+/** 把 nv 自带的 GSAP 复制到 outDir/gsap.min.js（帧里引用本地文件，不走 CDN），返回版本号 */
+export function installGsap(outDir) {
+  const src = join(GSAP_DIR, "dist", "gsap.min.js");
+  if (!existsSync(src)) throw new Error(`找不到 ${src}：在 ${SKILL_DIR} 运行 npm install`);
+  copyFileSync(src, join(outDir, "gsap.min.js"));
+  return JSON.parse(readFileSync(join(GSAP_DIR, "package.json"), "utf8")).version;
+}
 const TOKENS_RE = /\/\*KIT_TOKENS\*\/([\s\S]*?)\/\*END_KIT_TOKENS\*\//;
 const TOKEN_KEYS = ["accent", "ink", "muted", "bg", "surface", "line", "danger", "font", "mono"];
 
@@ -41,7 +50,9 @@ function main() {
   const out = join(outDir, "kit.js");
   writeFileSync(out, source.replace(TOKENS_RE, `/*KIT_TOKENS*/ ${JSON.stringify(tokens)} /*END_KIT_TOKENS*/`));
   for (const f of KIT_FILES) copyFileSync(join(SKILL_DIR, "hf-kit", f), join(outDir, f));
-  console.log(`✓ compositions/kit/kit.js + ${KIT_FILES.join("、")}（品牌色：${Object.keys(overrides).length ? "项目配置 hfKit.tokens" : "默认配色"}）`);
+  const gsapVersion = installGsap(outDir);
+  console.log(`✓ compositions/kit/kit.js + ${KIT_FILES.join("、")} + gsap.min.js（${gsapVersion}）`);
+  console.log(`  品牌色：${Object.keys(overrides).length ? "项目配置 hfKit.tokens" : "默认配色"}`);
   const cueFrames = writeCues(dir);
   console.log(cueFrames ? `✓ compositions/kit/cues.js（${cueFrames} 帧的逐字时间）` : "  还没有配音（audio_meta.json），cues.js 等 nv hf-audio 之后生成");
   console.log("  在帧里引用：<script src=\"compositions/kit/kit.js\"></script>，用法见 references/hf-kit.md");
