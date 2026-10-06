@@ -154,7 +154,8 @@
       tl.fromTo(row, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.35, ease: U.EASE }, at);
       var need = Math.max(0, row.offsetTop + row.offsetHeight + pad - viewH);
       if (need > shift) {
-        tl.fromTo(list, { y: -shift }, { y: -need, duration: 0.35, ease: U.EASE }, at);
+        // immediateRender: false：多段上推时，否则建好时间轴后列表会停在最后一段的起点
+        tl.fromTo(list, { y: -shift }, { y: -need, duration: 0.35, ease: U.EASE, immediateRender: false }, at);
         shift = need;
       }
     });

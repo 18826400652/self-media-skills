@@ -20,7 +20,7 @@ const PUSH_SCALE = 1.04; // camera: "push" 推到多大：观众察觉不到「�
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-const TIME_KEY_RE = /^(at|[a-z]+At)$/; // 时间字段：at、inAt、noteAt、checkAt……
+const TIME_KEY_RE = /^(at|until|[a-z][A-Za-z]*At)$/; // 时间字段：at、until、inAt、noteAt、zoomInAt……
 
 /**
  * 转成 JS 字面量；时间字段（at、xxxAt，及其数组）里的 "@词" / "@词#2" → C("词", 2)。
@@ -49,10 +49,13 @@ export function progressSegments(n, total, max = MAX_SEGMENTS) {
   return { count, lit: Math.max(1, Math.round((n / total) * count)) };
 }
 
-function hudPart(n, total) {
+/** HUD：四角 + 进度条；progress = false（钩子帧）只留四角，第一眼不要「上课感」 */
+function hudPart(n, total, progress) {
+  const corners = '<i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i>';
+  if (!progress) return `<div class="kit-hud">${corners}</div>`;
   const { count, lit } = progressSegments(n, total);
   const bars = Array.from({ length: count }, (_, i) => (i < lit ? '<i class="on"></i>' : "<i></i>")).join("");
-  return `<div class="kit-hud"><i class="c tl"></i><i class="c tr"></i><i class="c bl"></i><i class="c br"></i><div class="kit-progress">${bars}</div></div>`;
+  return `<div class="kit-hud">${corners}<div class="kit-progress">${bars}</div></div>`;
 }
 
 /** **词** → 强调色 span */
@@ -145,7 +148,7 @@ export function buildFrame(f) {
 ${css.map((c) => `      ${sub(c)}`).join("\n")}
     </style>
     <div id="${p}-ground" class="${p}-ground${glow ? ` kit-atmo${accent ? " is-accent" : ""}` : ""} clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
-${glow ? `    ${hudPart(f.n, f.total)}\n` : ""}${b.kicker === false ? "" : `    <div class="${p}-kicker${hook("kit-kicker")}">${esc(f.kicker)}</div>\n`}${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
+${glow ? `    ${hudPart(f.n, f.total, b.kicker !== false)}\n` : ""}${b.kicker === false ? "" : `    <div class="${p}-kicker${hook("kit-kicker")}">${esc(f.kicker)}</div>\n`}${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <script src="compositions/kit/cues.js"></script>
     <script src="compositions/kit/kit.js"></script>

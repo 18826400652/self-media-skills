@@ -219,6 +219,7 @@ test("帧模板 glow：accent 底不加光晕；kicker false 只去掉角标；g
   const noKicker = buildFrame({ ...f, build: { kicker: false } });
   assert.doesNotMatch(noKicker, /class="p01-kicker/);
   assert.match(noKicker, /class="kit-hud"><i class="c tl">/);
+  assert.doesNotMatch(noKicker, /kit-progress/, "钩子帧只留四角：不要「上课感」的进度条");
   assert.throws(() => buildFrame({ ...f, total: undefined, build: {} }), /glow 需要 total/);
 });
 
@@ -237,4 +238,9 @@ test("toJs：只有时间字段（at、xxxAt）里的 @词 才转成按词取时
     '{ "messages": [{ "from": "刘总", "text": "@你 十分钟后发群里", "at": C("十分钟") }], "focus": { "noteAt": C("王姐"), "note": "@某人" } }',
   );
   assert.equal(toJs({ at: ["@两遍", "@整理#2", 1.5] }), '{ "at": [C("两遍"), C("整理", 2), 1.5] }');
+});
+
+test("toJs：until 和带大写的 xxxYyyAt 也是时间字段", async () => {
+  const { toJs } = await import("../scripts/lib/frame-build.mjs");
+  assert.equal(toJs({ until: "@讲完", zoomInAt: "@推近", label: "@不是时间" }), '{ "until": C("讲完"), "zoomInAt": C("推近"), "label": "@不是时间" }');
 });

@@ -108,12 +108,16 @@ test("Kit.chat：staged false 不显示标签；消息超出高度时整体上�
       const tl = gsap.timeline({ paused: true });
       const messages = Array.from({ length: 12 }, (_, i) => ({ from: i % 2 ? "小林" : "刘总", text: "第 " + (i + 1) + " 条消息，内容稍微长一点占两行也没关系" }));
       Kit.chat(tl, "#host", { title: "群", staged: false, height: 600, stagger: 0.4, messages });
+      const view0 = document.querySelector(".kit-chat .view").getBoundingClientRect();
+      tl.seek(0.5); // 第一次上推之前：列表应在原位，已出现的消息在面板里
+      const first = document.querySelector(".kit-chat .msg").getBoundingClientRect();
+      const early = first.top >= view0.top && first.bottom <= view0.bottom;
       tl.seek(10);
       const view = document.querySelector(".kit-chat .view").getBoundingClientRect();
       const last = [...document.querySelectorAll(".kit-chat .msg")].pop().getBoundingClientRect();
-      return { staged: !!document.querySelector(".kit-chat-staged"), inside: last.bottom <= view.bottom + 1 && last.top >= view.top };
+      return { staged: !!document.querySelector(".kit-chat-staged"), early, inside: last.bottom <= view.bottom + 1 && last.top >= view.top };
     });
-    assert.deepEqual(r, { staged: false, inside: true });
+    assert.deepEqual(r, { staged: false, early: true, inside: true });
   } finally {
     await k.close();
   }
