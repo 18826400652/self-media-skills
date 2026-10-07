@@ -61,6 +61,55 @@ test("marker：glow 下是不透明笔触，涂完关键词变深色字", opt, a
   }
 });
 
+// glow 笔触的左右边界：svg 盒子 + 路径端点 + 圆头笔帽（stroke-width/2），按 viewBox 换算成像素；再加发光
+function glowStrokeExtent() {
+  const svg = document.querySelector(".kit-key svg");
+  const path = svg.querySelector("path");
+  const r = svg.getBoundingClientRect();
+  const sx = r.width / svg.viewBox.baseVal.width;
+  const cap = Number(path.getAttribute("stroke-width")) / 2;
+  const xs = path.getAttribute("d").match(/-?[\d.]+/g).map(Number).filter((_, i) => i % 2 === 0);
+  const blur = Number(path.style.filter.match(/0px 0px ([\d.]+)px/)?.[1] || 0);
+  const host = document.querySelector("#host").getBoundingClientRect();
+  return {
+    left: r.left + (Math.min(...xs) - cap) * sx - blur - host.left,
+    right: host.right - (r.left + (Math.max(...xs) + cap) * sx + blur),
+    size: parseFloat(document.querySelector(".kit-line").style.fontSize),
+  };
+}
+
+for (const [where, key] of [["句尾", "挑三页"], ["句首", "资料太长"]]) {
+  test(`marker：glow 关键词在${where}时，笔触和发光不超出宿主`, opt, async () => {
+    const k = await openKitPage({ files: ["kit.js", "kit-glow.js"] });
+    try {
+      const r = await k.page.evaluate(`(() => {
+        const tl = gsap.timeline({ paused: true });
+        Kit.marker(tl, "#host", { text: "资料太长别整本扔挑三页", key: ${JSON.stringify(key)}, size: 96, at: 0.2 });
+        tl.seek(3);
+        return (${glowStrokeExtent})();
+      })()`);
+      assert.ok(r.left >= 0, `左边超出 ${-r.left}px`);
+      assert.ok(r.right >= 0, `右边超出 ${-r.right}px`);
+    } finally {
+      await k.close();
+    }
+  });
+}
+
+test("marker：关键词在句中时字号不额外缩小（只按字数）", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-glow.js"] });
+  try {
+    const r = await k.page.evaluate(`(() => {
+      const tl = gsap.timeline({ paused: true });
+      Kit.marker(tl, "#host", { text: "资料太长别整本扔挑三页", key: "整本", size: 96, at: 0.2 });
+      return (${glowStrokeExtent})();
+    })()`);
+    assert.equal(r.size, Math.floor(960 / 11.3));
+  } finally {
+    await k.close();
+  }
+});
+
 const CHAT = {
   title: "双十一筹备群", count: 5, at: 0, stagger: 0.5,
   messages: [

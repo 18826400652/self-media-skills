@@ -218,6 +218,22 @@
     return Math.min(size, Math.floor(w / (Array.from(text).length + 0.3)));
   }
 
+  // glow 荧光笔的笔触比关键词宽：svg 盒子外扩 6%（宽 112%），路径 x 从 3 到 97，笔宽 32 的圆头再各伸出 16，
+  // 合计每边多出关键词宽的 GLOW_PAD（约 21%），外面还有一圈发光；整条笔触斜 GLOW_TILT 度，角上再多出约一个字高 × sin
+  var GLOW_BOX = { left: -6, width: 112 }, GLOW_PATH_X = [3, 97], GLOW_STROKE = 32, GLOW_BLUR = 14, GLOW_TILT = -1.2;
+  var GLOW_PAD = (-GLOW_BOX.left + (GLOW_BOX.width * (GLOW_STROKE / 2 - GLOW_PATH_X[0])) / 100) / 100;
+
+  // 关键词贴着行首或行尾时，笔触会伸出这一行：在那一侧留内边距，按「字 + 内边距」缩字号
+  function glowFit(host, text, key, size) {
+    var s = fitSize(host, text, size), w = host.clientWidth, i = key ? text.indexOf(key) : -1;
+    if (!w || i < 0) return { size: s, padL: 0, padR: 0 };
+    var n = Array.from(text).length, k = Array.from(key).length;
+    var before = Array.from(text.slice(0, i)).length, after = n - before - k;
+    var over = function (chars, sz) { return Math.max(0, Math.ceil((GLOW_PAD * k + Math.abs(Math.sin((GLOW_TILT * Math.PI) / 180)) - chars) * sz + GLOW_BLUR)); };
+    while (s > 1 && (n + 0.3) * s + over(before, s) + over(after, s) > w) s--;
+    return { size: s, padL: over(before, s), padR: over(after, s) };
+  }
+
   // 把「列编号」这样的关键词从一行字里拆出来
   function splitKey(parent, text, key) {
     var i = key ? text.indexOf(key) : -1;
@@ -281,31 +297,34 @@
   Kit.marker = function (tl, sel, o) {
     var host = hostOf(sel);
     var T = tok(host);
-    var size = fitSize(host, o.text, num(o.size, 110)), at = num(o.at, 1), inAt = num(o.inAt, 0);
+    var under = o.style === "underline";
+    var glow = Kit.look === "glow" && !under; // glow：不透明荧光笔笔触，涂完后关键词变深色字
+    var fit = glow ? glowFit(host, o.text, o.key, num(o.size, 110)) : { size: fitSize(host, o.text, num(o.size, 110)), padL: 0, padR: 0 };
+    var at = num(o.at, 1), inAt = num(o.inAt, 0);
     var line = el("div", "kit kit-line", host);
-    line.style.fontSize = size + "px";
+    line.style.fontSize = fit.size + "px";
+    if (fit.padL) line.style.paddingLeft = fit.padL + "px";
+    if (fit.padR) line.style.paddingRight = fit.padR + "px";
     var key = splitKey(line, o.text, o.key);
     inFrom(tl, line, inAt);
     if (!key) return;
     key.classList.add("kit-acc");
-    var under = o.style === "underline";
-    var glow = Kit.look === "glow" && !under; // glow：不透明荧光笔笔触，涂完后关键词变深色字
     var svg = svgEl("svg", { viewBox: "0 0 100 40", preserveAspectRatio: "none" }, key);
     svg.style.cssText = under
       ? "left:-2%;width:104%;top:88%;height:18%"
       : glow
-        ? "left:-6%;width:112%;top:8%;height:96%;transform:rotate(-1.2deg)"
+        ? "left:" + GLOW_BOX.left + "%;width:" + GLOW_BOX.width + "%;top:8%;height:96%;transform:rotate(" + GLOW_TILT + "deg)"
         : "left:-4%;width:108%;top:50%;height:45%";
     var path = svgEl("path", {
-      d: under ? "M 2 20 C 24 14, 52 26, 98 16" : glow ? "M 3 21 C 30 17, 62 24, 97 18" : "M 2 22 C 26 17, 58 26, 98 19",
+      d: under ? "M 2 20 C 24 14, 52 26, 98 16" : glow ? "M " + GLOW_PATH_X[0] + " 21 C 30 17, 62 24, " + GLOW_PATH_X[1] + " 18" : "M 2 22 C 26 17, 58 26, 98 19",
       fill: "none",
       stroke: T.accent,
-      "stroke-width": under ? 9 : glow ? 32 : 36,
+      "stroke-width": under ? 9 : glow ? GLOW_STROKE : 36,
       "stroke-linecap": "round",
     }, svg);
     path.style.opacity = 0;
     if (glow) {
-      path.style.filter = "drop-shadow(0 0 14px " + T.accent + ")";
+      path.style.filter = "drop-shadow(0 0 " + GLOW_BLUR + "px " + T.accent + ")";
       key.style.textShadow = "none";
     }
     drawOn(tl, path, at, 0.5, under ? 1 : glow ? 0.92 : 0.32);

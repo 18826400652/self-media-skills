@@ -88,7 +88,7 @@ GSAP 用本地文件 `compositions/kit/gsap.min.js`（`nv hf-kit` 复制进工�
 |---|---|
 | `Kit.strike` | `from` 旧的、`to` 新的、`at` 开始划线、`size`=140 |
 | `Kit.number` | `value` 数值、`unit` 单位、`label` 下方说明、`at`、`countFrom` 从几开始数（不填就直接出现）、`size`=300 |
-| `Kit.marker` | `text` 整行、`key` 关键词、`at` 开始涂、`style`=`highlight`（底色）\|`underline`（下划线）、`size`=110 |
+| `Kit.marker` | `text` 整行、`key` 关键词、`at` 开始涂、`style`=`highlight`（底色）\|`underline`（下划线）、`size`=110（是上限：按字数自动缩；glow 下关键词贴着行首或行尾时，会把笔触伸出的部分也算进去） |
 | `Kit.annotate` | `text` 整行、`key` 圈的词、`note` 说明、`at` 开始圈、`size`=96 |
 | `Kit.shot` | `src`、`size`=[原图宽,原图高]、`caption` 截图上方的小字、`width`/`height` 显示窗口（默认宿主宽、按比例）、`zoom`={`x`,`y`,`scale`=2,`at`,`dur`=0.9}、`marks`=[{`x`,`y`,`r`=20,`at`,`label`,`side`=`below`\|`above`\|`left`\|`right`}] |
 | `Kit.stream` | `text` 原话、`at`、`source` 上方小字（如「DeepSeek 原话」）、`size`=52、`rate`=1（越小越快） |
