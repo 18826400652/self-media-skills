@@ -12,6 +12,15 @@ description: >
 
 **原则：每条事实都能追溯到来源；每个阶段都有产物；不一次做完，三个节点停下来等人确认。**
 
+## 安装（第一次用）
+
+```bash
+ln -s <skill 目录> ~/.claude/skills/knowledge-video   # 让 Claude 能加载这个 skill
+ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 kv
+```
+
+没有第三方依赖，不用 npm install。下游的配音、分镜、渲染要先装好 narrated-video（`nv`）。
+
 开始前：读项目配置 `knowledge-video.config.json`（系列、观众、语气指南、经验库目录），读经验库的 `规律.md`。
 
 ## 阶段

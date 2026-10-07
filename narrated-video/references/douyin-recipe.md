@@ -108,6 +108,8 @@
 
 每帧在 STORYBOARD.md 写一行 JSON，`nv hf-build` 会自动生成画面（`nv hf-frames`）。时间写 `"@词"`（说到这个词时），不手写秒数。
 
+**动画别挂在句尾的词上**：帧在这句话说完就切走，挂在最后一两个字上的动画来不及播完。荧光笔要 0.5 秒涂完、圈词注释要 1 秒才出来，尤其要挂到前面的词上（「回答之前，先去翻资料」挂 `@先去`，不挂 `@翻资料`）。`nv hf-frames` 会按逐字时间检查，来不及看清的会给出 ⚠。
+
 ```text
 - build: {"rec":{"mediaStart":4.0,"rate":1.5,"dim":true},"kit":{"name":"compare","opts":{"bad":{"tag":"第 1 次","text":"合计 22 条"},"good":{"tag":"第 2 次","text":"合计 20 条"},"at":["@两遍","@不一样"],"size":72}}}
 - build: {"rec":{"mediaStart":0.9,"chip":"DeepSeek 实测录屏"}}
