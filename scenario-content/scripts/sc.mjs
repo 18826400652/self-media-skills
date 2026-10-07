@@ -171,8 +171,10 @@ function checkPlatforms(ep, config, r) {
   const douyin = read("douyinScript");
   if (douyin) {
     const lines = douyinLines(douyin);
-    for (const { n, text, emo } of lines) {
-      if (chars(text) > LIMITS.douyinLine) r.warn(`抖音第 ${n} 句 ${chars(text)} 字，建议 ≤ ${LIMITS.douyinLine}：${text}`);
+    for (const { n, text, emo, sentences = [text] } of lines) {
+      for (const s of sentences) {
+        if (chars(s) > LIMITS.douyinLine) r.warn(`抖音第 ${n} 帧有一句 ${chars(s)} 字，建议 ≤ ${LIMITS.douyinLine}：${s}`);
+      }
       if (emo && !EMOTIONS.includes(emo)) r.fail(`抖音第 ${n} 句情感「${emo}」无效，可选：${EMOTIONS.slice(0, 7).join(" ")}`);
       const written = WRITTEN_WORDS.filter((w) => text.includes(w));
       if (written.length) r.warn(`抖音第 ${n} 句有书面词「${written.join("、")}」，配音会像播报：${text}`);
@@ -187,15 +189,17 @@ function checkPlatforms(ep, config, r) {
 /**
  * 抖音口播 → [{ n, text, emo }]。支持两种写法：
  *   - 分镜表：表头含「口播…」「情感…」列，第一列是行号（narrated-video 旧流程的 脚本.md）
- *   - HyperFrames SCRIPT.md：`## … (Frame N)` 开一句，`**Emotion:**`/`**情感:**`，缩进块是口播原文
+ *   - HyperFrames SCRIPT.md：`## … (Frame N)` 开一帧，`**Emotion:**`/`**情感:**`，缩进块是口播原文；
+ *     缩进块可以有好几行，每行一句（同一个画面接着说），字数按句检查
  */
 export function douyinLines(md) {
   if (/\(Frame \d+\)/.test(md)) {
     return md.split(/^## /m).slice(1).flatMap((block) => {
       const n = block.match(/\(Frame (\d+)\)/)?.[1];
-      const text = block.split("\n").filter((l) => /^ {4}\S/.test(l)).map((l) => l.trim()).join("");
+      const sentences = block.split("\n").filter((l) => /^ {4}\S/.test(l)).map((l) => l.trim());
+      const text = sentences.join("");
       const emo = block.match(/\*\*(?:Emotion|情感)[:：]\*\*\s*(\S+)/i)?.[1] ?? "";
-      return n && text ? [{ n, text, emo }] : [];
+      return n && text ? [{ n, text, emo, sentences }] : [];
     });
   }
   const rows = md.split("\n").filter((l) => l.trim().startsWith("|"));

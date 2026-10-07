@@ -14,8 +14,15 @@ test("douyinLines 读旧版分镜表：行号、口播、情感", () => {
 test("douyinLines 读 HyperFrames SCRIPT.md：(Frame N)、缩进口播、Emotion / 情感", () => {
   const md = "# SCRIPT\n\n- 发布文案：xx\n\n## Line 1 — 钩子 (Frame 1)\n\n**Emotion:** 惊讶\n\n    同一个问题，问了两遍。\n\n## Line 2 (Frame 2)\n\n**情感:** 平静\n\n    第二句。\n";
   assert.deepEqual(douyinLines(md), [
-    { n: "1", text: "同一个问题，问了两遍。", emo: "惊讶" },
-    { n: "2", text: "第二句。", emo: "平静" },
+    { n: "1", text: "同一个问题，问了两遍。", emo: "惊讶", sentences: ["同一个问题，问了两遍。"] },
+    { n: "2", text: "第二句。", emo: "平静", sentences: ["第二句。"] },
+  ]);
+});
+
+test("douyinLines：一帧写好几行口播，每行一句，text 是整帧连起来", () => {
+  const md = "## 钩子 (Frame 1)\n\n    会上说的是再看看。\n    AI写成了不加。\n";
+  assert.deepEqual(douyinLines(md), [
+    { n: "1", text: "会上说的是再看看。AI写成了不加。", emo: "", sentences: ["会上说的是再看看。", "AI写成了不加。"] },
   ]);
 });
 

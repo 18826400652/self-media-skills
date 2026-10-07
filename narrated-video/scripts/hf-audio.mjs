@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 用法：nv hf-audio <HyperFrames 工程目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>]
+// 用法：nv hf-audio <HyperFrames 工程目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>] [--pause <秒>]
 //
 // 给 HyperFrames 官方工作流（/faceless-explainer 等）配音：用本模块的 TTS（默认读项目配置，如 CosyVoice）
 // 代替它自带的 HeyGen / Kokoro，产出与它的音频引擎完全相同的文件，后续 sync-durations、fetch-sfx、
@@ -14,6 +14,8 @@
 // 读取工程里的 SCRIPT.md：`## … (Frame N)` 开一句，缩进块是口播原文；
 // 可选 `**Emotion:** 惊讶`（平静 开心 惊讶 难过 生气 害怕 厌恶）逐句指定情感；
 // 可选 `**重点词:** 八秒钟、一下午` 指定字幕里要高亮的词。
+// 一帧的缩进块可以写好几句，画面不换、口播接着说（聊天式的慢节奏）。
+// --pause（或配置 tts.pause）：每帧说完后留几秒停顿再切下一帧，默认 0。
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -22,7 +24,7 @@ import { writeCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { loadDotEnv, probeDuration, synthesizeClean } from "./lib/speech.mjs";
 
-const OPTION_KEYS = ["voice", "speed", "provider", "model"];
+const OPTION_KEYS = ["voice", "speed", "provider", "model", "pause"];
 const PUNCTUATION = /^[\p{P}\p{S}\s]+$/u;
 const TAIL_SECONDS = 0.8; // 最后一帧结尾留白：口播说完后画面停一下再结束
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -147,7 +149,10 @@ async function main() {
   if (!existsSync(scriptPath)) throw new Error(`找不到 ${scriptPath}`);
   const config = loadConfig(dir);
   loadDotEnv(config.root);
-  const tts = { ...config.tts, ...overrides };
+  // 停顿不参与合成，也不影响配音缓存
+  const { pause: pauseRaw = 0, ...tts } = { ...config.tts, ...overrides };
+  const pause = Number(pauseRaw);
+  if (!(pause >= 0)) throw new Error(`--pause 要写秒数（如 0.4），现在是 ${pauseRaw}`);
   const lines = parseHfScript(readFileSync(scriptPath, "utf8"));
   if (!lines.length) throw new Error(`${scriptPath} 里没有口播（需要 "## … (Frame N)" 标题 + 缩进的口播原文）`);
 
@@ -155,7 +160,7 @@ async function main() {
   const voiceDir = join(dir, "assets", "voice");
   mkdirSync(cacheDir, { recursive: true });
   mkdirSync(voiceDir, { recursive: true });
-  console.log(`读取 ${scriptPath}（${tts.provider} · ${tts.voice} · ${tts.speed}x）`);
+  console.log(`读取 ${scriptPath}（${tts.provider} · ${tts.voice} · ${tts.speed}x · 帧间停顿 ${pause}s）`);
 
   const voices = [];
   for (const line of lines) {
@@ -165,8 +170,9 @@ async function main() {
     if (!clip.words.length) throw new Error(`第 ${line.frame} 帧没有逐字时间戳（${tts.provider} 不提供），字幕无法对齐`);
     const rel = `assets/voice/${pad2(line.frame)}.wav`;
     const isLast = line === lines[lines.length - 1];
-    if (isLast) {
-      execFileSync("ffmpeg", ["-y", "-v", "error", "-i", clip.file, "-af", `apad=pad_dur=${TAIL_SECONDS}`, join(dir, rel)]);
+    const padding = isLast ? TAIL_SECONDS : pause;
+    if (padding > 0) {
+      execFileSync("ffmpeg", ["-y", "-v", "error", "-i", clip.file, "-af", `apad=pad_dur=${padding}`, join(dir, rel)]);
     } else {
       copyFileSync(clip.file, join(dir, rel));
     }
@@ -174,7 +180,7 @@ async function main() {
       id: pad2(line.frame),
       frame: line.frame,
       path: rel,
-      duration_s: isLast ? Math.round(probeDuration(join(dir, rel)) * 1000) / 1000 : clip.speechDuration,
+      duration_s: padding > 0 ? Math.round(probeDuration(join(dir, rel)) * 1000) / 1000 : clip.speechDuration,
       words: withIds(toCaptionWords(clip.words, line.keywords)),
       chars: clip.words, // 逐字时间（nv hf-sfx 按关键词放音效时用）
     });
