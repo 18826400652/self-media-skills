@@ -305,3 +305,26 @@ test("localizeProject：index.html 和 compositions 下所有 HTML 都换成本�
   assert.equal(readFileSync(join(dir, "compositions", "frames", "notes.txt"), "utf8"), cdn, "只改 HTML");
   assert.deepEqual(localizeProject(dir, "3.14.2"), { files: 0, tags: 0, mismatched: [] }, "再跑一次没有可换的");
 });
+
+test("cueTime：按词取时间，支持第几次出现、忽略大小写和空格；找不到返回 null", async () => {
+  const { cueTime } = await import("../scripts/lib/cues.mjs");
+  const cues = [["问A", 0.04], ["I", 0.49], ["你", 0.84], ["们", 0.94], ["你", 2.2], ["们", 2.3]];
+  assert.equal(cueTime(cues, "ai"), 0.04);
+  assert.equal(cueTime(cues, "你们"), 0.84);
+  assert.equal(cueTime(cues, "你们", 2), 2.2);
+  assert.equal(cueTime(cues, "他们"), null);
+});
+
+test("lateAnimations：动画挂在句尾、帧结尾前来不及播完时报出来", async () => {
+  const { lateAnimations } = await import("../scripts/lib/frame-build.mjs");
+  const cues = [["回", 0.2], ["答", 0.4], ["先", 1.0], ["去", 1.2], ["翻", 2.4], ["资", 2.6], ["料", 2.8]];
+  const frame = (build) => ({ n: 4, duration: 3.0, build });
+  const late = lateAnimations(frame({ kit: { name: "marker", opts: { inAt: 0.1, at: "@资料" } } }), cues);
+  assert.deepEqual(late, [{ word: "资料", component: "marker", cue: 2.6, readable: 3.1, frameEnd: 3 }]);
+  assert.deepEqual(lateAnimations(frame({ kit: { name: "marker", opts: { at: "@先去" } } }), cues), []);
+  const title = lateAnimations(frame({ title: { lines: [{ text: "a", at: "@回答" }, { text: "b", at: "@料" }] } }), cues);
+  assert.deepEqual(title.map((x) => [x.word, x.component]), [["料", "title"]]);
+  assert.deepEqual(lateAnimations(frame({ kit: { name: "annotate", opts: { at: "@翻" } } }), cues).map((x) => x.readable), [3.4]);
+  assert.deepEqual(lateAnimations(frame({ kit: { name: "marker", opts: { at: "@没有这个词" } } }), cues), [], "找不到的词交给运行时报错");
+  assert.deepEqual(lateAnimations(frame({ kit: { name: "marker", opts: { at: 2.9 } } }), cues), [], "手写秒数不管");
+});

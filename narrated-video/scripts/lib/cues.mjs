@@ -21,3 +21,32 @@ export function writeCues(dir) {
   writeFileSync(join(outDir, "cues.js"), body);
   return Object.keys(cues).length;
 }
+
+const norm = (t) => String(t).toLowerCase().replace(/\s+/g, "");
+
+/** 和 Kit.cue 一样按词取时间（第 nth 次出现，忽略大小写和空格）；找不到返回 null。cues = [[字, 开始秒], …] */
+export function cueTime(cues, word, nth = 1) {
+  let text = "";
+  const starts = [];
+  for (const [t, start] of cues) {
+    const s = norm(t);
+    for (let i = 0; i < s.length; i++) starts.push(start);
+    text += s;
+  }
+  const w = norm(word);
+  let idx = -1;
+  for (let k = 0, from = 0; k < nth; k++) {
+    idx = text.indexOf(w, from);
+    if (idx < 0) return null;
+    from = idx + 1;
+  }
+  return starts[idx];
+}
+
+/** audio_meta.json → { 帧号: [[字, 开始秒], …] }；没有配音时 {} */
+export function loadCues(dir) {
+  const metaPath = join(dir, "audio_meta.json");
+  if (!existsSync(metaPath)) return {};
+  const meta = JSON.parse(readFileSync(metaPath, "utf8"));
+  return Object.fromEntries((meta.voices ?? []).filter((v) => v.chars?.length).map((v) => [v.frame, v.chars.map((c) => [c.text, c.start])]));
+}

@@ -7,7 +7,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { SKILL_DIR, loadConfig, resolveLook } from "./lib/config.mjs";
-import { buildFrame, parseStoryboardFrames } from "./lib/frame-build.mjs";
+import { buildFrame, lateAnimations, parseStoryboardFrames } from "./lib/frame-build.mjs";
+import { loadCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { mergeTokens } from "./hf-kit.mjs";
 
@@ -30,6 +31,13 @@ function main() {
     if (!(f.duration > 0)) throw new Error(`第 ${f.n} 帧缺少 duration（先运行 nv hf-audio，再由 nv hf-build 同步时长）`);
     writeFileSync(join(dir, f.src), buildFrame({ ...f, kicker, tokens, look, total: frames.length }));
     built++;
+  }
+  const cues = loadCues(dir);
+  for (const f of frames) {
+    if (!f.build) continue;
+    for (const x of lateAnimations(f, cues[f.n])) {
+      console.log(`  ⚠ 第 ${f.n} 帧：${x.component} 挂在「${x.word}」（${x.cue.toFixed(2)} 秒），约 ${x.readable.toFixed(2)} 秒才看得清，帧在 ${x.frameEnd.toFixed(2)} 秒结束，观众来不及读；挂到更早的词上`);
+    }
   }
   const manual = frames.filter((f) => !f.build).map((f) => f.n);
   console.log(`✓ 按 build 生成 ${built} 帧（${look}）${manual.length ? `；手写的帧：${manual.join("、")}` : ""}`);

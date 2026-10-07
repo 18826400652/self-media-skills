@@ -14,6 +14,7 @@
 // 时间写法：数字 = 帧内秒数；"@词" = 说到这个词的时刻；"@词#2" = 第二次说到。
 // 位置都在抖音安全区内（内容 x 60–1020、y 230–1150）。
 
+import { cueTime } from "./cues.mjs";
 import { LOCAL_GSAP } from "./localize.mjs";
 
 const CUE_RE = /^@(.+?)(?:#(\d+))?$/;
@@ -42,6 +43,47 @@ export function toJs(value, time = false) {
 }
 
 const at = (v, fallback = 0) => toJs(v ?? fallback, true);
+
+// 「说到这个词」之后，组件多久能看清（按 kit.js 里各组件的动画）：淡入到一半就能读；荧光笔要等笔触涂完；圈词注释要等注释出来
+// 校准自 2026-10-07 RAG 试跑：荧光笔、圈词注释挂在句尾时帧切走了还没看清；普通淡入挂在句尾问题不大
+const READABLE = { marker: 0.5, annotate: 1.0, answer: 1.0, strike: 0.5, number: 0.45, chat: 0.2 };
+const READABLE_DEFAULT = 0.25; // inFrom 淡入（0.45 秒）到一半
+const READ_TIME = 0.2; // 看清之后至少留给观众读的时间
+
+/** 一帧 build 里所有「@词」时间：[{ component, word, nth }] */
+function cueRefs(b) {
+  const refs = [];
+  const add = (component, v) => {
+    const m = typeof v === "string" ? v.match(CUE_RE) : null;
+    if (m) refs.push({ component, word: m[1], nth: m[2] ? Number(m[2]) : 1 });
+  };
+  const walk = (component, v, key) => {
+    if (Array.isArray(v)) return v.forEach((x) => walk(component, x, key));
+    if (v && typeof v === "object") return Object.entries(v).forEach(([k, x]) => walk(component, x, k));
+    if (key && TIME_KEY_RE.test(key)) add(component, v);
+  };
+  if (b.lead) walk("lead", b.lead.at, "at");
+  if (b.title) walk("title", b.title, null);
+  if (b.kit) walk(b.kit.name, b.kit.opts ?? {}, null);
+  return refs;
+}
+
+/**
+ * 挂得太晚的动画：说到这个词的时刻 + 组件看清所需时间，离帧结尾不到 0.2 秒（观众来不及读）。
+ * @param {{ n: number, duration: number, build: object }} f
+ * @param {[string, number][]} cues 这一帧的逐字时间
+ * @returns {{ word: string, component: string, cue: number, readable: number, frameEnd: number }[]}
+ */
+export function lateAnimations(f, cues) {
+  const out = [];
+  for (const r of cueRefs(f.build ?? {})) {
+    const t = cueTime(cues ?? [], r.word, r.nth);
+    if (t == null) continue; // 找不到的词交给运行时 Kit.cue 报错
+    const readable = Math.round((t + (READABLE[r.component] ?? READABLE_DEFAULT)) * 100) / 100;
+    if (readable > f.duration - READ_TIME) out.push({ word: r.word, component: r.component, cue: t, readable, frameEnd: f.duration });
+  }
+  return out;
+}
 
 const MAX_SEGMENTS = 8; // 进度条最多几段：帧多时一段代表几帧
 
