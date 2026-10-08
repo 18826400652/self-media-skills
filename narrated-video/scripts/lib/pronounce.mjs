@@ -48,27 +48,67 @@ function matchAt(token, text, p) {
 }
 
 const PUNCT_ONLY = /^[\p{P}\p{S}\s]*$/u;
+const chars = (token) => [...token.replace(/\s+/g, "")];
+const piece = (w, text) => ({ text, start: w.start, end: w.end });
 
-/** 逐字时间 → 命中处的几个字合并成原文的词（时间取首尾），其余原样；对不上就整体原样返回 */
+/** 时间戳里的一个字，最短的哪段后缀能从原文 p 处对上（TTS 把「I帮」并成一个字时）；返回切分位置，没有返回 -1 */
+function suffixAt(token, text, p) {
+  const cs = chars(token);
+  for (let k = 1; k < cs.length; k++) if (matchAt(cs.slice(k).join(""), text, p) >= 0) return k;
+  return -1;
+}
+
+/** 时间戳里的一个字从原文 p 处往下对，走到某个命中处的起点时（TTS 把「给A」并成一个字），返回切分位置，否则 -1 */
+function prefixBeforeSpan(token, text, p, spans) {
+  const cs = chars(token);
+  for (let k = 0; k < cs.length; k++) {
+    p = skipSpace(text, p);
+    if (k > 0 && spans.some((s) => s.start === p)) return k;
+    if (text.slice(p, p + cs[k].length).toLowerCase() !== cs[k].toLowerCase()) return -1;
+    p += cs[k].length;
+  }
+  return -1;
+}
+
+/** 逐字时间 → 命中处的几个字合并成原文的词（时间取首尾），其余原样；跨边界的字从边界拆开（两半沿用原时间）；对不上就整体原样返回 */
 export function restoreSpans(words, text, spans) {
   if (!spans?.length) return words;
+  const queue = words.slice();
   const out = [];
   let pos = 0;
-  for (let i = 0; i < words.length; ) {
+  for (let i = 0; i < queue.length; ) {
     pos = skipSpace(text, pos);
     const span = spans.find((s) => s.start === pos);
     if (span) {
-      let j = i + 1;
-      while (j < words.length && matchAt(words[j].text, text, span.end) < 0) j++;
-      if (j === words.length && !PUNCT_ONLY.test(text.slice(span.end))) return words;
-      out.push({ text: text.slice(span.start, span.end), start: words[i].start, end: words[j - 1].end });
+      let j = i;
+      for (; j < queue.length; j++) {
+        if (j > i && matchAt(queue[j].text, text, span.end) >= 0) break;
+        const k = suffixAt(queue[j].text, text, span.end);
+        if (k > 0) {
+          const cs = chars(queue[j].text);
+          queue.splice(j, 1, piece(queue[j], cs.slice(0, k).join("")), piece(queue[j], cs.slice(k).join("")));
+          j++;
+          break;
+        }
+      }
+      if (j === queue.length && !PUNCT_ONLY.test(text.slice(span.end))) return words;
+      out.push({ text: text.slice(span.start, span.end), start: queue[i].start, end: queue[j - 1].end });
       pos = span.end;
       i = j;
       continue;
     }
-    const end = matchAt(words[i].text, text, pos);
+    const k = prefixBeforeSpan(queue[i].text, text, pos, spans);
+    if (k > 0) {
+      const cs = chars(queue[i].text);
+      const head = cs.slice(0, k).join("");
+      out.push(piece(queue[i], head));
+      pos = matchAt(head, text, pos);
+      queue[i] = piece(queue[i], cs.slice(k).join(""));
+      continue;
+    }
+    const end = matchAt(queue[i].text, text, pos);
     if (end >= 0) pos = end;
-    out.push(words[i]);
+    out.push(queue[i]);
     i++;
   }
   return out;

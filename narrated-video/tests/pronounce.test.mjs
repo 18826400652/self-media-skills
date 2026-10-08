@@ -58,3 +58,19 @@ test("restoreSpans：对不上（后面的字一直找不到）就原样返回�
   assert.deepEqual(restoreSpans(words, "AI帮我", [{ start: 0, end: 2 }]), words);
   assert.deepEqual(restoreSpans(words, "AIx", []), words);
 });
+
+test("restoreSpans：前一个字和 A 并在一起（「给A」，实测第 3 帧）也能从边界拆开", () => {
+  const w = (text, start) => ({ text, start, end: start + 0.1 });
+  const words = [w("交", 0), w("给A", 0.1), w(",I", 0.2), w(",", 0.3), w("。", 0.4), w("写", 0.5)];
+  assert.deepEqual(restoreSpans(words, "交给AI。写", [{ start: 2, end: 4 }]), [
+    w("交", 0), w("给", 0.1), { text: "AI", start: 0.1, end: 0.4 }, w("。", 0.4), w("写", 0.5),
+  ]);
+});
+
+test("restoreSpans：I 和后一个字并在一起（「I帮」）也从结尾拆开", () => {
+  const w = (text, start) => ({ text, start, end: start + 0.1 });
+  const words = [w("A", 0), w("I帮", 0.1), w("我", 0.2)];
+  assert.deepEqual(restoreSpans(words, "AI帮我", [{ start: 0, end: 2 }]), [
+    { text: "AI", start: 0, end: 0.2 }, w("帮", 0.1), w("我", 0.2),
+  ]);
+});
