@@ -19,6 +19,8 @@ const HF = join(SKILL_DIR, "node_modules", ".bin", "hyperframes");
 const ASSET_SOURCES = ["capture/assets", "public"];
 const SNAP_BEFORE_END = 0.3; // 截每帧结尾前 0.3 秒：动画已落定
 const MOTION_ENTRANCE = 0.35; // 入场时刻：帧开始后 0.35 秒
+const HOLD_GAP = 0.7; // 落定后还动不动：比较「落定」和它前 0.7 秒这两张
+const MIN_HOLD_DIFF = 0.3; // 两张图内容区的平均像素差（0–255）低于它，算落定后静止
 // 画面铺开检查（借鉴 nutllwhy/hyperframes-motion-library）：落定时内容外接框太小 = 下半屏空着
 const MIN_SPAN_Y = 0.55; // 纵向至少铺开内容区的 55%（第 1 课校准：空的两帧是 0.46、0.50，正常帧 ≥ 0.6）
 const MIN_OCCUPANCY = 0.4;
@@ -75,7 +77,10 @@ export function frameEndTimes(dir) {
   });
 }
 
-/** 动画过程：每帧取入场、中段、落定三个时刻（借鉴 HyperFrames-RenderKit「看连续帧，不只看结果」） */
+/**
+ * 动画过程：每帧取入场、中段、落定前 HOLD_GAP 秒、落定四个时刻（借鉴 HyperFrames-RenderKit「看连续帧，不只看结果」）。
+ * 后两张用来自动检查落定后还在不在动：静止的画面就是一张带进度条的图片。
+ */
 export function frameMotionTimes(dir) {
   const ends = frameEndTimes(dir);
   const html = readFileSync(join(dir, "index.html"), "utf8");
@@ -84,7 +89,15 @@ export function frameMotionTimes(dir) {
     .filter(Number.isFinite)
     .sort((a, b) => a - b);
   const r2 = (x) => Math.round(x * 100) / 100;
-  return starts.flatMap((start, i) => [r2(start + MOTION_ENTRANCE), r2((start + ends[i]) / 2), ends[i]]);
+  return starts.flatMap((start, i) => {
+    const mid = r2((start + ends[i]) / 2);
+    return [r2(start + MOTION_ENTRANCE), mid, Math.max(mid, r2(ends[i] - HOLD_GAP)), ends[i]];
+  });
+}
+
+/** 纯函数：stillness.py 的结果 → 落定后几乎不动的帧 */
+export function stillFrames(results) {
+  return results.filter((r) => r.diff < MIN_HOLD_DIFF);
 }
 
 /** 纯函数：occupancy.py 的结果 → 内容铺得太少的帧 */
@@ -92,9 +105,30 @@ export function sparseFrames(results) {
   return results.filter((r) => r.spanY < MIN_SPAN_Y || r.occupancy < MIN_OCCUPANCY);
 }
 
+/** 截图按序号排（frame-07-at-…），不按文件名字母顺序 */
+function snapshotFiles(dir) {
+  const idx = (f) => Number(f.match(/^frame-(\d+)/)[1]);
+  return readdirSync(join(dir, "snapshots")).filter((f) => /^frame-\d+.*\.png$/.test(f)).sort((a, b) => idx(a) - idx(b)).map((f) => join("snapshots", f));
+}
+
+function checkStillness(dir) {
+  if (!existsSync(PYTHON)) return console.log("  ⚠ 跳过落定后动静检查：没有 .venv（见 references/setup.md）");
+  const files = snapshotFiles(dir);
+  const pairs = files.filter((_, i) => i % 4 >= 2); // 每帧四张里的后两张：落定前、落定
+  let out;
+  try {
+    out = execFileSync(PYTHON, [join(SKILL_DIR, "scripts", "stillness.py"), ...pairs], { cwd: dir, encoding: "utf8" });
+  } catch (err) {
+    return console.log(`  ⚠ 落定后动静检查没跑成：${err.message.split("\n")[0]}`);
+  }
+  const still = stillFrames(out.trim().split("\n").map((l) => JSON.parse(l)));
+  if (!still.length) return console.log("  ✓ 每帧落定后都还在动（缓推、录屏或持续的小动作）");
+  for (const r of still) console.log(`  ⚠ 第 ${r.frame} 帧落定后完全静止：去掉 "camera": false 用默认缓推，或加一个持续的小动作（数字在数、线在画、圈在抖）；光晕呼吸太轻，不算在动`);
+}
+
 function checkOccupancy(dir) {
   if (!existsSync(PYTHON)) return console.log("  ⚠ 跳过铺开检查：没有 .venv（见 references/setup.md）");
-  const files = readdirSync(join(dir, "snapshots")).filter((f) => /^frame-.*\.png$/.test(f)).sort().map((f) => join("snapshots", f));
+  const files = snapshotFiles(dir);
   let out;
   try {
     out = execFileSync(PYTHON, [join(SKILL_DIR, "scripts", "occupancy.py"), ...files], { cwd: dir, encoding: "utf8" });
@@ -134,13 +168,14 @@ function snapshotSheet(dir, motion) {
   if (!times.length) throw new Error("index.html 里没找到帧，无法截图");
   rmSync(join(dir, "snapshots"), { recursive: true, force: true });
   run(`截图（${times.length} 帧）`, HF, ["snapshot", ".", "--at", times.join(","), "--no-end"], dir);
-  const cols = motion ? 6 : Math.min(7, times.length); // 动画过程：每行两帧，每帧「入场 / 中段 / 落定」
+  const cols = motion ? 8 : Math.min(7, times.length); // 动画过程：每行两帧，每帧「入场 / 中段 / 落定前 / 落定」
   execFileSync("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", "snapshots/frame-*.png",
     "-vf", `scale=300:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=6:color=0x444444`, "-frames:v", "1", "snapshots/sheet.jpg"], { cwd: dir });
   console.log(motion
-    ? "  ✓ snapshots/sheet.jpg（每帧三张：入场 / 中段 / 落定，看元素是否按时出现、过程中有没有穿帮）"
+    ? "  ✓ snapshots/sheet.jpg（每帧四张：入场 / 中段 / 落定前 / 落定，看元素是否按时出现、过程中有没有穿帮）"
     : "  ✓ snapshots/sheet.jpg（每帧结尾一张，看图检查断行、遮挡、安全区）");
-  if (!motion) checkOccupancy(dir);
+  if (motion) checkStillness(dir);
+  else checkOccupancy(dir);
 }
 
 function main() {
