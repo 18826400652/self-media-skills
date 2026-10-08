@@ -9,7 +9,10 @@
 //   kit:   { name, top, width, opts }  一个 hf-kit 组件，如 { "name": "compare", "opts": {…} }；width 默认 960，"auto" 不限宽
 //   title: { label, lines, top, center }  大字标题（lines 每项一行，**词** 用强调色）；center = 居中（一句话冲击帧）
 //   kicker: false                      这一帧不显示角标（钩子帧用：第一眼不要有「上课」感）
-//   camera: "push"                     整帧缓慢推近（1 → 1.04，贯穿全帧），让落定后的静态画面不死板；录屏帧不用
+//   camera: "push" | false             整帧缓慢推近（1 → 1.04，贯穿全帧），让落定后的画面还在动。不写时默认推近，
+//                                      录屏帧（rec）和截图帧（kit shot，自带推近）默认不推；false = 这一帧不推
+// 落定后也要在动（静止的画面就是一张带进度条的图片）：默认缓推；glow 下底色光晕再慢慢呼吸（次数按帧长算，不无限循环）。
+// 缓动按角色分：E 说明文字和组件（power3.out）、EH 大标题（expo.out，更有冲击力）、EB 小标签（back.out，轻轻弹一下）。
 // 视觉风格 f.look（项目配置 hfKit.look）："flat" 纯色底（默认）；"glow" 光晕颗粒底色 + HUD 四角和进度条 + 玻璃卡片（样式在 hf-kit/kit-glow.js）。
 // 时间写法：数字 = 帧内秒数；"@词" = 说到这个词的时刻；"@词#2" = 第二次说到。
 // 位置都在抖音安全区内（内容 x 60–1020、y 230–1150）。
@@ -20,6 +23,7 @@ import { LOCAL_GSAP } from "./localize.mjs";
 const CUE_RE = /^@(.+?)(?:#(\d+))?$/;
 const REC_BOX = { left: 95, top: 340, width: 890, height: 1582 };
 const PUSH_SCALE = 1.04; // camera: "push" 推到多大：观众察觉不到「在动」，但画面不会死
+const BREATH = { from: 1, to: 0.7, half: 1.5 }; // glow 光晕呼吸：亮度 1 ↔ 0.7，半个周期 1.5 秒
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -114,6 +118,13 @@ function recPart(b, dur, hook) {
   return parts;
 }
 
+/** glow 光晕呼吸：来回 n 个半周期正好放进帧长，不用 repeat: -1（渲染要确定、有尽头） */
+function breathJs(duration) {
+  const half = Math.min(BREATH.half, duration);
+  const repeat = Math.max(0, Math.floor(duration / half) - 1);
+  return `tl.fromTo("#P-ground", { "--kit-atmo-glow": ${BREATH.from} }, { "--kit-atmo-glow": ${BREATH.to}, duration: ${half}, ease: "sine.inOut", yoyo: true, repeat: ${repeat} }, 0);`;
+}
+
 /**
  * @param {{ n: number, id: string, duration: number, kicker: string, tokens: object, build: object }} f
  *   tokens：品牌色和字体（hf-kit 的 TOKENS 合并项目配置），翻转底色时要用具体色值
@@ -157,23 +168,24 @@ export function buildFrame(f) {
     const t = b.title;
     if (t.label) {
       body.push(`<div class="P-label${hook("kit-label")}${t.center ? " P-center" : ""}" id="P-tl" style="top:${(t.top ?? 690) - 130}px">${esc(t.label)}</div>`);
-      js.push(`tl.fromTo("#P-tl", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, ${at(t.labelAt)});`);
+      js.push(`tl.fromTo("#P-tl", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, ease: EB }, ${at(t.labelAt)});`);
     }
     (t.lines ?? []).forEach((line, i) => {
       const text = typeof line === "string" ? line : line.text;
       const when = typeof line === "string" ? i * 0.6 + 0.3 : line.at;
       body.push(`<div class="P-h${t.center ? " P-center" : ""}" id="P-h${i}" style="top:${(t.top ?? 690) + i * 140}px">${inlineAccent(text)}</div>`);
-      js.push(`tl.fromTo("#P-h${i}", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: E }, ${at(when)});`);
+      js.push(`tl.fromTo("#P-h${i}", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.45, ease: EH }, ${at(when)});`);
     });
     css.push(".P-label { position: absolute; left: 60px; font-size: 44px; font-weight: 900; color: var(--kit-bg); background: var(--kit-accent); padding: 6px 20px; }");
     css.push(".P-h { position: absolute; left: 60px; right: 60px; font-size: 104px; font-weight: 900; line-height: 1.2; text-wrap: balance; }");
     if (t.center) css.push(".P-center { left: 60px; right: 60px; width: fit-content; margin-inline: auto; text-align: center; }");
   }
-  if (b.camera === "push") {
-    js.push(`tl.fromTo("#P-cam", { scale: 1 }, { scale: ${PUSH_SCALE}, duration: ${f.duration}, ease: "sine.inOut" }, 0);`);
-  } else if (b.camera) {
-    throw new Error(`第 ${f.n} 帧 camera 只支持 "push"，收到 ${JSON.stringify(b.camera)}`);
+  if (b.camera !== undefined && b.camera !== "push" && b.camera !== false) {
+    throw new Error(`第 ${f.n} 帧 camera 只支持 "push" 或 false，收到 ${JSON.stringify(b.camera)}`);
   }
+  const camera = b.camera ?? (b.rec || b.kit?.name === "shot" ? false : "push");
+  if (camera) js.push(`tl.fromTo("#P-cam", { scale: 1 }, { scale: ${PUSH_SCALE}, duration: ${f.duration}, ease: "sine.inOut" }, 0);`);
+  if (glow) js.push(breathJs(f.duration));
 
   const T = f.tokens;
   // 强调色底：这一帧里的文字、组件改用深色（组件颜色读 --kit-*，在根元素上覆盖）
@@ -192,7 +204,7 @@ export function buildFrame(f) {
 ${css.map((c) => `      ${sub(c)}`).join("\n")}
     </style>
     <div id="${p}-ground" class="${p}-ground${glow ? ` kit-atmo${accent ? " is-accent" : ""}` : ""} clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
-${glow ? `    ${hudPart(f.n, f.total, b.kicker !== false)}\n` : ""}${b.kicker === false ? "" : `    <div class="${p}-kicker${hook("kit-kicker")}">${esc(f.kicker)}</div>\n`}${b.camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${b.camera ? "  " : ""}${sub(x)}`).join("\n")}${b.camera ? "\n    </div>" : ""}
+${glow ? `    ${hudPart(f.n, f.total, b.kicker !== false)}\n` : ""}${b.kicker === false ? "" : `    <div class="${p}-kicker${hook("kit-kicker")}">${esc(f.kicker)}</div>\n`}${camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${camera ? "  " : ""}${sub(x)}`).join("\n")}${camera ? "\n    </div>" : ""}
     <script src="${LOCAL_GSAP}"></script>
     <script src="compositions/kit/cues.js"></script>
     <script src="compositions/kit/kit.js"></script>
@@ -201,6 +213,7 @@ ${glow ? '    <script src="compositions/kit/kit-glow.js"></script>\n' : ""}    <
       (function () {
         var tl = gsap.timeline({ paused: true });
         var E = "power3.out";
+        var EH = "expo.out", EB = "back.out(1.6)";
         var C = function (w, n) { return Kit.cue(${f.n}, w, n) - 0.05; }; // 说到这个词（提前一点点出现）
 ${js.map((x) => `        ${sub(x)}`).join("\n")}
         window.__timelines = window.__timelines || {};

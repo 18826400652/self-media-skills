@@ -151,8 +151,36 @@ test("帧模板：camera push 把内容包进推镜层（角标不动），title
   assert.match(html, /<div id="p03-cam"[^>]*>\s*<div class="p03-h p03-center"/);
   assert.ok(html.indexOf('class="p03-kicker"') < html.indexOf('id="p03-cam"'), "角标在推镜层外面");
   assert.match(html, /tl\.fromTo\("#p03-cam", \{ scale: 1 \}, \{ scale: 1\.04, duration: 1\.2/);
-  assert.doesNotMatch(buildFrame({ ...f, build: { title: { lines: ["x"] } } }), /-cam/);
-  assert.throws(() => buildFrame({ ...f, build: { camera: "orbit" } }), /只支持 "push"/);
+  assert.throws(() => buildFrame({ ...f, build: { camera: "orbit" } }), /只支持 "push" 或 false/);
+});
+
+test("帧模板：没写 camera 时默认缓推；录屏帧、截图帧、camera false 不推", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const f = { n: 4, id: "04-x", duration: 5, kicker: "K", tokens: FLAT_TOKENS };
+  assert.match(buildFrame({ ...f, build: { title: { lines: ["x"] } } }), /tl\.fromTo\("#p04-cam", \{ scale: 1 \}, \{ scale: 1\.04, duration: 5/);
+  assert.match(buildFrame({ ...f, build: { kit: { name: "compare" } } }), /id="p04-cam"/);
+  assert.doesNotMatch(buildFrame({ ...f, build: { rec: { mediaStart: 0 } } }), /-cam/);
+  assert.doesNotMatch(buildFrame({ ...f, build: { kit: { name: "shot", opts: {} } } }), /-cam/);
+  assert.doesNotMatch(buildFrame({ ...f, build: { camera: false, title: { lines: ["x"] } } }), /-cam/);
+});
+
+test("帧模板 glow：底色光晕慢呼吸，次数按帧长算（不用无限循环）；flat 不加", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const f = { n: 2, id: "02-x", kicker: "K", tokens: FLAT_TOKENS, total: 4, build: { title: { lines: ["x"] } } };
+  const glow = buildFrame({ ...f, duration: 6.2, look: "glow" });
+  assert.match(glow, /tl\.fromTo\("#p02-ground", \{ "--kit-atmo-glow": 1 \}, \{ "--kit-atmo-glow": 0\.7, duration: 1\.5, ease: "sine\.inOut", yoyo: true, repeat: 3 \}, 0\);/);
+  assert.doesNotMatch(glow, /repeat: -1/);
+  assert.match(buildFrame({ ...f, duration: 1, look: "glow" }), /duration: 1, ease: "sine\.inOut", yoyo: true, repeat: 0/);
+  assert.doesNotMatch(buildFrame({ ...f, duration: 6.2, look: "flat" }), /kit-atmo-glow/);
+});
+
+test("帧模板：缓动分角色——大标题 expo.out，标签 back.out，说明文字 power3.out", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const html = buildFrame({ n: 1, id: "01-x", duration: 3, kicker: "K", tokens: FLAT_TOKENS, build: { lead: { text: "a" }, title: { label: "L", lines: ["b"] } } });
+  assert.match(html, /tl\.fromTo\("#p01-h0", [^;]*ease: EH \}/);
+  assert.match(html, /tl\.fromTo\("#p01-tl", [^;]*ease: EB \}/);
+  assert.match(html, /tl\.fromTo\("#p01-l", [^;]*ease: E \}/);
+  assert.match(html, /var EH = "expo\.out", EB = "back\.out\(1\.6\)";/);
 });
 
 test("帧模板：kicker false 不显示角标", async () => {

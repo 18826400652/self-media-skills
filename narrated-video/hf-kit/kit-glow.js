@@ -21,7 +21,7 @@
     /* 底色层：光晕在 ::before（压暗叠在最上面），点阵和颗粒在 ::after */
     ".kit-atmo{overflow:hidden}",
     ".kit-atmo::before,.kit-atmo::after{content:'';position:absolute;inset:0;pointer-events:none}",
-    ".kit-atmo::before{background:" + VIGNETTE + ",radial-gradient(900px 700px at 88% 8%," + A(13) + ",transparent 60%),radial-gradient(800px 900px at 0% 78%," + WARM + ",transparent 60%),radial-gradient(1200px 800px at 50% 115%," + A(6) + ",transparent 60%)}",
+    ".kit-atmo::before{background:" + VIGNETTE + ",radial-gradient(900px 700px at 88% 8%," + A(13) + ",transparent 60%),radial-gradient(800px 900px at 0% 78%," + WARM + ",transparent 60%),radial-gradient(1200px 800px at 50% 115%," + A(6) + ",transparent 60%);opacity:var(--kit-atmo-glow,1)}", /* 帧模板用 --kit-atmo-glow 做慢呼吸 */
     ".kit-atmo.is-accent::before{background:radial-gradient(1300px 1700px at 50% 42%,transparent 60%,rgb(0 0 0/.28))}",
     ".kit-atmo::after{background-image:radial-gradient(color-mix(in srgb,var(--kit-ink) 7%,transparent) 1.6px,transparent 1.8px)," + GRAIN + ";background-size:48px 48px,300px 300px;opacity:.55;mix-blend-mode:soft-light}",
     ".kit-atmo.is-accent::after{background-image:" + GRAIN + ";background-size:300px 300px;opacity:.35}",

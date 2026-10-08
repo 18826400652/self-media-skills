@@ -30,6 +30,23 @@ test("kit-glow：Kit.look 变成 glow，玻璃卡片和质感层样式生效", o
   }
 });
 
+test("kit-glow：底色光晕亮度跟着 --kit-atmo-glow（帧模板用它做慢呼吸）", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-glow.js"] });
+  try {
+    const r = await k.page.evaluate(() => {
+      const atmo = document.createElement("div");
+      atmo.className = "kit-atmo";
+      document.body.appendChild(atmo);
+      const before = getComputedStyle(atmo, "::before").opacity;
+      gsap.timeline({ paused: true }).fromTo(atmo, { "--kit-atmo-glow": 1 }, { "--kit-atmo-glow": 0.7, duration: 1 }, 0).seek(1);
+      return { before, after: getComputedStyle(atmo, "::before").opacity };
+    });
+    assert.deepEqual(r, { before: "1", after: "0.7" });
+  } finally {
+    await k.close();
+  }
+});
+
 test("kit-glow：没加载时 Kit.look 是 flat，卡片不变", opt, async () => {
   const k = await openKitPage({ files: ["kit.js"] });
   try {
