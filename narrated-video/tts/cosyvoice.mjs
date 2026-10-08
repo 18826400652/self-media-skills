@@ -6,6 +6,7 @@
 //   scene    = 场景（可选，仅支持指令的音色，如 longanyang 的「闲聊互动」、longanhuan 的「闲聊对话」）
 //   emotion  = 默认情感（可选）；脚本「情感」列可逐句覆盖。可写中文：平静 开心 惊讶 难过 生气 害怕 厌恶
 //   instruction = 完整的语气指令（可选，写了就不再用 scene / emotion 拼接）
+//   pronounce = 读音表（可选），如 { "AI": "<say-as interpret-as=\"characters\">AI</say-as>" }，见 scripts/lib/pronounce.mjs
 // 每句同时输出逐字时间戳 <音频名>.words.json（单位秒）。
 // 音色支持哪些场景，以官方音色列表为准：https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list
 // 密钥：环境变量 DASHSCOPE_API_KEY，可写在项目根目录 .env（nv voice 会自动读取，.env 不入 git）。
@@ -19,6 +20,9 @@ const DEFAULT_MODEL = "cosyvoice-v3-flash";
 
 /** 每句同时输出逐字时间戳 */
 export const wordTimestamps = true;
+
+/** 支持 SSML（cosyvoice-v2 / v3 系列 + 标了支持 SSML 的音色，如 longanyang）：读音表 tts.pronounce 会生效 */
+export const ssml = true;
 
 export const EMOTIONS = {
   平静: "neutral",

@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getProvider } from "../../tts/index.mjs";
+import { applyPronounce, restoreSpans } from "./pronounce.mjs";
 
 const KEEP_HEAD = 0.04; // 切静音时句首留一点，避免吃掉字头
 const KEEP_TAIL = 0.08; // 句尾留一点，让尾音自然收住
@@ -50,27 +51,29 @@ function trimBySilence(file, out) {
 /**
  * 合成并清理一句口播。
  * @param {{ text: string }} line
- * @param {object} tts  provider / model / voice / speed / scene / emotion / instruction
+ * @param {object} tts  provider / model / voice / speed / scene / emotion / instruction / pronounce（读音表，见 pronounce.mjs）
  * @param {string} dir  缓存目录
  * @param {string} name 文件名前缀（如 "03"）
  * @returns {Promise<{ file: string, speechDuration: number, words: {text: string, start: number, end: number}[] }>}
  */
 export async function synthesizeClean(line, tts, dir, name) {
-  const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, line.text].join("|");
+  const provider = getProvider(tts.provider);
+  // 读音表只对支持 SSML 的服务商生效；送出去的是 ttsText，字幕和关键词仍按 line.text
+  const { ttsText, spans } = provider.ssml ? applyPronounce(line.text, tts.pronounce) : { ttsText: line.text, spans: [] };
+  const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, ttsText].join("|");
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const raw = join(dir, `${name}-${hash}.wav`);
   const wordsRaw = raw.replace(/\.wav$/, ".words.json");
-  const provider = getProvider(tts.provider);
   // 旧缓存没有时间戳、而服务商能给时，重新合成一次
   if (existsSync(raw) && (existsSync(wordsRaw) || !provider.wordTimestamps)) {
     console.log(`  ✓  ${name}（缓存）`);
   } else {
     console.log(`  🎙  ${name}：${line.text}`);
-    await provider.synthesize({ ...tts, text: line.text, outFile: raw });
+    await provider.synthesize({ ...tts, text: ttsText, outFile: raw });
   }
 
   const file = raw.replace(/\.wav$/, ".trim.wav");
-  const rawWords = existsSync(wordsRaw) ? JSON.parse(readFileSync(wordsRaw, "utf8")) : [];
+  const rawWords = restoreSpans(existsSync(wordsRaw) ? JSON.parse(readFileSync(wordsRaw, "utf8")) : [], line.text, spans);
   const hasWords = rawWords.some((w) => !PUNCTUATION.test(w.text));
   const words = hasWords ? trimByWords(raw, rawWords, file) : (trimBySilence(raw, file), []);
   if (hasWords) writeFileSync(file.replace(/\.wav$/, ".words.json"), JSON.stringify(words));

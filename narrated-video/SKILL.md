@@ -176,6 +176,7 @@ nv draft <成片.mp4> --copy <发布文案.md>
   - `cosyvoice`：阿里云百炼 CosyVoice，官方付费接口，中文自然，**支持声音复刻**。需要 `DASHSCOPE_API_KEY`，放在项目根目录 `.env`（`nv voice` 自动读取）。`tts.model` 指定模型；`tts.scene` + `tts.emotion` 控制语气（仅部分音色支持，场景名因音色而异，如 longanyang 用「闲聊互动」、longanhuan 用「闲聊对话」，以[官方音色列表](https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list)为准）
   - `edge`：微软神经网络音色，音质好、免费，需要联网。属于非官方接口，商业化前要评估风险，见 `tts/edge.mjs` 的说明。
   - `kokoro`：本地离线，中文只有一个音色。
+  - **读音表**（配置 `tts.pronounce`，仅支持 SSML 的服务商生效，目前是 `cosyvoice`）：TTS 读不对的词，键写原文、值写 SSML 片段，如 `{ "AI": "<say-as interpret-as=\"characters\">AI</say-as>" }`（逐个字母读）。只改送给 TTS 的文字，口播原文、字幕、`@词` 时间点都不变；TTS 返回的逐字时间会合并回原文的词（`scripts/lib/pronounce.mjs`）。英文单词内部不替换（`OpenAI` 里的 AI 不动）。SSML 用法见[官方文档](https://help.aliyun.com/zh/model-studio/introduction-to-cosyvoice-ssml-markup-language)
   - 新增服务商：写 `tts/<名字>.mjs` 导出 `synthesize({ text, voice, speed, outFile })`，再到 `tts/index.mjs` 登记。密钥用环境变量。
 - **环境搭建与排坑**：见 `references/setup.md`
 - **改了脚本或组件库后**：在 skill 目录运行 `npm test`（`tests/` 里是口播解析、字幕分段、音效定位、按词取时间等纯逻辑测试）
