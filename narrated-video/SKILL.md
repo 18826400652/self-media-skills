@@ -42,7 +42,7 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 | `nv hf-audio <工程>` | 用项目配置的 TTS 逐帧配音，带逐字时间（替代官方 TTS）。SCRIPT.md 每帧可写 `**情感:**`、`**重点词:**` |
 | `nv hf-kit <工程>` | 装入画面组件库，**写帧之前读 `references/hf-kit.md` 的选用表**，帧里用 `Kit.xxx(...)` 拼画面 |
 | STORYBOARD 每帧 `- build: {…}` | 帧模板：录屏、计时、组件、说明、标题自由组合，时间写 `"@词"`；`nv hf-build` 自动生成画面（见 douyin-recipe.md）。放不下的画面才手写 `compositions/frames/NN-*.html`（`Kit.xxx(...)` + `Kit.cue`） |
-| `nv hf-build <工程> --snap` | 一键组装：组件库和逐字时间 → 帧时长 → 按 build 生成画面 → 音效（STORYBOARD `- sfx: error @数错了`）→ 素材 → 中文字体 → 字幕 → index → 转场 → lint/check → 每帧截图拼成 `snapshots/sheet.jpg` |
+| `nv hf-build <工程> --snap` | 一键组装：组件库和逐字时间 → 帧时长 → 按 build 生成画面 → 音效（STORYBOARD `- sfx: error @数错了`）→ 素材 → 中文字体 → 字幕 → index → 转场 → lint/check（竖屏另查字幕带 `--caption-zone` 和越框：内容不能伸出四角框、不能占角标那一行）→ 每帧截图拼成 `snapshots/sheet.jpg` |
 | `nv hf-build <工程> --motion` | 每帧截「入场 / 中段 / 落定前 / 落定」四张，检查元素是否按时出现、字幕折行、过程中有没有穿帮（只看结尾截图会漏掉这类问题）；并自动比较落定前后两张，落定后完全静止的帧给出警告 |
 | 看 `snapshots/sheet.jpg` → `nv render <工程>` | 看图确认后渲染；渲染完自动做成片检查（`nv verify`：帧数、时长、声音、尺寸、黑屏） |
 

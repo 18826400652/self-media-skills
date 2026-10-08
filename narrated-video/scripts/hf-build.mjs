@@ -3,16 +3,18 @@
 //
 // 配音（nv hf-audio）和画面（compositions/frames/）都写好之后，一条命令把工程组装成可渲染的状态：
 //   组件库 + 逐字时间 → 同步帧时长 → 按 build 生成画面 → 音效 → 素材 → 字体 → 字幕 → 组装 index → 转场 → GSAP 本地化 → lint / check
-// check 时竖屏工程加 --caption-zone：每帧结尾查文字有没有伸出内容框（y 1160 以下）压到字幕
+// check 时竖屏工程加 --caption-zone：每帧结尾查文字有没有伸出内容框（y 1160 以下）压到字幕；
+// 再做越框检查：截一套「干净画面」（只剩内容），每帧中段和结尾查面板、图片、文字有没有伸出四角框或占了角标行
 // --snap：再按每帧结尾截图，拼成 snapshots/sheet.jpg，用来看图检查；并量每帧内容铺开多少，偏空的帧给出警告。
 // --motion：每帧截入场、中段、落定三张（动画过程），检查元素是否按时出现、过程中有没有穿帮。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import { SKILL_DIR } from "./lib/config.mjs";
 import { isMain } from "./lib/is-main.mjs";
+import { parseStoryboardFrames } from "./lib/frame-build.mjs";
 import { localizeGsap } from "./lib/localize.mjs";
 
 const FE = join(process.env.FACELESS_DIR || join(homedir(), ".claude", "skills", "faceless-explainer"), "scripts");
@@ -87,6 +89,67 @@ export function captionZoneSpec(ends, total) {
   const f = (x) => Number(x.toFixed(4));
   const seek = ends.map((t) => f(t / total)).join(",");
   return `x0=0;y0=${f(CAPTION_BAND.top / CAPTION_BAND.height)};x1=1;y1=${f(CAPTION_BAND.bottom / CAPTION_BAND.height)};severity=error;seek=${seek}`;
+}
+
+/** 越框检查的取样时刻：每帧中段 + 结尾前 SNAP_BEFORE_END 秒（有转场重叠时取在下一帧进场之前） */
+export function boundsTimes(frames) {
+  const r2 = (x) => Math.round(x * 100) / 100;
+  return frames.flatMap((f, i) => {
+    const end = Math.min(f.end, frames[i + 1]?.start ?? Infinity);
+    return [r2((f.start + end) / 2), r2(end - SNAP_BEFORE_END)];
+  });
+}
+
+/** 「干净画面」：隐藏底色、光晕、四角框、角标、进度条和字幕，关掉阴影和外发光（光晕可以越过框线），底改纯黑，剩下的全是内容 */
+export function cleanIndex(html) {
+  const css = `<style data-nv-bounds>html,body,#root{background:#000!important}`
+    + `#el-captions,.kit-hud,.kit-kicker,.kit-progress,.kit-atmo,[id$="-ground"]{visibility:hidden!important}`
+    + `*,*::before,*::after{box-shadow:none!important;text-shadow:none!important;filter:none!important}</style>`;
+  return html.replace("</head>", `${css}\n</head>`);
+}
+
+function indexFrames(dir) {
+  const html = readFileSync(join(dir, "index.html"), "utf8");
+  return [...html.matchAll(/<div[^>]*data-composition-src="compositions\/frames\/[^"]+"[^>]*>/g)]
+    .map((m) => {
+      const start = Number(m[0].match(/data-start="([\d.]+)"/)?.[1]);
+      return { start, end: start + Number(m[0].match(/data-duration="([\d.]+)"/)?.[1]) };
+    })
+    .filter((f) => Number.isFinite(f.end))
+    .sort((a, b) => a.start - b.start);
+}
+
+/** 越框检查：截干净画面，交给 bounds.py 找伸出四角框、占了角标行的内容（录屏帧铺满全屏，跳过） */
+function checkBounds(dir) {
+  const html = readFileSync(join(dir, "index.html"), "utf8");
+  if (!/data-width="1080"/.test(html) || !/data-height="1920"/.test(html)) return;
+  if (!existsSync(PYTHON)) return console.log("\n▸ 越框检查\n  ⚠ 跳过：没有 .venv（见 references/setup.md）");
+  const frames = indexFrames(dir);
+  const sb = parseStoryboardFrames(readFileSync(join(dir, "STORYBOARD.md"), "utf8")).frames;
+  const tmp = join(dir, ".media", "bounds");
+  rmSync(tmp, { recursive: true, force: true });
+  mkdirSync(tmp, { recursive: true });
+  for (const name of readdirSync(dir)) {
+    if ([".media", "index.html", "renders", "snapshots"].includes(name)) continue;
+    cpSync(join(dir, name), join(tmp, name), { recursive: true }); // HyperFrames 打包不跟随软链接目录，只能复制
+  }
+  writeFileSync(join(tmp, "index.html"), cleanIndex(html));
+  const times = boundsTimes(frames);
+  run(`越框检查（${frames.length} 帧 × 中段、结尾）`, HF, ["snapshot", ".", "--at", times.join(","), "--no-end"], tmp);
+  const shots = readdirSync(join(tmp, "snapshots")).filter((f) => /^frame-\d+.*\.png$/.test(f))
+    .sort((a, b) => Number(a.match(/^frame-(\d+)/)[1]) - Number(b.match(/^frame-(\d+)/)[1]));
+  const items = shots.map((f, i) => {
+    const s = sb[Math.floor(i / 2)];
+    return { file: join(tmp, "snapshots", f), frame: s?.n ?? Math.floor(i / 2) + 1, kicker: s?.build?.kicker !== false, rec: !!s?.build?.rec, at: times[i] };
+  }).filter((x) => !x.rec);
+  const out = JSON.parse(execFileSync(PYTHON, [join(SKILL_DIR, "scripts", "bounds.py")], { input: JSON.stringify(items), encoding: "utf8" }));
+  if (!out.length) return console.log("  ✓ 内容都在四角框里（录屏帧不查）");
+  const NAMES = { bottom: "伸出框底（会压到字幕）", side: "伸出左右框外", kicker: "占了角标那一行" };
+  for (const r of out) {
+    const at = items.find((x) => x.file === r.file)?.at;
+    for (const z of r.zones) console.log(`  ✗ 第 ${r.frame} 帧 t=${at}s：${NAMES[z.zone]}，范围 x ${z.box[0]}–${z.box[2]}、y ${z.box[1]}–${z.box[3]}（干净画面：${relative(dir, r.file)}）`);
+  }
+  throw new Error("有内容伸出四角框：调小 size、少放一项或把元素往上 / 往下挪，改 STORYBOARD 后重跑");
 }
 
 /** 竖屏 1080×1920 的工程才查字幕带；返回 check 要加的参数 */
@@ -229,7 +292,16 @@ function main() {
   if (loc.mismatched.length) console.log(`  ⚠ 有文件写的是 GSAP ${loc.mismatched.join("、")}，本地是 ${gsapVersion()}，已统一用本地版本`);
   if (check) {
     run("lint", HF, ["lint", "."], dir);
-    run("check（含字幕带：内容不能伸出四角框压到字幕）", HF, ["check", ".", ...captionZoneArgs(dir)], dir);
+    // 两项检查都跑完再报错，一次看到所有问题
+    const errors = [];
+    for (const step of [() => run("check（含字幕带：内容不能伸出四角框压到字幕）", HF, ["check", ".", ...captionZoneArgs(dir)], dir), () => checkBounds(dir)]) {
+      try {
+        step();
+      } catch (err) {
+        errors.push(err.message);
+      }
+    }
+    if (errors.length) throw new Error(errors.join("\n✗ "));
   }
   if (args.includes("--snap") || args.includes("--motion")) snapshotSheet(dir, args.includes("--motion"));
   console.log("\n✓ 组装完成。看完截图后：nv render <工程>");

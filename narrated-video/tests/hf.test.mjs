@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { parseHfScript, restoreCase, toCaptionWords } from "../scripts/hf-audio.mjs";
-import { captionZoneSpec, frameEndTimes, frameMotionTimes, sparseFrames, stillFrames } from "../scripts/hf-build.mjs";
+import { boundsTimes, captionZoneSpec, cleanIndex, frameEndTimes, frameMotionTimes, sparseFrames, stillFrames } from "../scripts/hf-build.mjs";
 import { mergeTokens } from "../scripts/hf-kit.mjs";
 import { parseStoryboardSfx } from "../scripts/hf-sfx.mjs";
 import { writeCues } from "../scripts/lib/cues.mjs";
@@ -401,4 +401,15 @@ test("lateAnimations：动画挂在句尾、帧结尾前来不及播完时报出
 test("captionZoneSpec：竖屏字幕带 y 1160–1440（内容框下沿到字幕带底），每帧结尾各查一次", () => {
   assert.equal(captionZoneSpec([2.2, 4.2], 5), "x0=0;y0=0.6042;x1=1;y1=0.75;severity=error;seek=0.44,0.84");
   assert.equal(captionZoneSpec([], 5), null);
+});
+
+test("boundsTimes：每帧取中段和结尾前 0.3 秒；有转场重叠时结尾取在下一帧进场之前", () => {
+  assert.deepEqual(boundsTimes([{ start: 0, end: 4 }, { start: 3.5, end: 8 }]), [1.75, 3.2, 5.75, 7.7]);
+});
+
+test("cleanIndex：注入隐藏底色、四角框、角标、进度条、字幕的样式，根节点底色改黑", () => {
+  const html = "<html><head><style>#root{background:#F4F1EA}</style></head><body></body></html>";
+  const out = cleanIndex(html);
+  assert.ok(out.indexOf("data-nv-bounds") < out.indexOf("</head>"));
+  for (const sel of ["#el-captions", ".kit-hud", ".kit-kicker", ".kit-progress", ".kit-atmo", '[id$="-ground"]', "#root", "box-shadow:none"]) assert.ok(out.includes(sel), sel);
 });
