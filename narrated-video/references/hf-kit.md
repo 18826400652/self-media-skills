@@ -7,6 +7,18 @@
 - 装进工程：`nv hf-kit <工程>`（`nv hf-build` 会自动做）→ `compositions/kit/kit.js`（写入项目品牌色）和 `cues.js`（逐字时间）
 - 品牌色：项目配置 `narrated-video.config.json` 的 `hfKit.tokens`（`accent ink muted bg surface line font mono`）。单帧要换色时，在该帧根元素上覆盖 `--kit-accent` 等 CSS 变量
 
+## 缓动：按角色分
+
+同一帧里的元素别全用同一种动法，画面才不呆板（官方 Claude Design 指南：每个场景至少三种缓动）。组件和帧模板已经按下表分好；手写帧也照这个分：
+
+| 角色 | 缓动 | 用在哪 |
+|---|---|---|
+| 一般入场 | `power3.out`（`Kit._u.EASE`） | 说明文字、卡片、聊天消息 |
+| 主角 | `expo.out`（`Kit._u.HERO`） | 大数字、划掉后换上的新词、帧模板大标题 |
+| 弹出的小元素 | `back.out(1.6)`（`Kit._u.POP`） | 勾、标签、注释、箭头、放大镜卡片 |
+| 背景和镜头 | `sine.inOut` | 缓推、光晕呼吸 |
+| 画线、涂色 | `power2.inOut` / `none` | 荧光笔、圈、划线、颜色变化 |
+
 ## 选用表：这句话在讲什么 → 用哪个组件
 
 写 STORYBOARD 时，先判断每一帧口播在讲什么，再查这张表。**表里没有的就用纯文字排版，不要硬套组件。**

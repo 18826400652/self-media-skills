@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { parseHfScript, restoreCase, toCaptionWords } from "../scripts/hf-audio.mjs";
-import { frameEndTimes, sparseFrames } from "../scripts/hf-build.mjs";
+import { frameEndTimes, frameMotionTimes, sparseFrames, stillFrames } from "../scripts/hf-build.mjs";
 import { mergeTokens } from "../scripts/hf-kit.mjs";
 import { parseStoryboardSfx } from "../scripts/hf-sfx.mjs";
 import { writeCues } from "../scripts/lib/cues.mjs";
@@ -71,6 +71,25 @@ test("frameEndTimes 取每帧结尾前 0.3 秒，有转场重叠时取在下一�
     '<div id="b" data-composition-src="compositions/frames/02.html" data-start="2.5" data-duration="2"></div>',
   ].join("\n"));
   assert.deepEqual(frameEndTimes(dir), [2.2, 4.2]);
+});
+
+test("frameMotionTimes：每帧四张——入场、中段、落定前 0.7 秒、落定（后两张用来比较落定后还动不动）", () => {
+  const dir = tmp();
+  writeFileSync(join(dir, "index.html"), [
+    '<div id="a" data-composition-src="compositions/frames/01.html" data-start="0" data-duration="4"></div>',
+    '<div id="b" data-composition-src="compositions/frames/02.html" data-start="4" data-duration="1"></div>',
+  ].join("\n"));
+  // 第 2 帧太短：落定前 0.7 秒早于中段，就取中段
+  assert.deepEqual(frameMotionTimes(dir), [0.35, 1.85, 3, 3.7, 4.35, 4.35, 4.35, 4.7]);
+});
+
+test("stillFrames：落定前后两张几乎没差别的帧算「落定后静止」", () => {
+  const r = stillFrames([
+    { frame: 1, diff: 2.4 },
+    { frame: 2, diff: 0.02 },
+    { frame: 3, diff: 0.6 },
+  ]);
+  assert.deepEqual(r.map((x) => x.frame), [2]);
 });
 
 function loadKit(cues) {

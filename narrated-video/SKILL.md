@@ -43,7 +43,7 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 | `nv hf-kit <工程>` | 装入画面组件库，**写帧之前读 `references/hf-kit.md` 的选用表**，帧里用 `Kit.xxx(...)` 拼画面 |
 | STORYBOARD 每帧 `- build: {…}` | 帧模板：录屏、计时、组件、说明、标题自由组合，时间写 `"@词"`；`nv hf-build` 自动生成画面（见 douyin-recipe.md）。放不下的画面才手写 `compositions/frames/NN-*.html`（`Kit.xxx(...)` + `Kit.cue`） |
 | `nv hf-build <工程> --snap` | 一键组装：组件库和逐字时间 → 帧时长 → 按 build 生成画面 → 音效（STORYBOARD `- sfx: error @数错了`）→ 素材 → 中文字体 → 字幕 → index → 转场 → lint/check → 每帧截图拼成 `snapshots/sheet.jpg` |
-| `nv hf-build <工程> --motion` | 每帧截「入场 / 中段 / 落定」三张，检查元素是否按时出现、字幕折行、过程中有没有穿帮（只看结尾截图会漏掉这类问题） |
+| `nv hf-build <工程> --motion` | 每帧截「入场 / 中段 / 落定前 / 落定」四张，检查元素是否按时出现、字幕折行、过程中有没有穿帮（只看结尾截图会漏掉这类问题）；并自动比较落定前后两张，落定后完全静止的帧给出警告 |
 | 看 `snapshots/sheet.jpg` → `nv render <工程>` | 看图确认后渲染；渲染完自动做成片检查（`nv verify`：帧数、时长、声音、尺寸、黑屏） |
 
 改了口播或语速：重跑 `nv hf-audio` 和 `nv hf-build`，画面时间会跟着 `Kit.cue` 自动对齐。单独的 `nv hf-sfx`、`nv hf-fonts`、`nv hf-kit` 一般不用手动跑。
@@ -120,7 +120,7 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 
 - 根元素 `#root` 带 `data-composition-id="main"`；时间轴是 `gsap.timeline({ paused: true })`，注册到 `window.__timelines["main"]`
 - 有时间的元素需要 `class="clip"` 和 `data-start` / `data-duration`
-- 只写确定性逻辑：不用 `Date.now()`、`Math.random()`、网络请求
+- 只写确定性逻辑：不用 `Date.now()`、`Math.random()`、`setTimeout` / `setInterval`、网络请求；循环动画不写 `repeat: -1`，按帧长算出次数（如 `repeat: Math.max(0, Math.floor(帧长 / 周期) - 1)`）；`stagger` 不用 `from: "random"`；时间线在页面加载时同步建好
 - `querySelector` 里不能用模板字符串（打包器会崩溃），要用字符串拼接或 `getElementById`
 - 高亮的划线动画：`tl.from("mark", { "--mark": "0%" })`
 - `nested_structure_needs_subcomposition` 警告只影响 Studio 时间轴显示，可以忽略

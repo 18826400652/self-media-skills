@@ -1,5 +1,5 @@
 // qa.json 校验：Claude 逐帧看总览图和成片抽帧后写的视觉 QA。检查项说明见 references/qa.md。
-export const QA_CHECKS = ["safe-area", "text-size", "density", "typo", "fact-on-screen", "rhythm"];
+export const QA_CHECKS = ["safe-area", "text-size", "density", "typo", "fact-on-screen", "rhythm", "motion"];
 const SEVERITIES = ["high", "medium", "low"];
 const error = (msg) => ({ level: "error", msg });
 
