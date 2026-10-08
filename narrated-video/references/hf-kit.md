@@ -113,7 +113,7 @@ GSAP 用本地文件 `compositions/kit/gsap.min.js`（`nv hf-kit` 复制进工�
 | `Kit.template` | `title`、`lines`=[每行，【】内高亮]、`footer`、`at`、`stagger`=0.25 行间隔、`size`=40 |
 | `Kit.receipt` | `rows`=[每行文字，自动编 01 02…]、`total` 合计、`title`=「小票」、`at` 开始打印、`dur`=1.1、`highlight`=[要标出的行号]、`highlightAt`、`tag` 标签文字、`tagAt`、`size`=46、`width`=640。宿主放在内容区左侧，给标签留位置 |
 | `Kit.checklist` | `title`、`items`=[字符串或 {`text`,`at`,`checkAt`}]、`at`、`stagger`=0.4、`size`=68。每条说到时出现并打勾；两条时内容偏少，宿主往下放或加大 `size` |
-| `Kit.steps` | `steps`=[{`title`,`desc`,`at`}]、`at`、`stagger`=0.6、`size`=76（说明文字 0.58 倍）。竖线随口播长到当前一步 |
+| `Kit.steps` | `steps`=[{`title`,`desc`,`at`}]、`at`、`stagger`=0.6、`size`=76（说明文字 0.58 倍；序号块和步骤间距跟着缩放，76 时 110px / 80px）。竖线随口播长到当前一步。5 步要放进内容框，size ≤ 56 |
 | `Kit.chain` | `cards`=[{`tag`,`text`,`at`}]、`at`、`stagger`=0.7、`size`=60。箭头往下长，最后一张（结果）描强调色边；只写真实的因果，不凑三段 |
 | `Kit.chat` | `title` 群名、`count` 人数、`staged`=true、`at`=0、`stagger`=0.5、`height`=760（面板总高，消息超出时自动上推）、`size`=34、`messages`=[{`from`,`text`,`me`,`tone`:`"bad"`,`doc`:{`title`,`tag`,`head`,`rows`,`mark`:{`row`,`col`,`at`}},`at`}]。`text` 里的 `@某人` 自动高亮；`mark` 的行列从 0 数 |
 | `Kit.attach` | `question` 打进输入框的问题、`file`={`name`,`meta`,`type`=`"PDF"`}、`at`=0（输入框出现）、`askAt`=at+0.4（开始打字）、`fileAt`=askAt+0.9（文件卡飞进来）、`done`=`"✓ 已附上"`（`false` 不显示）、`tag`=`"示例"`（`false` 不标）。组件高 400 |

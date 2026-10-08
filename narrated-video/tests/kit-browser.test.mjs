@@ -348,3 +348,30 @@ test("Kit.answer：缺 source、focus 行超出、focus 但没有表格，都报
     await k.close();
   }
 });
+
+test("Kit.steps：序号块和步骤间距跟着 size 缩放（默认 76 时 110px / 80px 不变；5 步小字号能放进内容区）", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js"] });
+  try {
+    const r = await k.page.evaluate(() => {
+      const measure = (size) => {
+        const host = document.createElement("div");
+        document.body.appendChild(host);
+        host.id = "h" + size;
+        const tl = gsap.timeline({ paused: true });
+        Kit.steps(tl, "#" + host.id, { steps: [1, 2, 3, 4, 5].map((n) => ({ title: "第" + n + "步" })), ...(size ? { size } : {}) });
+        tl.seek(10);
+        const ix = host.querySelector(".ix");
+        const st = getComputedStyle(host.querySelector(".st"));
+        return { ix: ix.getBoundingClientRect().height, gap: parseFloat(st.paddingBottom), total: host.querySelector(".kit-steps").getBoundingClientRect().height };
+      };
+      return { def: measure(0), small: measure(52) };
+    });
+    assert.equal(r.def.ix, 110);
+    assert.equal(r.def.gap, 80);
+    assert.equal(r.small.ix, 75);
+    assert.equal(r.small.gap, 55);
+    assert.ok(r.small.total <= 620, `5 步总高 ${r.small.total}`);
+  } finally {
+    await k.close();
+  }
+});

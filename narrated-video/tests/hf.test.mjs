@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { parseHfScript, restoreCase, toCaptionWords } from "../scripts/hf-audio.mjs";
-import { frameEndTimes, frameMotionTimes, sparseFrames, stillFrames } from "../scripts/hf-build.mjs";
+import { captionZoneSpec, frameEndTimes, frameMotionTimes, sparseFrames, stillFrames } from "../scripts/hf-build.mjs";
 import { mergeTokens } from "../scripts/hf-kit.mjs";
 import { parseStoryboardSfx } from "../scripts/hf-sfx.mjs";
 import { writeCues } from "../scripts/lib/cues.mjs";
@@ -396,4 +396,9 @@ test("lateAnimations：动画挂在句尾、帧结尾前来不及播完时报出
   // 新组件：挑页要等几页都飞出来（约 0.9 秒），文件卡飞进来约 0.6 秒
   assert.deepEqual(lateAnimations(frame({ kit: { name: "pick", opts: { pickAt: "@翻" } } }), cues).map((x) => x.readable), [3.3]);
   assert.deepEqual(lateAnimations(frame({ kit: { name: "attach", opts: { fileAt: "@先去" } } }), cues), []);
+});
+
+test("captionZoneSpec：竖屏字幕带 y 1160–1440（内容框下沿到字幕带底），每帧结尾各查一次", () => {
+  assert.equal(captionZoneSpec([2.2, 4.2], 5), "x0=0;y0=0.6042;x1=1;y1=0.75;severity=error;seek=0.44,0.84");
+  assert.equal(captionZoneSpec([], 5), null);
 });

@@ -3,6 +3,7 @@
 //
 // 配音（nv hf-audio）和画面（compositions/frames/）都写好之后，一条命令把工程组装成可渲染的状态：
 //   组件库 + 逐字时间 → 同步帧时长 → 按 build 生成画面 → 音效 → 素材 → 字体 → 字幕 → 组装 index → 转场 → GSAP 本地化 → lint / check
+// check 时竖屏工程加 --caption-zone：每帧结尾查文字有没有伸出内容框（y 1160 以下）压到字幕
 // --snap：再按每帧结尾截图，拼成 snapshots/sheet.jpg，用来看图检查；并量每帧内容铺开多少，偏空的帧给出警告。
 // --motion：每帧截入场、中段、落定三张（动画过程），检查元素是否按时出现、过程中有没有穿帮。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
@@ -24,6 +25,9 @@ const MIN_HOLD_DIFF = 0.3; // 两张图内容区的平均像素差（0–255）�
 // 画面铺开检查（借鉴 nutllwhy/hyperframes-motion-library）：落定时内容外接框太小 = 下半屏空着
 const MIN_SPAN_Y = 0.55; // 纵向至少铺开内容区的 55%（第 1 课校准：空的两帧是 0.46、0.50，正常帧 ≥ 0.6）
 const MIN_OCCUPANCY = 0.4;
+// 字幕带（竖屏 1080×1920）：glow 的四角框住内容区 y 200–1160，字幕从 1180 起、最低到 1440。
+// 内容伸出框就会压到字幕：check 时加 --caption-zone，在每帧结尾查文字有没有进这条带（字幕本身不算）
+const CAPTION_BAND = { top: 1160, bottom: 1440, height: 1920 };
 const PYTHON = join(SKILL_DIR, ".venv", "bin", "python");
 
 const gsapVersion = () => JSON.parse(readFileSync(join(SKILL_DIR, "node_modules", "gsap", "package.json"), "utf8")).version;
@@ -75,6 +79,25 @@ export function frameEndTimes(dir) {
     const end = Math.min(f.end, frames[i + 1]?.start ?? Infinity);
     return Math.round((end - SNAP_BEFORE_END) * 100) / 100;
   });
+}
+
+/** 每帧结尾时刻 + 总时长 → hyperframes check 的 --caption-zone 参数（seek 是占总时长的比例）；没有帧返回 null */
+export function captionZoneSpec(ends, total) {
+  if (!ends.length || !(total > 0)) return null;
+  const f = (x) => Number(x.toFixed(4));
+  const seek = ends.map((t) => f(t / total)).join(",");
+  return `x0=0;y0=${f(CAPTION_BAND.top / CAPTION_BAND.height)};x1=1;y1=${f(CAPTION_BAND.bottom / CAPTION_BAND.height)};severity=error;seek=${seek}`;
+}
+
+/** 竖屏 1080×1920 的工程才查字幕带；返回 check 要加的参数 */
+function captionZoneArgs(dir) {
+  const html = readFileSync(join(dir, "index.html"), "utf8");
+  if (!/data-width="1080"/.test(html) || !/data-height="1920"/.test(html)) return [];
+  const ends = [...html.matchAll(/<div[^>]*data-composition-src="compositions\/frames\/[^"]+"[^>]*>/g)]
+    .map((m) => Number(m[0].match(/data-start="([\d.]+)"/)?.[1]) + Number(m[0].match(/data-duration="([\d.]+)"/)?.[1]))
+    .filter(Number.isFinite);
+  const spec = captionZoneSpec(frameEndTimes(dir), Math.max(...ends));
+  return spec ? ["--caption-zone", spec] : [];
 }
 
 /**
@@ -137,7 +160,7 @@ function checkOccupancy(dir) {
   }
   const sparse = sparseFrames(out.trim().split("\n").map((l) => JSON.parse(l)));
   if (!sparse.length) return console.log("  ✓ 每帧内容都铺开了（纵向 ≥ 55%）");
-  for (const r of sparse) console.log(`  ⚠ ${basename(r.file)}：内容只铺了纵向 ${Math.round(r.spanY * 100)}%，下半屏偏空（放大字号、加一个图形或把元素往下排）`);
+  for (const r of sparse) console.log(`  ⚠ ${basename(r.file)}：内容只铺了纵向 ${Math.round(r.spanY * 100)}%，下半屏偏空（把元素往下排开、加一个和口播有关的图形，或适当放大字号；别伸出四角框，冲击帧、大字帧可以不管）`);
 }
 
 function htmlFiles(dir) {
@@ -206,7 +229,7 @@ function main() {
   if (loc.mismatched.length) console.log(`  ⚠ 有文件写的是 GSAP ${loc.mismatched.join("、")}，本地是 ${gsapVersion()}，已统一用本地版本`);
   if (check) {
     run("lint", HF, ["lint", "."], dir);
-    run("check", HF, ["check", "."], dir);
+    run("check（含字幕带：内容不能伸出四角框压到字幕）", HF, ["check", ".", ...captionZoneArgs(dir)], dir);
   }
   if (args.includes("--snap") || args.includes("--motion")) snapshotSheet(dir, args.includes("--motion"));
   console.log("\n✓ 组装完成。看完截图后：nv render <工程>");

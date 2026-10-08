@@ -678,12 +678,19 @@
   Kit.steps = function (tl, sel, o) {
     var host = hostOf(sel);
     var size = num(o.size, 76);
+    // 序号块和步骤间距跟着字号缩放（默认 76 时 110px / 80px），步骤多时调小 size 就能放进内容区
+    var badge = Math.round(size * 110 / 76), gap = Math.round(size * 80 / 76);
     var box = el("div", "kit kit-steps", host);
     var rail = el("div", "rail", box);
     var fill = el("i", "", rail);
-    var list = itemsWithTimes(o.steps, num(o.at, 0.2), num(o.stagger, 0.6)).map(function (x, i) {
+    rail.style.left = Math.round(badge / 2 - 3) + "px";
+    var steps = o.steps || [];
+    var list = itemsWithTimes(steps, num(o.at, 0.2), num(o.stagger, 0.6)).map(function (x, i) {
       var st = el("div", "st", box);
-      el("div", "ix", st, String(i + 1).padStart(2, "0"));
+      if (i < steps.length - 1) st.style.paddingBottom = gap + "px";
+      var ix = el("div", "ix", st, String(i + 1).padStart(2, "0"));
+      ix.style.width = ix.style.height = badge + "px";
+      ix.style.fontSize = Math.round(badge * 0.4) + "px";
       var txt = el("div", "", st);
       var hd = el("div", "hd", txt, x.o.title);
       hd.style.fontSize = size + "px";
@@ -692,7 +699,7 @@
       return { node: st, at: x.at };
     });
     if (list.length < 2) return rail.remove();
-    var center = function (n) { return n.offsetTop + 55; };
+    var center = function (n) { return n.offsetTop + badge / 2; };
     var top = center(list[0].node), span = center(list[list.length - 1].node) - top;
     rail.style.top = top + "px";
     rail.style.height = span + "px";
