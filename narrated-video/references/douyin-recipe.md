@@ -133,7 +133,7 @@
 | `kit` | 一个组件 | `name`（strike number marker annotate shot stream prompt arrow compare template checklist steps chain）、`top`、`width`（默认 960，`"auto"` 不限宽）、`opts` 见 hf-kit.md |
 | `lead` | 一行灰色说明 | `text`（`**词**` 强调色）、`top`、`at` |
 | `title` | 大字标题 | `label`、`lines`（字符串或 `{text, at}`）、`top`、`center`（居中，冲击帧用） |
-| `camera` | 镜头 | `"push"`：整帧缓慢推近，给落定后的静态帧用 |
+| `camera` | 镜头 | 不写 = 默认整帧缓慢推近（录屏帧、截图帧除外）；`false` = 这一帧不推 |
 | `ground` | 底色 | `"accent"` = 整屏强调色（翻车帧，整片最多一次） |
 
 录屏的 `mediaStart`：看 `nv rec` 输出的 `.json`，`sentAt` 是发送时刻、`doneAt` 是回答结束。原速播「粘贴 + 发送」从 `pastedAt - 0.6` 开始；加速播「输出过程」从 `sentAt` 开始，`rate ≈ (doneAt - sentAt) / 这一帧时长`。
