@@ -127,6 +127,28 @@ test("marker：关键词在句中时字号不额外缩小（只按字数）", op
   }
 });
 
+test("缓动分角色：主角（数字、换上的新词）expo.out，弹出的小元素（勾、注释）back.out", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js"] });
+  try {
+    const r = await k.page.evaluate(() => {
+      const tl = gsap.timeline({ paused: true });
+      const easeOf = (el) => tl.getTweensOf(el)[0]?.vars.ease;
+      Kit.number(tl, "#host", { value: 8, at: 0 });
+      const num = easeOf(document.querySelector(".kit-num"));
+      document.querySelector("#host").innerHTML = "";
+      Kit.strike(tl, "#host", { from: "旧", to: "新", at: 0 });
+      const neu = easeOf(document.querySelector(".kit-strike .kit-acc"));
+      document.querySelector("#host").innerHTML = "";
+      Kit.annotate(tl, "#host", { text: "列编号", key: "编号", note: "关键", at: 0 });
+      const note = easeOf(document.querySelector(".kit-note"));
+      return { num, neu, note };
+    });
+    assert.deepEqual(r, { num: "expo.out", neu: "expo.out", note: "back.out(1.6)" });
+  } finally {
+    await k.close();
+  }
+});
+
 const CHAT = {
   title: "双十一筹备群", count: 5, at: 0, stagger: 0.5,
   messages: [

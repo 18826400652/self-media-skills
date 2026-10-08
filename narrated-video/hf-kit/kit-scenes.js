@@ -229,7 +229,7 @@
       ? "minmax(0,1.5fr)" + " auto".repeat(data.length - 2) + " minmax(0,1fr)"
       : "minmax(0,1fr)" + (data.length > 1 ? " auto" : "");
     var cells = data.map(function (c) { return el("span", "", line, c); });
-    tl.fromTo(lens, { opacity: 0, scale: 0.92, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.45, ease: U.EASE }, fAt + 0.1);
+    tl.fromTo(lens, { opacity: 0, scale: 0.92, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.45, ease: U.POP }, fAt + 0.1);
     if (f.col != null) {
       var cell = cells[f.col];
       if (!cell) throw new Error("Kit.answer: focus.col 超出列数（共 " + data.length + " 列，从 0 数）");
@@ -238,7 +238,7 @@
     }
     if (f.note) {
       var note = el("div", "kit-ans-note", lens, f.note);
-      tl.fromTo(note, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: U.EASE }, num(f.noteAt, fAt + 0.7));
+      tl.fromTo(note, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: U.POP }, num(f.noteAt, fAt + 0.7));
     }
   };
 

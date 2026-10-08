@@ -23,7 +23,9 @@
   // 默认值是中性配色；nv hf-kit 复制时会把下面这一行替换成项目配置
   var TOKENS = /*KIT_TOKENS*/ { accent: "#5B8CFF", ink: "#F5F5F5", muted: "#8A8A8A", bg: "#111111", surface: "#1C1C1C", line: "#2E2E2E", danger: "#FF5A5F", font: '"Noto Sans SC", sans-serif', mono: '"JetBrains Mono", "Noto Sans SC", monospace' } /*END_KIT_TOKENS*/;
 
-  var EASE = "power3.out";
+  // 缓动按角色分（同一帧里有几种不同的动法，画面才不呆板）：
+  //   EASE 一般入场；HERO 主角（数字、换上的新词），出场更有冲击力；POP 弹出的小元素（勾、标签、注释、箭头），轻轻回弹
+  var EASE = "power3.out", HERO = "expo.out", POP = "back.out(1.6)";
   var SVG_NS = "http://www.w3.org/2000/svg";
   var STREAM_GAPS = [0.167, 0.1, 0, 0.367, 0, 0.167, 0.133, 0.1, 0.1, 0.133, 0.167, 0.133, 0, 0.233, 0.167, 0.1, 0, 0.133, 0.133, 0.1];
 
@@ -207,8 +209,8 @@
     }
   }
 
-  function inFrom(tl, node, at, y) {
-    tl.fromTo(node, { opacity: 0, y: y == null ? 30 : y }, { opacity: 1, y: 0, duration: 0.45, ease: EASE }, at);
+  function inFrom(tl, node, at, y, ease) {
+    tl.fromTo(node, { opacity: 0, y: y == null ? 30 : y }, { opacity: 1, y: 0, duration: 0.45, ease: ease || EASE }, at);
   }
 
   // 一行大字放不下时自动缩小字号，保证不折行（中文按每字 1em 估算）
@@ -290,7 +292,7 @@
     inFrom(tl, old, inAt);
     tl.fromTo(line, { scaleX: 0 }, { scaleX: 1, duration: 0.32, ease: "power2.out" }, at);
     tl.fromTo(old, { color: T.ink }, { color: T.muted, duration: 0.3, ease: "none" }, at + 0.1);
-    tl.fromTo(neu, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: EASE }, at + 0.28);
+    tl.fromTo(neu, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: HERO }, at + 0.28);
   };
 
   /** 荧光笔：一行字里的关键词被涂上底色。{ text, key, at, inAt=0, size=110, style="highlight"|"underline" } */
@@ -364,7 +366,7 @@
     cp.style.strokeWidth = "3px";
     cp.style.opacity = 0;
     drawOn(tl, cp, at + 0.4, 0.35);
-    tl.fromTo(note, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: EASE }, at + 0.68);
+    tl.fromTo(note, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: POP }, at + 0.68);
   };
 
   /**
@@ -436,7 +438,7 @@
       label.style.left = lx + "px";
       label.style.top = ly + "px";
       label.style.transform = tf;
-      tl.fromTo(label, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: EASE }, at + 0.3);
+      tl.fromTo(label, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: POP }, at + 0.3);
     });
   };
 
@@ -548,7 +550,7 @@
     n.style.fontSize = num(o.size, 300) + "px";
     var v = el("span", "", n, String(o.value));
     if (o.unit) el("span", "u", n, o.unit);
-    inFrom(tl, n, at, 40);
+    inFrom(tl, n, at, 40, HERO);
     if (o.countFrom != null && isFinite(Number(o.value))) {
       var target = Number(o.value), proxy = { v: Number(o.countFrom) };
       var digits = (String(o.value).split(".")[1] || "").length;
@@ -631,7 +633,7 @@
     // 挂在最后一个高亮行的右边、垂直居中（行的 offsetTop 相对小票外框 .kit 计算）
     tag.style.left = box.offsetLeft + width + 28 + "px";
     tag.style.top = box.offsetTop + last.offsetTop + (last.offsetHeight - tag.offsetHeight) / 2 + "px";
-    tl.fromTo(tag, { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.3, ease: EASE }, num(o.tagAt, hAt + 0.3));
+    tl.fromTo(tag, { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.3, ease: POP }, num(o.tagAt, hAt + 0.3));
   };
 
   // 下面三个组件的版式参考 nutllwhy/hyperframes-motion-library（MIT）的 checklist-pop、three-step-flow、cause-chain，
@@ -665,7 +667,7 @@
       var mark = el("i", "", bx, "✓");
       el("span", "", row, x.o.text);
       inFrom(tl, row, x.at, 18);
-      tl.fromTo(mark, { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.25, ease: EASE }, num(x.o.checkAt, x.at + 0.2));
+      tl.fromTo(mark, { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.25, ease: POP }, num(x.o.checkAt, x.at + 0.2));
     });
   };
 
@@ -712,7 +714,7 @@
     itemsWithTimes(o.cards, num(o.at, 0.2), num(o.stagger, 0.7)).forEach(function (x, i) {
       if (i > 0) {
         var ar = el("div", "ar", box);
-        tl.fromTo(ar, { opacity: 0, scaleY: 0 }, { opacity: 1, scaleY: 1, duration: 0.25, ease: EASE }, x.at - 0.2);
+        tl.fromTo(ar, { opacity: 0, scaleY: 0 }, { opacity: 1, scaleY: 1, duration: 0.25, ease: POP }, x.at - 0.2);
       }
       var cd = el("div", "cd", box);
       if (x.o.tag) el("div", "kit-tag", cd, x.o.tag);
@@ -723,7 +725,7 @@
 
   Kit.look = "flat"; // 加载 kit-glow.js 后变成 "glow"，组件按它切换笔触
   // 给 kit-scenes.js 等扩展文件复用的内部工具（不是对外接口，帧里不要直接用）
-  Kit._u = { EASE: EASE, el: el, svgEl: svgEl, tok: tok, hostOf: hostOf, num: num, inFrom: inFrom, drawOn: drawOn, boil: boil, wobblyEllipse: wobblyEllipse, hashText: hashText, itemsWithTimes: itemsWithTimes };
+  Kit._u = { EASE: EASE, HERO: HERO, POP: POP, el: el, svgEl: svgEl, tok: tok, hostOf: hostOf, num: num, inFrom: inFrom, drawOn: drawOn, boil: boil, wobblyEllipse: wobblyEllipse, hashText: hashText, itemsWithTimes: itemsWithTimes };
 
   window.Kit = Kit;
 })();
