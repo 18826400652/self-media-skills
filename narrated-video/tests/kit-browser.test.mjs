@@ -149,6 +149,76 @@ test("缓动分角色：主角（数字、换上的新词）expo.out，弹出的
   }
 });
 
+test("Kit.attach：问题打进输入框，文件卡飞进附件栏，默认标「示例」", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-scenes.js"] });
+  try {
+    const r = await k.page.evaluate(() => {
+      const tl = gsap.timeline({ paused: true });
+      Kit.attach(tl, "#host", { question: "差旅住宿标准是多少？", file: { name: "报销制度.pdf", meta: "12 页" }, at: 0, askAt: 0.5, fileAt: 1.5 });
+      const file = document.querySelector(".kit-att .file");
+      const q = document.querySelector(".kit-att .q");
+      tl.seek(1.4, false); // false：不压住 onUpdate（打字、数数靠它写字）
+      const before = { file: getComputedStyle(file).opacity, q: q.textContent };
+      tl.seek(4, false);
+      return {
+        before,
+        after: { file: getComputedStyle(file).opacity, x: gsap.getProperty(file, "x"), q: q.textContent, chip: getComputedStyle(document.querySelector(".kit-att .done")).opacity },
+        name: file.textContent.includes("报销制度.pdf"),
+        tag: document.querySelector(".kit-att .kit-tag-demo")?.textContent,
+      };
+    });
+    assert.deepEqual(r.before, { file: "0", q: "差旅住宿标准是多少？" });
+    assert.deepEqual(r.after, { file: "1", x: 0, q: "差旅住宿标准是多少？", chip: "1" });
+    assert.equal(r.name, true);
+    assert.equal(r.tag, "示例");
+  } finally {
+    await k.close();
+  }
+});
+
+test("Kit.pick：一摞资料落下、页数数上来、打叉，挑出的几页依次飞出排开", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-scenes.js"] });
+  try {
+    const r = await k.page.evaluate(() => {
+      const tl = gsap.timeline({ paused: true });
+      Kit.pick(tl, "#host", { title: "员工手册", total: 186, picks: [{ page: "第 12 页", text: "差旅标准" }, { page: "第 13 页", text: "住宿上限" }], at: 0, rejectAt: 0.8, pickAt: 1.5, tag: false });
+      const pages = [...document.querySelectorAll(".kit-pick .pg")];
+      tl.seek(1.4, false); // false：不压住 onUpdate（打字、数数靠它写字）
+      const before = { pages: pages.map((p) => getComputedStyle(p).opacity), cross: getComputedStyle(document.querySelector(".kit-pick .x path")).opacity };
+      tl.seek(4, false);
+      return {
+        before,
+        pages: pages.map((p) => getComputedStyle(p).opacity),
+        texts: pages.map((p) => p.querySelector(".tx").textContent),
+        count: document.querySelector(".kit-pick .n").textContent,
+        stack: getComputedStyle(document.querySelector(".kit-pick .stack")).opacity,
+        tag: document.querySelector(".kit-pick .kit-tag-demo"),
+      };
+    });
+    assert.deepEqual(r.before, { pages: ["0", "0"], cross: "1" });
+    assert.deepEqual(r.pages, ["1", "1"]);
+    assert.deepEqual(r.texts, ["差旅标准", "住宿上限"]);
+    assert.equal(r.count, "186");
+    assert.ok(Number(r.stack) < 0.6, "挑出后整摞变暗");
+    assert.equal(r.tag, null, "tag false 不标「示例」");
+  } finally {
+    await k.close();
+  }
+});
+
+test("Kit.pick：不写 rejectAt 就不打叉", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-scenes.js"] });
+  try {
+    const n = await k.page.evaluate(() => {
+      Kit.pick(gsap.timeline({ paused: true }), "#host", { title: "手册", total: 20, picks: [{ page: "P1", text: "a" }] });
+      return document.querySelectorAll(".kit-pick .x").length;
+    });
+    assert.equal(n, 0);
+  } finally {
+    await k.close();
+  }
+});
+
 const CHAT = {
   title: "双十一筹备群", count: 5, at: 0, stagger: 0.5,
   messages: [

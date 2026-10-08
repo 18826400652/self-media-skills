@@ -7,7 +7,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { SKILL_DIR, loadConfig, resolveLook } from "./lib/config.mjs";
-import { buildFrame, lateAnimations, parseStoryboardFrames } from "./lib/frame-build.mjs";
+import { buildFrame, lateAnimations, parseStoryboardFrames, textOnlyRuns } from "./lib/frame-build.mjs";
 import { loadCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { mergeTokens } from "./hf-kit.mjs";
@@ -38,6 +38,9 @@ function main() {
     for (const x of lateAnimations(f, cues[f.n])) {
       console.log(`  ⚠ 第 ${f.n} 帧：${x.component} 挂在「${x.word}」（${x.cue.toFixed(2)} 秒），约 ${x.readable.toFixed(2)} 秒才看得清，帧在 ${x.frameEnd.toFixed(2)} 秒结束，观众来不及读；挂到更早的词上`);
     }
+  }
+  for (const r of textOnlyRuns(frames)) {
+    console.log(`  ⚠ 第 ${r.from}–${r.to} 帧连着 ${r.count} 帧都是纯文字，节奏会平：挑一两帧把「怎么做」画成动作（attach、pick、steps、compare……见 references/hf-kit.md）`);
   }
   const manual = frames.filter((f) => !f.build).map((f) => f.n);
   console.log(`✓ 按 build 生成 ${built} 帧（${look}）${manual.length ? `；手写的帧：${manual.join("、")}` : ""}`);

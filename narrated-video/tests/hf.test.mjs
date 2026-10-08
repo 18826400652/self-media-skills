@@ -362,6 +362,25 @@ test("cueTime：按词取时间，支持第几次出现、忽略大小写和空�
   assert.equal(cueTime(cues, "他们"), null);
 });
 
+test("textOnlyRuns：连着 3 帧以上纯文字（大字、说明、文字类组件）报出来；有图形组件、录屏或手写帧就断开", async () => {
+  const { textOnlyRuns } = await import("../scripts/lib/frame-build.mjs");
+  const fr = (n, build) => ({ n, build });
+  const frames = [
+    fr(8, { kit: { name: "steps" } }),
+    fr(9, { title: { lines: ["a"] } }),
+    fr(10, { lead: { text: "x" }, kit: { name: "prompt" } }),
+    fr(11, { title: { lines: ["b"] } }),
+    fr(12, { kit: { name: "template" } }),
+    fr(13, { kit: { name: "compare" } }),
+    fr(14, { title: { lines: ["c"] } }),
+    fr(15, { kit: { name: "marker" } }),
+    fr(16, null), // 手写帧：不知道画了什么，不算纯文字
+    fr(17, { title: { lines: ["d"] } }),
+  ];
+  assert.deepEqual(textOnlyRuns(frames), [{ from: 9, to: 12, count: 4 }]);
+  assert.deepEqual(textOnlyRuns(frames.slice(5)), []);
+});
+
 test("lateAnimations：动画挂在句尾、帧结尾前来不及播完时报出来", async () => {
   const { lateAnimations } = await import("../scripts/lib/frame-build.mjs");
   const cues = [["回", 0.2], ["答", 0.4], ["先", 1.0], ["去", 1.2], ["翻", 2.4], ["资", 2.6], ["料", 2.8]];
@@ -374,4 +393,7 @@ test("lateAnimations：动画挂在句尾、帧结尾前来不及播完时报出
   assert.deepEqual(lateAnimations(frame({ kit: { name: "annotate", opts: { at: "@翻" } } }), cues).map((x) => x.readable), [3.4]);
   assert.deepEqual(lateAnimations(frame({ kit: { name: "marker", opts: { at: "@没有这个词" } } }), cues), [], "找不到的词交给运行时报错");
   assert.deepEqual(lateAnimations(frame({ kit: { name: "marker", opts: { at: 2.9 } } }), cues), [], "手写秒数不管");
+  // 新组件：挑页要等几页都飞出来（约 0.9 秒），文件卡飞进来约 0.6 秒
+  assert.deepEqual(lateAnimations(frame({ kit: { name: "pick", opts: { pickAt: "@翻" } } }), cues).map((x) => x.readable), [3.3]);
+  assert.deepEqual(lateAnimations(frame({ kit: { name: "attach", opts: { fileAt: "@先去" } } }), cues), []);
 });

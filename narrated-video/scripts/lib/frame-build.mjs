@@ -50,7 +50,7 @@ const at = (v, fallback = 0) => toJs(v ?? fallback, true);
 
 // 「说到这个词」之后，组件多久能看清（按 kit.js 里各组件的动画）：淡入到一半就能读；荧光笔要等笔触涂完；圈词注释要等注释出来
 // 校准自 2026-10-07 RAG 试跑：荧光笔、圈词注释挂在句尾时帧切走了还没看清；普通淡入挂在句尾问题不大
-const READABLE = { marker: 0.5, annotate: 1.0, answer: 1.0, strike: 0.5, number: 0.45, chat: 0.2 };
+const READABLE = { marker: 0.5, annotate: 1.0, answer: 1.0, strike: 0.5, number: 0.45, chat: 0.2, attach: 0.6, pick: 0.9 };
 const READABLE_DEFAULT = 0.25; // inFrom 淡入（0.45 秒）到一半
 const READ_TIME = 0.2; // 看清之后至少留给观众读的时间
 
@@ -78,6 +78,28 @@ function cueRefs(b) {
  * @param {[string, number][]} cues 这一帧的逐字时间
  * @returns {{ word: string, component: string, cue: number, readable: number, frameEnd: number }[]}
  */
+// 以文字为主的组件：只用它们（或只有大字、说明）的帧算「纯文字帧」
+const TEXT_KITS = new Set(["marker", "strike", "template", "prompt", "stream"]);
+const MAX_TEXT_RUN = 2; // 纯文字帧最多连着 2 帧，再多节奏就平了（RAG 第 9–12 帧四张文字卡）
+
+const isTextOnly = (b) => !!b && !b.rec && !b.timer && (!b.kit || TEXT_KITS.has(b.kit.name));
+
+/** 连着超过 MAX_TEXT_RUN 帧的纯文字帧 → [{ from, to, count }]；手写帧（没有 build）不知道画了什么，按图形帧算 */
+export function textOnlyRuns(frames) {
+  const runs = [];
+  let run = [];
+  const flush = () => {
+    if (run.length > MAX_TEXT_RUN) runs.push({ from: run[0], to: run[run.length - 1], count: run.length });
+    run = [];
+  };
+  for (const f of frames) {
+    if (isTextOnly(f.build)) run.push(f.n);
+    else flush();
+  }
+  flush();
+  return runs;
+}
+
 export function lateAnimations(f, cues) {
   const out = [];
   for (const r of cueRefs(f.build ?? {})) {
@@ -204,7 +226,7 @@ export function buildFrame(f) {
 ${css.map((c) => `      ${sub(c)}`).join("\n")}
     </style>
     <div id="${p}-ground" class="${p}-ground${glow ? ` kit-atmo${accent ? " is-accent" : ""}` : ""} clip" data-start="0" data-duration="${f.duration}" data-track-index="0"></div>
-${glow ? `    ${hudPart(f.n, f.total, b.kicker !== false)}\n` : ""}${b.kicker === false ? "" : `    <div class="${p}-kicker${hook("kit-kicker")}">${esc(f.kicker)}</div>\n`}${camera ? `    <div id="${p}-cam" style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${camera ? "  " : ""}${sub(x)}`).join("\n")}${camera ? "\n    </div>" : ""}
+${glow ? `    ${hudPart(f.n, f.total, b.kicker !== false)}\n` : ""}${b.kicker === false ? "" : `    <div class="${p}-kicker${hook("kit-kicker")}">${esc(f.kicker)}</div>\n`}${camera ? `    <div id="${p}-cam" data-layout-allow-overflow style="position:absolute;inset:0;transform-origin:50% 40%">\n` : ""}${body.map((x) => `    ${camera ? "  " : ""}${sub(x)}`).join("\n")}${camera ? "\n    </div>" : ""}
     <script src="${LOCAL_GSAP}"></script>
     <script src="compositions/kit/cues.js"></script>
     <script src="compositions/kit/kit.js"></script>

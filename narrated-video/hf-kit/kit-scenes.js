@@ -2,6 +2,8 @@
  * hf-kit 场景组件：还原上班族熟悉的界面。在 kit.js 之后引用（帧模板自动引用）。
  *   Kit.chat    聊天界面（群聊、@人、文档卡、红圈）——演示场景用，默认标「情景演绎」
  *   Kit.answer  重建 AI 回答（实测原文，可推近到表格某一行）
+ *   Kit.attach  问题打进输入框、文件卡飞进附件栏（「先把文件发给它」）——默认标「示例」
+ *   Kit.pick    一摞资料落下、打叉，挑出几页飞出来排开（「别整本扔，挑几页」）——默认标「示例」
  * 只用 fromTo / set，颜色读 --kit-*，渲染可复现。用法和参数见 references/hf-kit.md。
  */
 (function () {
@@ -39,6 +41,30 @@
       ".kit-chat .doc td{position:relative;padding:11px 6px;border-top:1px solid color-mix(in srgb,var(--kit-ink) 10%,transparent)}",
       ".kit-ring{position:absolute;left:-14%;top:-22%;width:128%;height:144%;overflow:visible;pointer-events:none}",
       ".kit-ans-stage{position:relative;perspective:2200px}",
+      /* 动作画面（attach / pick）；角上的「示例」标签 */
+      ".kit-tag-demo{position:absolute;right:20px;top:-58px;font-size:24px;font-weight:700;letter-spacing:.08em;color:var(--kit-muted);border:1.5px solid var(--kit-line);border-radius:99px;padding:4px 14px}",
+      ".kit-att{position:relative;height:400px;border-radius:36px;background:linear-gradient(180deg,rgb(255 255 255/.08),rgb(255 255 255/.03));border:2px solid rgb(255 255 255/.12);box-shadow:0 40px 100px rgb(0 0 0/.55)}",
+      ".kit-att .slot{position:absolute;left:36px;top:34px;width:520px;height:150px;box-sizing:border-box;border-radius:24px;border:3px dashed rgb(255 255 255/.18);padding:50px 28px;font-size:34px;color:var(--kit-muted)}",
+      ".kit-att .in{position:absolute;left:40px;top:220px;right:160px;font-size:52px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden}",
+      ".kit-att .caret{display:inline-block;width:5px;height:56px;background:var(--kit-accent);vertical-align:-10px;margin-left:6px}",
+      ".kit-att .send{position:absolute;right:36px;bottom:36px;width:104px;height:104px;border-radius:52px;background:var(--kit-accent);display:grid;place-items:center}",
+      ".kit-att .send svg{width:50px;height:50px;fill:var(--kit-bg)}",
+      ".kit-att .file{position:absolute;left:36px;top:34px;width:520px;height:150px;box-sizing:border-box;border-radius:24px;background:#F4F1EA;color:#111;display:flex;align-items:center;gap:26px;padding:0 28px;box-shadow:0 24px 60px rgb(0 0 0/.5);z-index:2}",
+      ".kit-att .file .ic{flex:none;width:78px;height:96px;border-radius:10px;background:#E5484D;color:#fff;font-size:26px;font-weight:900;display:grid;place-items:center}",
+      ".kit-att .file .nm{font-size:44px;font-weight:900;line-height:1.15}",
+      ".kit-att .file .mt{font-size:30px;font-weight:500;color:#666}",
+      ".kit-att .done{position:absolute;left:580px;top:80px;font-size:34px;font-weight:900;color:var(--kit-bg);background:var(--kit-accent);padding:8px 20px;border-radius:40px;z-index:3}",
+      ".kit-pick{position:relative;height:500px}",
+      ".kit-pick .stack{position:absolute;left:30px;top:0;width:400px;height:480px}",
+      ".kit-pick .stack i{position:absolute;left:0;top:0;width:360px;height:440px;border-radius:14px;background:#D9D4C7;box-shadow:0 2px 0 rgb(0 0 0/.25)}",
+      ".kit-pick .cover{position:absolute;left:0;top:0;width:360px;height:440px;box-sizing:border-box;border-radius:14px;background:#F4F1EA;color:#111;padding:40px 34px;box-shadow:0 30px 70px rgb(0 0 0/.5)}",
+      ".kit-pick .cover .t{font-size:52px;font-weight:900;line-height:1.2}",
+      ".kit-pick .cover .n{font-size:96px;font-weight:900;margin-top:70px;line-height:1;font-variant-numeric:tabular-nums}",
+      ".kit-pick .cover .u{font-size:36px;font-weight:700;color:#666;margin-top:34px}",
+      ".kit-pick .x{position:absolute;left:30px;top:40px;width:340px;height:400px;overflow:visible}",
+      ".kit-pick .pg{position:absolute;left:540px;width:420px;height:150px;box-sizing:border-box;border-radius:16px;background:#F4F1EA;color:#111;padding:18px 26px;box-shadow:0 20px 50px rgb(0 0 0/.45)}",
+      ".kit-pick .pg .no{font-size:28px;font-weight:900;color:#888}",
+      ".kit-pick .pg .tx{display:inline-block;margin-top:8px;font-size:40px;font-weight:900;background:linear-gradient(var(--kit-accent),var(--kit-accent)) no-repeat 0 85%/100% 38%}",
       ".kit-ans{position:relative;font-family:var(--kit-font);color:var(--kit-ink);background:var(--kit-surface);border:1px solid var(--kit-line);border-radius:32px;overflow:hidden;transform:rotateX(6deg) rotateY(-8deg) scale(.96);transform-origin:50% 0}",
       ".kit-ans .bar{height:84px;display:flex;align-items:center;gap:14px;padding:0 30px;border-bottom:1px solid var(--kit-line);font-weight:700}",
       ".kit-ans .logo,.kit-ans-lens .logo{flex:none;width:40px;height:40px;border-radius:50%}",
@@ -240,6 +266,101 @@
       var note = el("div", "kit-ans-note", lens, f.note);
       tl.fromTo(note, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: U.POP }, num(f.noteAt, fAt + 0.7));
     }
+  };
+
+  /* ---------- 动作画面：把一句「怎么做」画成一个动作 ---------- */
+
+  // 画面里的文件名、页码是演示用的，默认在角上标「示例」，免得观众当成真实数据
+  function demoTag(parent, o) {
+    if (o.tag === false) return;
+    el("div", "kit-tag-demo", parent, o.tag || "示例");
+  }
+
+  /**
+   * 文件飞进输入框：输入框出现 → 说到问题时逐字打进去 → 说到「文件」时文件卡沿弧线飞进附件栏、落地回弹，亮「✓ 已附上」。
+   * { question, file:{ name, meta, type="PDF" }, at=0, askAt=at+0.4, fileAt=askAt+0.9, done="✓ 已附上"|false, tag="示例"|false }
+   */
+  Kit.attach = function (tl, sel, o) {
+    var host = U.hostOf(sel);
+    var file = o.file || {};
+    var at = num(o.at, 0), askAt = num(o.askAt, at + 0.4), fileAt = num(o.fileAt, askAt + 0.9);
+    var box = el("div", "kit kit-att", host);
+    demoTag(box, o);
+    var slot = el("div", "slot", box, "附件");
+    var overlapOk = function (node) { node.setAttribute("data-layout-allow-overlap", ""); return node; }; // 文件卡落进附件栏时故意盖住虚线框
+    var input = el("div", "in", box);
+    var q = el("span", "q", input);
+    var caret = el("i", "caret", input);
+    var send = el("div", "send", box);
+    U.svgEl("path", { d: "M4 12 L20 4 L14 20 L11 13 Z" }, U.svgEl("svg", { viewBox: "0 0 24 24" }, send));
+    var card = el("div", "file", box);
+    overlapOk(slot);
+    overlapOk(el("div", "ic", card, file.type || "PDF"));
+    var info = el("div", "", card);
+    overlapOk(el("div", "nm", info, file.name || "资料.pdf"));
+    if (file.meta) overlapOk(el("div", "mt", info, file.meta));
+    var done = o.done === false ? null : el("div", "done", box, o.done || "✓ 已附上");
+
+    tl.fromTo(box, { opacity: 0, y: 60, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.55, ease: U.EASE }, at);
+    tl.fromTo(caret, { opacity: 1 }, { opacity: 0, duration: 0.25, ease: "steps(1)", yoyo: true, repeat: 1 }, at + 0.3);
+    var text = String(o.question || ""), typed = { i: 0 };
+    tl.fromTo(typed, { i: 0 }, {
+      i: text.length, duration: Math.min(0.9, 0.07 * text.length), ease: "none",
+      onUpdate: function () { q.textContent = text.slice(0, Math.round(typed.i)); },
+    }, askAt);
+    tl.fromTo(card, { x: 430, y: -330, rotation: 14, scale: 0.8, opacity: 0 }, { x: 0, y: 0, rotation: 0, scale: 1, opacity: 1, duration: 0.55, ease: U.POP }, fileAt);
+    tl.fromTo(slot, { opacity: 1 }, { opacity: 0, duration: 0.2, ease: "none", immediateRender: false }, fileAt + 0.45);
+    if (done) tl.fromTo(done, { opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1, duration: 0.3, ease: U.POP }, fileAt + 0.5);
+    tl.fromTo(send, { scale: 1 }, { scale: 1.12, duration: 0.25, ease: "sine.inOut", yoyo: true, repeat: 1, immediateRender: false }, fileAt + 0.6);
+  };
+
+  /**
+   * 一摞资料里挑几页：整摞落下、页数从 0 数上来 →（rejectAt）红叉两笔、整摞抖一下 → 整摞变暗，挑出的几页依次飞出、在右边排开，之后轻轻浮动。
+   * { title, total, unit="页", picks:[{ page, text }]（1–4 页）, at=0, rejectAt（不写就不打叉）, pickAt=at+1.2, tag="示例"|false }
+   */
+  Kit.pick = function (tl, sel, o) {
+    var host = U.hostOf(sel);
+    var picks = (o.picks || []).slice(0, 4);
+    if (!picks.length) throw new Error("Kit.pick: picks 至少要有一页（{ page, text }）");
+    var at = num(o.at, 0), pickAt = num(o.pickAt, at + 1.2);
+    var box = el("div", "kit kit-pick", host);
+    demoTag(box, o);
+    var stack = el("div", "stack", box);
+    for (var i = 7; i >= 1; i--) el("i", "", stack).style.transform = "translate(" + i * 4 + "px," + i * 4 + "px)";
+    var cover = el("div", "cover", stack);
+    el("div", "t", cover, o.title || "资料");
+    var n = el("div", "n", cover, "0");
+    el("div", "u", cover, o.unit || "页");
+    var total = num(o.total, 100);
+    tl.fromTo(stack, { y: -420, opacity: 0, rotation: -6 }, { y: 0, opacity: 1, rotation: 0, duration: 0.5, ease: "back.out(1.2)" }, at);
+    var cnt = { v: 0 };
+    tl.fromTo(cnt, { v: 0 }, { v: total, duration: 0.6, ease: "power2.out", onUpdate: function () { n.textContent = Math.round(cnt.v); } }, at + 0.25);
+
+    if (o.rejectAt != null) {
+      var rejectAt = num(o.rejectAt, at + 0.8);
+      var T = U.tok(host);
+      var svg = U.svgEl("svg", { class: "x", viewBox: "0 0 340 400" }, stack);
+      ["M 20 30 L 320 370", "M 320 30 L 20 370"].forEach(function (d, k) {
+        var path = U.svgEl("path", { d: d, stroke: T.danger, "stroke-width": 22, "stroke-linecap": "round", fill: "none" }, svg);
+        var len = path.getTotalLength();
+        // 圆头笔触没画时也会露一个点，所以先藏起来
+        tl.fromTo(path, { strokeDasharray: len, strokeDashoffset: len, opacity: 0 }, { strokeDashoffset: 0, opacity: 1, duration: 0.18, ease: "power2.in" }, rejectAt + k * 0.16);
+      });
+      tl.fromTo(stack, { x: 0 }, { x: 10, duration: 0.05, ease: "none", yoyo: true, repeat: 3, immediateRender: false }, rejectAt + 0.34);
+    }
+
+    tl.fromTo(stack, { opacity: 1, scale: 1 }, { opacity: 0.45, scale: 0.92, duration: 0.35, ease: U.EASE, immediateRender: false }, pickAt);
+    var pages = picks.map(function (p, k) {
+      var pg = el("div", "pg", box);
+      pg.style.top = k * 170 + "px";
+      // 飞出来时边转边放大，页码和标题的文字框会短暂交叠
+      el("div", "no", pg, p.page || "").setAttribute("data-layout-allow-overlap", "");
+      el("div", "tx", pg, p.text || "").setAttribute("data-layout-allow-overlap", "");
+      tl.fromTo(pg, { x: -460, y: 120 - k * 170, rotation: -10, opacity: 0, scale: 0.7 }, { x: 0, y: 0, rotation: 0, opacity: 1, scale: 1, duration: 0.45, ease: U.POP }, pickAt + k * 0.18);
+      return pg;
+    });
+    // 落定后轻轻浮动（有限次数，渲染可复现）
+    tl.fromTo(pages, { y: 0 }, { y: -8, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 1, stagger: 0.1, immediateRender: false }, pickAt + 0.45 + picks.length * 0.18);
   };
 
   Kit._scenes = { ringAround: ringAround };
