@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // 用法：sc check <作品目录>
-// 检查一期内容：场景卡、实测记录、母稿结构、占位符、AI 腔用语、各平台长度。有 ✗ 时退出码为 1。
-import { existsSync, readFileSync, readdirSync, realpathSync, statSync } from "node:fs";
+//       sc bench <关键词…> [--platform 抖音|小红书|all] [--out 文件.json]
+// check：检查一期内容：场景卡、选题关、实测记录、母稿结构、占位符、AI 腔用语、各平台长度。有 ✗ 时退出码为 1。
+// bench：在已登录的浏览器里搜关键词，抓对标内容的标题和点赞，给选题关用。
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,6 +14,9 @@ const DEFAULTS = {
   bannedPhrases: [],
   requiredSections: ["场景", "痛点", "实测", "解法", "可复制"],
   feynmanCheck: "费曼检查.md", // 母稿后的「讲没讲明白」检查；设为 null 关闭
+  topicGate: "选题关.md", // 实测前的「有没有人想看」检查；设为 null 关闭
+  minBenchmarks: 5, // 选题关里至少几条对标
+  benchCdpPort: 9333, // sc bench 连接的浏览器调试端口（要已登录抖音、小红书）
   platformFiles: {},
 };
 const BANNED = [
@@ -64,16 +70,38 @@ function makeReport() {
   };
 }
 
-function checkScenario(ep, r) {
-  const p = join(ep, "场景卡.md");
-  if (!existsSync(p)) return r.fail("缺少 场景卡.md");
-  const empty = readFileSync(p, "utf8")
+/** 「- 字段：值」列表里没填的字段（空或还是「（…）」占位） */
+function emptyFields(md) {
+  return md
     .split("\n")
     .map((l) => l.match(/^- ([^：:]+)[：:]\s*(.*)$/))
     .filter(Boolean)
     .filter(([, , v]) => !v.trim() || v.trim().startsWith("（"))
     .map(([, k]) => k);
+}
+
+function checkScenario(ep, r) {
+  const p = join(ep, "场景卡.md");
+  if (!existsSync(p)) return r.fail("缺少 场景卡.md");
+  const empty = emptyFields(readFileSync(p, "utf8"));
   return empty.length ? r.fail(`场景卡未填写：${empty.join("、")}`) : r.pass("场景卡已填写");
+}
+
+/** 选题关：没填的字段、对标表的有效行数、用户是否确认 */
+export function parseGate(md) {
+  const benchRows = tableRows(md, "标题").filter((cells) => cells.slice(1, 3).every((c) => !isPlaceholder(c))).length;
+  const confirm = md.match(/^- 用户确认[：:][ \t]*(.*)$/m)?.[1]?.trim() ?? "";
+  return { empty: emptyFields(md), benchRows, confirmed: !isPlaceholder(confirm) };
+}
+
+function checkGate(ep, config, r) {
+  if (!config.topicGate) return;
+  const p = join(ep, config.topicGate);
+  if (!existsSync(p)) return r.fail(`缺少 ${config.topicGate}（实测前先过选题关：标题、封面、开头三秒、对标）`);
+  const g = parseGate(readFileSync(p, "utf8"));
+  if (g.empty.length) r.fail(`选题关未填写：${g.empty.join("、")}`);
+  if (g.benchRows < config.minBenchmarks) r.fail(`选题关对标只有 ${g.benchRows} 条，至少 ${config.minBenchmarks} 条（可用 sc bench 抓）`);
+  if (!g.empty.length && g.benchRows >= config.minBenchmarks) r.pass(`选题关已填写，对标 ${g.benchRows} 条`);
 }
 
 function checkTest(ep, r) {
@@ -213,10 +241,76 @@ export function douyinLines(md) {
     .map((cells) => ({ n: cells[1], text: cells[col], emo: emoCol >= 0 ? cells[emoCol] : "" }));
 }
 
-function main() {
-  const [cmd, dir] = process.argv.slice(2);
+/** 平台上的计数：「1.2万」「10万+」「5276」→ 数字；读不出来算 0 */
+export function parseCount(s) {
+  const m = String(s ?? "").trim().match(/^([\d.]+)(万)?\+?$/);
+  if (!m) return 0;
+  return Math.round(Number(m[1]) * (m[2] ? 10000 : 1));
+}
+
+/** 抖音搜索页的 innerText：每条视频是「时长 / 点赞 / 标题 / @作者」连续四行 */
+export function parseDouyinText(text) {
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const items = [];
+  lines.forEach((line, i) => {
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(line)) return;
+    const [likes, title, author] = lines.slice(i + 1, i + 4);
+    if (!/^[\d.]+万?$/.test(likes ?? "") || !author?.startsWith("@")) return;
+    items.push({ duration: line, likes: parseCount(likes), title, author: author.slice(1) });
+  });
+  return items;
+}
+
+const median = (xs) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : 0;
+};
+
+async function bench(args, config) {
+  const kws = [];
+  const opts = { platform: "all", out: null, top: 10 };
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--platform") opts.platform = args[++i];
+    else if (args[i] === "--out") opts.out = args[++i];
+    else if (args[i] === "--top") opts.top = Number(args[++i]);
+    else kws.push(args[i]);
+  }
+  if (!kws.length) throw new Error("用法：sc bench <关键词…> [--platform 抖音|小红书|all] [--out 文件.json] [--top 10]");
+  const platforms = opts.platform === "all" ? ["小红书", "抖音"] : [opts.platform];
+  const port = config.benchCdpPort;
+  let ws;
+  try {
+    ws = (await (await fetch(`http://127.0.0.1:${port}/json/version`)).json()).webSocketDebuggerUrl;
+  } catch {
+    throw new Error(`连不上 ${port} 端口的浏览器：先打开带远程调试的浏览器，并登录抖音、小红书`);
+  }
+  const script = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "bench_harness.py"), "utf8");
+  const res = spawnSync("browser-harness", ["-c", script], {
+    env: { ...process.env, BU_CDP_WS: ws, BU_NAME: "sc-bench", BENCH_KWS: JSON.stringify(kws), BENCH_PLATFORMS: JSON.stringify(platforms) },
+    encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 15 * 60 * 1000,
+  });
+  if (res.status !== 0) throw new Error(`browser-harness 出错：${(res.stderr || res.error?.message || "").slice(-800)}`);
+  const results = res.stdout.split("\n").filter((l) => l.startsWith("{")).map((l) => JSON.parse(l)).map((r) => ({
+    ...r,
+    items: r.platform === "抖音" ? parseDouyinText(r.text ?? "")
+      : r.items.map(([title, author, likes, collects]) => ({ title, author, likes: parseCount(likes), collects: parseCount(collects) })),
+    text: undefined,
+  }));
+  for (const r of results) {
+    console.log(`\n## ${r.platform} · ${r.keyword}（${r.items.length} 条，点赞中位数 ${median(r.items.map((i) => i.likes))}）\n`);
+    console.log("| 平台 | 标题 | 点赞 | 收藏 | 作者 |\n|---|---|---|---|---|");
+    for (const i of [...r.items].sort((a, b) => b.likes - a.likes).slice(0, opts.top)) {
+      console.log(`| ${r.platform} | ${(i.title ?? "").replace(/\|/g, "/").slice(0, 60)} | ${i.likes} | ${i.collects ?? ""} | ${i.author ?? ""} |`);
+    }
+  }
+  if (opts.out) writeFileSync(opts.out, JSON.stringify({ at: new Date().toISOString(), results }, null, 1));
+}
+
+async function main() {
+  const [cmd, dir, ...rest] = process.argv.slice(2);
+  if (cmd === "bench") return bench([dir, ...rest].filter(Boolean), loadConfig(process.cwd()));
   if (cmd !== "check" || !dir) {
-    console.error("用法：sc check <作品目录>");
+    console.error("用法：sc check <作品目录>\n      sc bench <关键词…> [--platform 抖音|小红书|all] [--out 文件.json]");
     process.exit(1);
   }
   const ep = resolve(dir);
@@ -225,6 +319,7 @@ function main() {
   const r = makeReport();
 
   checkScenario(ep, r);
+  checkGate(ep, config, r);
   checkTest(ep, r);
   checkDraft(ep, config, r);
   checkFeynman(ep, config, r);
@@ -248,10 +343,8 @@ const isMain = (() => {
 })();
 
 if (isMain) {
-  try {
-    main();
-  } catch (err) {
+  main().catch((err) => {
     console.error(`✗ ${err.message}`);
     process.exit(1);
-  }
+  });
 }

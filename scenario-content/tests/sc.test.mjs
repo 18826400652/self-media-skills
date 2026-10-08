@@ -40,3 +40,36 @@ test("parseFeynman 读追问表、术语表和类比；占位和「没有」算�
   assert.equal(f.analogy, "列编号就是要小票");
   assert.equal(f.verified, "");
 });
+
+test("parseGate：字段未填、对标行数、用户确认", async () => {
+  const { parseGate } = await import("../scripts/sc.mjs");
+  const md = [
+    "# 选题关", "", "- 目标观众：想用 AI 做自媒体的人", "- 标题候选 1：（写三个）", "- 用户确认：", "",
+    "## 对标", "", "| 平台 | 标题 | 点赞 | 收藏 | 角度 |", "|---|---|---|---|---|",
+    "| 抖音 | Claude Code 零基础终极教程 | 86.9万 | | 上手 |", "| 小红书 | 10 个 AI Skills | 5276 | 8738 | 合集 |", "| （平台） | （标题） | | | |",
+  ].join("\n");
+  const g = parseGate(md);
+  assert.deepEqual(g.empty, ["标题候选 1", "用户确认"]);
+  assert.equal(g.benchRows, 2);
+  assert.equal(g.confirmed, false);
+  assert.equal(parseGate("- 用户确认：2026-10-08 通过").confirmed, true);
+});
+
+test("parseCount：万、+、空值", async () => {
+  const { parseCount } = await import("../scripts/sc.mjs");
+  assert.equal(parseCount("1.2万"), 12000);
+  assert.equal(parseCount("10万+"), 100000);
+  assert.equal(parseCount("5276"), 5276);
+  assert.equal(parseCount(null), 0);
+  assert.equal(parseCount("赞"), 0);
+});
+
+test("parseDouyinText：按「时长 / 点赞 / 标题 / @作者」切出视频", async () => {
+  const { parseDouyinText } = await import("../scripts/sc.mjs");
+  const text = ["综合", "视频", "02:52", "86", "普通人做自媒体别乱冲 #ai博主", "@舟仔", "2月前", "合集",
+    "53:00", "86.9万", "Claude Code 零基础终极教程！", "@木子不写代码", "1年前", "01:00:12", "不是数字", "标题"].join("\n");
+  assert.deepEqual(parseDouyinText(text), [
+    { duration: "02:52", likes: 86, title: "普通人做自媒体别乱冲 #ai博主", author: "舟仔" },
+    { duration: "53:00", likes: 869000, title: "Claude Code 零基础终极教程！", author: "木子不写代码" },
+  ]);
+});
