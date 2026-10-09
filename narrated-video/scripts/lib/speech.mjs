@@ -6,6 +6,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getProvider } from "../../tts/index.mjs";
 import { applyPronounce, restoreSpans } from "./pronounce.mjs";
+import { frameCuts, splitWordsByFrame } from "./voice-direction.mjs";
 
 const KEEP_HEAD = 0.04; // 切静音时句首留一点，避免吃掉字头
 const KEEP_TAIL = 0.08; // 句尾留一点，让尾音自然收住
@@ -60,7 +61,9 @@ export async function synthesizeClean(line, tts, dir, name) {
   const provider = getProvider(tts.provider);
   // 读音表只对支持 SSML 的服务商生效；送出去的是 ttsText，字幕和关键词仍按 line.text
   const { ttsText, spans } = provider.ssml ? applyPronounce(line.text, tts.pronounce) : { ttsText: line.text, spans: [] };
-  const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, ttsText].join("|");
+  // style / reference 只在填了时才进 key，旧缓存不失效
+  const extra = [tts.style, tts.reference].filter(Boolean);
+  const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, ...extra, ttsText].join("|");
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const raw = join(dir, `${name}-${hash}.wav`);
   const wordsRaw = raw.replace(/\.wav$/, ".words.json");
@@ -78,4 +81,44 @@ export async function synthesizeClean(line, tts, dir, name) {
   const words = hasWords ? trimByWords(raw, rawWords, file) : (trimBySilence(raw, file), []);
   if (hasWords) writeFileSync(file.replace(/\.wav$/, ".words.json"), JSON.stringify(words));
   return { file, speechDuration: probeDuration(file), words };
+}
+
+/**
+ * 按导演稿整段生成几帧的口播，再按逐字时间戳切回每一帧（见 voice-direction.mjs）。
+ * 帧与帧之间切在两句中间的停顿处，保留整段说话的自然衔接；只切掉整段的首尾静音。
+ * @param {{ name: string, frames: number[], prompt: string }} segment
+ * @param {{ frame: number, text: string }[]} lines 这一段的口播（按帧顺序）
+ * @returns {Promise<{ file: string, speechDuration: number, words: {text: string, start: number, end: number}[] }[]>}
+ */
+export async function synthesizeSegment(segment, lines, tts, dir) {
+  const provider = getProvider(tts.provider);
+  if (!provider.direction) throw new Error(`${tts.provider} 不支持导演稿（VOICE.md），只有 seedaudio 支持`);
+  const text = lines.map((l) => l.text).join("");
+  const extra = [tts.style, tts.reference].filter(Boolean);
+  const key = [tts.provider, tts.model, tts.voice, tts.speed, ...extra, segment.prompt, text].join("|");
+  const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
+  const name = `seg-${String(lines[0].frame).padStart(2, "0")}-${String(lines.at(-1).frame).padStart(2, "0")}`;
+  const raw = join(dir, `${name}-${hash}.wav`);
+  const wordsRaw = raw.replace(/\.wav$/, ".words.json");
+  if (existsSync(raw) && existsSync(wordsRaw)) {
+    console.log(`  ✓  ${segment.name}（第 ${lines[0].frame}–${lines.at(-1).frame} 帧，缓存）`);
+  } else {
+    console.log(`  🎙  ${segment.name}（第 ${lines[0].frame}–${lines.at(-1).frame} 帧）：${text}`);
+    await provider.synthesize({ ...tts, text, direction: segment.prompt, outFile: raw });
+  }
+
+  const words = JSON.parse(readFileSync(wordsRaw, "utf8"));
+  const groups = splitWordsByFrame(words, lines.map((l) => l.text));
+  const cuts = frameCuts(groups, probeDuration(raw), { head: KEEP_HEAD, tail: KEEP_TAIL });
+  return lines.map((line, i) => {
+    const { start, end } = cuts[i];
+    const file = raw.replace(/\.wav$/, `.f${String(line.frame).padStart(2, "0")}.wav`);
+    cutClip(raw, file, start, end);
+    const shifted = groups[i].map((w) => ({
+      text: w.text,
+      start: round3(Math.max(0, w.start - start)),
+      end: round3(Math.min(end, w.end) - start),
+    }));
+    return { file, speechDuration: probeDuration(file), words: shifted };
+  });
 }

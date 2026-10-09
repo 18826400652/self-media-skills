@@ -93,7 +93,7 @@
 - 口播里不出现观众不认识的人名（说「领导」「同事」），不堆实测细节
 - 每句话都要和实测原文对得上：AI 原话里说「暂不确定，本次先不加」，就不能说成它「写成了定了」
 - 情感：钩子惊讶、翻车惊讶、结果和收尾开心、方法平静
-- 配音 `nv hf-audio . --speed 1.1 --pause 0.3`（1.1 倍速，帧间停 0.3 秒；1.0 + 0.5 用户觉得偏慢）；整条 2 分钟左右，不卡时长
+- 配音 `nv hf-audio . --pause 0.3`：seedaudio 按 `VOICE.md` 导演稿整段生成（`references/voice-direction.md`），语速写在导演稿里，段与段之间停 0.3 秒；用普通 TTS（cosyvoice 等）时加 `--speed 1.1`（1.0 + 0.5 用户觉得偏慢）；整条 2 分钟左右，不卡时长
 - 画面里的标题大字一行 ≤ 9 个字，超过会折行和下一行重叠（`check` 报 content_overlap）；`Kit.prompt` / `Kit.stream` 要在帧结束前打完（`cps` / `rate` 调快），看 `snapshots/sheet.jpg` 每帧结尾那张
 
 ## 实测和素材（先于写稿）

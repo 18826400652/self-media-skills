@@ -39,7 +39,13 @@ export function loadConfig(startDir = process.cwd()) {
   return {
     ...DEFAULTS,
     ...user,
-    tts: { ...DEFAULTS.tts, ...user.tts },
+    tts: {
+      // 默认音色是 kokoro 的；换了服务商只继承倍速，免得把 zf_xiaobei 带给别家
+      ...(!user.tts?.provider || user.tts.provider === DEFAULTS.tts.provider ? DEFAULTS.tts : { speed: DEFAULTS.tts.speed }),
+      ...user.tts,
+      // 参考音频（seedaudio）按项目根目录解析，在哪个目录跑命令都一样
+      ...(user.tts?.reference ? { reference: resolve(dirname(configPath), user.tts.reference) } : {}),
+    },
     root: dirname(configPath),
     configPath,
   };

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 用法：nv hf-audio <HyperFrames 工程目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>] [--pause <秒>]
+// 用法：nv hf-audio <HyperFrames 工程目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>] [--pause <秒>] [--check]
 //
 // 给 HyperFrames 官方工作流（/faceless-explainer 等）配音：用本模块的 TTS（默认读项目配置，如 CosyVoice）
 // 代替它自带的 HeyGen / Kokoro，产出与它的音频引擎完全相同的文件，后续 sync-durations、fetch-sfx、
@@ -16,13 +16,19 @@
 // 可选 `**重点词:** 八秒钟、一下午` 指定字幕里要高亮的词。
 // 一帧的缩进块可以写好几句，画面不换、口播接着说（聊天式的慢节奏）。
 // --pause（或配置 tts.pause）：每帧说完后留几秒停顿再切下一帧，默认 0。
+//
+// 导演稿模式：工程里有 VOICE.md、且服务商支持（seedaudio）时，按段整段生成再切回每帧（scripts/lib/voice-direction.mjs）。
+// 段内帧与帧之间保留说话本身的停顿，--pause 只加在段与段之间；Emotion 不再单独生效（写进导演稿）。
+// --check：只检查 VOICE.md 和 SCRIPT.md 对不对得上，不生成。
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { loadConfig } from "./lib/config.mjs";
 import { writeCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
-import { loadDotEnv, probeDuration, synthesizeClean } from "./lib/speech.mjs";
+import { loadDotEnv, probeDuration, synthesizeClean, synthesizeSegment } from "./lib/speech.mjs";
+import { checkDirection, parseVoiceDirection } from "./lib/voice-direction.mjs";
+import { getProvider } from "../tts/index.mjs";
 
 const OPTION_KEYS = ["voice", "speed", "provider", "model", "pause"];
 const PUNCTUATION = /^[\p{P}\p{S}\s]+$/u;
@@ -30,12 +36,14 @@ const TAIL_SECONDS = 0.8; // 最后一帧结尾留白：口播说完后画面停
 const pad2 = (n) => String(n).padStart(2, "0");
 
 function parseArgs(argv) {
-  const [dir, ...rest] = argv;
+  let [dir, ...rest] = argv;
   if (!dir) {
     console.error("用法：nv hf-audio <HyperFrames 工程目录> [--voice x] [--speed 1.1] [--provider x] [--model x]");
     process.exit(1);
   }
   const overrides = {};
+  const check = rest.includes("--check");
+  rest = rest.filter((a) => a !== "--check");
   for (let i = 0; i < rest.length; i += 2) {
     const key = rest[i].replace(/^--/, "");
     if (!OPTION_KEYS.includes(key) || rest[i + 1] === undefined) {
@@ -43,7 +51,7 @@ function parseArgs(argv) {
     }
     overrides[key] = rest[i + 1];
   }
-  return { dir: resolve(dir), overrides };
+  return { dir: resolve(dir), overrides, check };
 }
 
 /** SCRIPT.md → [{ frame, text, emotion }]，规则与 HyperFrames 的 audio.mjs 相同，另读 **Emotion:** */
@@ -143,8 +151,43 @@ export function restoreCase(words, text) {
 
 const withIds = (words) => words.map((w, i) => ({ id: `w${i}`, text: w.text, start: w.start, end: w.end }));
 
+/** 读 VOICE.md 并检查；没有文件或服务商不支持导演稿时返回 null */
+function loadDirection(dir, lines, tts) {
+  const file = join(dir, "VOICE.md");
+  if (!existsSync(file)) return null;
+  if (!getProvider(tts.provider).direction) {
+    console.log(`⚠ 有 VOICE.md，但 ${tts.provider} 不支持导演稿，按逐帧配音`);
+    return null;
+  }
+  const segments = parseVoiceDirection(readFileSync(file, "utf8"));
+  if (!segments.length) throw new Error(`${file} 里没有段落（需要 "## 段名 (Frame 1-4)" 标题 + \`\`\`text 代码块）`);
+  const problems = checkDirection(segments, lines);
+  if (problems.length) throw new Error(`VOICE.md 和 SCRIPT.md 对不上：\n  - ${problems.join("\n  - ")}`);
+  return segments;
+}
+
+/** 逐帧或按段生成，统一返回 [{ line, clip, segmentEnd }] */
+async function synthesizeAll(lines, segments, tts, cacheDir) {
+  if (!segments) {
+    const out = [];
+    for (const line of lines) {
+      const lineTts = line.emotion ? { ...tts, emotion: line.emotion } : tts;
+      out.push({ line, clip: await synthesizeClean(line, lineTts, cacheDir, pad2(line.frame)), segmentEnd: true });
+    }
+    return out;
+  }
+  const byFrame = new Map(lines.map((l) => [l.frame, l]));
+  const out = [];
+  for (const seg of [...segments].sort((a, b) => a.frames[0] - b.frames[0])) {
+    const segLines = seg.frames.map((f) => byFrame.get(f));
+    const clips = await synthesizeSegment(seg, segLines, tts, cacheDir);
+    clips.forEach((clip, i) => out.push({ line: segLines[i], clip, segmentEnd: i === clips.length - 1 }));
+  }
+  return out;
+}
+
 async function main() {
-  const { dir, overrides } = parseArgs(process.argv.slice(2));
+  const { dir, overrides, check } = parseArgs(process.argv.slice(2));
   const scriptPath = join(dir, "SCRIPT.md");
   if (!existsSync(scriptPath)) throw new Error(`找不到 ${scriptPath}`);
   const config = loadConfig(dir);
@@ -155,22 +198,27 @@ async function main() {
   if (!(pause >= 0)) throw new Error(`--pause 要写秒数（如 0.4），现在是 ${pauseRaw}`);
   const lines = parseHfScript(readFileSync(scriptPath, "utf8"));
   if (!lines.length) throw new Error(`${scriptPath} 里没有口播（需要 "## … (Frame N)" 标题 + 缩进的口播原文）`);
+  const segments = loadDirection(dir, lines, tts);
+  if (check) {
+    console.log(segments ? `✓ VOICE.md 没问题：${segments.length} 段，覆盖 ${lines.length} 帧` : "没有可用的 VOICE.md，会逐帧配音");
+    return;
+  }
 
   const cacheDir = join(dir, ".media", "voice-cache");
   const voiceDir = join(dir, "assets", "voice");
   mkdirSync(cacheDir, { recursive: true });
   mkdirSync(voiceDir, { recursive: true });
-  console.log(`读取 ${scriptPath}（${tts.provider} · ${tts.voice} · ${tts.speed}x · 帧间停顿 ${pause}s）`);
+  const mode = segments ? `导演稿 ${segments.length} 段` : `逐帧`;
+  console.log(`读取 ${scriptPath}（${tts.provider} · ${tts.voice ?? tts.reference ?? ""} · ${tts.speed}x · ${mode} · 停顿 ${pause}s）`);
 
+  const results = await synthesizeAll(lines, segments, tts, cacheDir);
   const voices = [];
-  for (const line of lines) {
-    const lineTts = line.emotion ? { ...tts, emotion: line.emotion } : tts;
-    const clip = await synthesizeClean(line, lineTts, cacheDir, pad2(line.frame));
+  for (const [i, { line, clip, segmentEnd }] of results.entries()) {
     clip.words = restoreCase(clip.words, line.text);
     if (!clip.words.length) throw new Error(`第 ${line.frame} 帧没有逐字时间戳（${tts.provider} 不提供），字幕无法对齐`);
     const rel = `assets/voice/${pad2(line.frame)}.wav`;
-    const isLast = line === lines[lines.length - 1];
-    const padding = isLast ? TAIL_SECONDS : pause;
+    const isLast = i === results.length - 1;
+    const padding = isLast ? TAIL_SECONDS : segmentEnd ? pause : 0;
     if (padding > 0) {
       execFileSync("ffmpeg", ["-y", "-v", "error", "-i", clip.file, "-af", `apad=pad_dur=${padding}`, join(dir, rel)]);
     } else {

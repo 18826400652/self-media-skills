@@ -29,7 +29,7 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 |---|---|---|---|
 | 0. 理解任务 | 按项目约定创建作品目录（项目说明里写的新建作品方式），判断内容类型（读 `types/`），复制 `templates/brief.md`、`templates/run.json` 到作品目录。新建时预放的空模板（未填的实测记录、占位口播的 SCRIPT）`kv status` 不算完成 | `brief.md`、`run.json` | — |
 | 1. 求真 | 按类型档案：概念科普查资料（`references/research.md`），实用技巧做实测 | `research.json` 或 `实测记录.md` | — |
-| 2. 脚本 | 按类型档案的结构配方写 `抖音/SCRIPT.md`（narrated-video 格式），每句标依据（`references/script.md`）；费曼检查写进 brief.md；`kv check` 无 ✗ | `抖音/SCRIPT.md` | **① `kv brief` 生成研究简报，请用户确认简报和脚本** |
+| 2. 脚本 | 按类型档案的结构配方写 `抖音/SCRIPT.md`（narrated-video 格式），每句标依据（`references/script.md`）；费曼检查写进 brief.md；`kv check` 无 ✗。配音服务商支持导演稿时，再按 narrated-video 的 `references/voice-direction.md` 写 `抖音/VOICE.md`，`nv hf-audio . --check` 通过 | `抖音/SCRIPT.md`、`抖音/VOICE.md` | **① `kv brief` 生成研究简报，请用户确认简报、脚本和配音导演稿** |
 | 3. 分镜 | 按 narrated-video 写 STORYBOARD 的 build 行 → `nv hf-audio` → `nv hf-build --snap` | `抖音/STORYBOARD.md`、`抖音/snapshots/sheet.jpg` | **② 请用户看总览图** |
 | 4. 渲染和 QA | `nv render`；逐帧看总览图和成片抽帧，写 `qa.json`（`references/qa.md`）；有 high 级问题先修 | `抖音/renders/*.mp4`、`qa.json` | **③ 请用户看成片** |
 | 5. 复盘 | 写经验库记录；同类修改出现 2 次以上，提议改哪个文件（先问用户） | 经验库 | — |

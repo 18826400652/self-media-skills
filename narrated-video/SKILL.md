@@ -39,7 +39,7 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 | `nv rec <工程>/capture/assets/rec.mp4 --prompt 提问.txt --url <AI 网址>` | （可选，强烈推荐）录真实操作：粘贴提问 → 发送 → 回答完，手机竖屏 1080×1920；同时输出用时（.json）和页面全文（.txt，写进实测记录）。录前确认已登录、新对话、模型开关与实测一致、侧边栏收起 |
 | `nv rec-flow <输出.mp4> --steps 步骤.py --url <网址>` | 录「按步骤操作网页」的电脑横屏录屏（软件演示、多步向导），16:9，1920×1080。步骤脚本是 Python，可用 `click_text` / `click_css` / `type_into` / `wait_until` / `mark` / `shot`（见 `scripts/rec/flow.py` 开头）；等待时持续录帧，最高 15 帧/秒。输出 `.json` 里有每个 `mark` 在视频里的秒数，剪辑时用来快进等待段。在单独的浏览器窗口、单独的连接里录，不受同时在用这个浏览器的其他会话影响 |
 | `/faceless-explainer` | 建工程、写 BRIEF.md / STORYBOARD.md / frame.md、SCRIPT.md |
-| `nv hf-audio <工程>` | 用项目配置的 TTS 逐帧配音，带逐字时间（替代官方 TTS）。SCRIPT.md 每帧可写 `**情感:**`、`**重点词:**` |
+| `nv hf-audio <工程>` | 用项目配置的 TTS 配音，带逐字时间（替代官方 TTS）。SCRIPT.md 每帧可写 `**情感:**`、`**重点词:**`。工程里有 `VOICE.md`（配音导演稿，写法见 `references/voice-direction.md`）且服务商是 seedaudio 时，按段整段生成再切回每帧；`--check` 只核对导演稿和口播是否一致，不生成 |
 | `nv hf-kit <工程>` | 装入画面组件库，**写帧之前读 `references/hf-kit.md` 的选用表**，帧里用 `Kit.xxx(...)` 拼画面 |
 | STORYBOARD 每帧 `- build: {…}` | 帧模板：录屏、计时、组件、说明、标题自由组合，时间写 `"@词"`；`nv hf-build` 自动生成画面（见 douyin-recipe.md）。放不下的画面才手写 `compositions/frames/NN-*.html`（`Kit.xxx(...)` + `Kit.cue`） |
 | `nv hf-build <工程> --snap` | 一键组装：组件库和逐字时间 → 帧时长 → 按 build 生成画面 → 音效（STORYBOARD `- sfx: error @数错了`）→ 素材 → 中文字体 → 字幕 → index → 转场 → lint/check（竖屏另查字幕带 `--caption-zone` 和越框：内容不能伸出四角框、不能占角标那一行）→ 每帧截图拼成 `snapshots/sheet.jpg` |
@@ -174,6 +174,8 @@ nv draft <成片.mp4> --copy <发布文案.md>
 - **新平台**：在 `presets/` 加一个 JSON，字段参照 `douyin.json`
 - **TTS 服务商**（配置 `tts.provider`）：
   - `cosyvoice`：阿里云百炼 CosyVoice，官方付费接口，中文自然，**支持声音复刻**。需要 `DASHSCOPE_API_KEY`，放在项目根目录 `.env`（`nv voice` 自动读取）。`tts.model` 指定模型；`tts.scene` + `tts.emotion` 控制语气（仅部分音色支持，场景名因音色而异，如 longanyang 用「闲聊互动」、longanhuan 用「闲聊对话」，以[官方音色列表](https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list)为准）
+  - `volcengine`：火山引擎豆包语音合成，官方付费接口，带逐字时间戳。需要 `VOLC_TTS_API_KEY`（新版控制台的 API Key），放在项目根目录 `.env`。`tts.voice` 写音色 ID（如 `zh_female_vv_uranus_bigtts`，见[音色列表](https://www.volcengine.com/docs/6561/1257544)），`tts.model` 写资源 ID（默认 `seed-tts-2.0`，要和音色版本对应），`tts.instruction` 可写一句语音指令调语气（仅 2.0 音色）。不支持读音表，`scene` / `emotion` 不生效
+  - `seedaudio`（推荐，最像真人）：火山引擎豆包音频生成模型 Seed-Audio 1.0（音频创作），按描述「演」出口播，带逐字时间戳。和 `volcengine` 共用 `VOLC_TTS_API_KEY`，账号要另外开通「音频生成」。`tts.style` 写人设和场景（每期一样的部分）；`tts.reference`（参考音频，相对项目根目录，≤30 秒）或 `tts.voice`（2.0 / 复刻音色 ID）二选一绑定音色。每期按内容写 `VOICE.md` 导演稿（`references/voice-direction.md`），整段生成，前后语气连贯；没有导演稿时逐帧生成。每段要 20–40 秒，账号并发有限，遇到 429 会自动重试
   - `edge`：微软神经网络音色，音质好、免费，需要联网。属于非官方接口，商业化前要评估风险，见 `tts/edge.mjs` 的说明。
   - `kokoro`：本地离线，中文只有一个音色。
   - **读音表**（配置 `tts.pronounce`，仅支持 SSML 的服务商生效，目前是 `cosyvoice`）：TTS 读不对的词，键写原文、值写 SSML 片段，如 `{ "AI": "<say-as interpret-as=\"characters\">AI</say-as>" }`（逐个字母读）。只改送给 TTS 的文字，口播原文、字幕、`@词` 时间点都不变；TTS 返回的逐字时间会合并回原文的词（`scripts/lib/pronounce.mjs`）。英文单词内部不替换（`OpenAI` 里的 AI 不动）。SSML 用法见[官方文档](https://help.aliyun.com/zh/model-studio/introduction-to-cosyvoice-ssml-markup-language)
