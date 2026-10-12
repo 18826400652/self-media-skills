@@ -1,24 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { episode } from "./helpers.mjs";
 
 const KV = fileURLToPath(new URL("../scripts/kv.mjs", import.meta.url));
 const claim = (id) => ({ id, text: "事实", kind: "fact", confidence: "high", sources: [{ title: "T", url: "https://a.com", type: "official", quote: "原文", accessed: "2026-10-07" }] });
 const SCRIPT = "## Line 1 — 钩子 (Frame 1)\n\n**依据:** c01\n\n    它先翻资料再回答。\n";
 
-/** 建一个作品目录：files = { 相对路径: 内容（对象自动转 JSON） } */
-export function episode(files) {
-  const dir = mkdtempSync(join(tmpdir(), "kv-"));
-  for (const [p, v] of Object.entries(files)) {
-    mkdirSync(join(dir, p, ".."), { recursive: true });
-    writeFileSync(join(dir, p), typeof v === "string" ? v : JSON.stringify(v));
-  }
-  return dir;
-}
+export { episode };
 const kv = (...args) => spawnSync(process.execPath, [KV, ...args], { encoding: "utf8" });
 
 test("kv check：研究和脚本都合格 → 退出码 0", () => {
@@ -99,8 +90,10 @@ test("kv check / status：claims 写成对象时给中文错误，不报内部�
 
 test("kv status：new-episode 生成的空模板不算做完（实用技巧仍在实测，概念科普仍要写脚本）", () => {
   const tplScript = "## Line 1 — 钩子 (Frame 1)\n\n**重点词:** \n\n    （一句话抛出冲突）\n";
-  const practical = kv("status", episode({ "brief.md": "x", "run.json": { type: "practical" }, "实测记录.md": "- 状态：待实测\n", "抖音/SCRIPT.md": tplScript }));
-  assert.match(practical.stdout, /阶段：research/);
+  // 实用类走完整一期的 14 步（详见 kv-practical.test.mjs）；这里只确认空模板的实测、脚本不算 ✓
+  const practical = spawnSync(process.execPath, [KV, "status", episode({ "brief.md": "x", "run.json": { type: "practical" }, "实测记录.md": "- 状态：待实测\n", "抖音/SCRIPT.md": tplScript })], { encoding: "utf8", env: { ...process.env, KV_SC_CMD: "false" } });
+  assert.match(practical.stdout, /· +3 实测/);
+  assert.match(practical.stdout, /· +7 抖音脚本/);
   const concept = kv("status", episode({ "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": tplScript }));
   assert.match(concept.stdout, /阶段：script/);
   assert.match(concept.stdout, /下一步：按类型档案的结构配方写/);

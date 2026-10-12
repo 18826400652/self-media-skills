@@ -6,6 +6,8 @@
 
 实测：按 scenario-content 的流程写场景卡、在真实产品里实测，产物 `实测记录.md` + 录屏（`nv rec`）。
 
+整期的顺序和确认由 `kv status` / `kv gate` / `kv done` 管，见 SKILL.md「实用类」一节。
+
 ## 结构配方
 
 沿用 narrated-video 的 `references/douyin-recipe.md`「1 分钟版」：能用 → 用好三招 → 避坑。

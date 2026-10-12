@@ -1,20 +1,25 @@
 #!/usr/bin/env node
-// 用法：kv check|brief|status <作品目录>
+// 用法：kv check|brief|status|init|gate|done <作品目录> …
 //   check   检查 research.json、SCRIPT.md 的依据、qa.json（存在时）。有 ✗ 退出码 1
 //   brief   research.json → 研究简报.md（给人在确认节点 ① 看）
-//   status  当前阶段、下一步、还没通过的确认节点
+//   status  当前阶段、下一步、还没通过的确认节点（实用类：完整一期的 14 步）
+//   init    [--fresh]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」
+//   gate    <节点> [--edit] "用户原话"   记录用户确认（实用类：topic script storyboard final）
+//   done    <wechat|xiaohongshu|douyin>   存草稿成功后记一笔
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { renderBrief } from "./lib/brief.mjs";
 import { loadConfig } from "./lib/config.mjs";
 import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
 import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
+import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, practicalStatus } from "./lib/practical.mjs";
+import { collectPracticalFacts, defaultRunners, fingerprint, templateHashes } from "./lib/practical-facts.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
-const USAGE = "用法：kv check|brief|status <作品目录>";
+const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
 
 /** run.json → 对象；没有时 null；坏了报中文错误 */
 export function readRun(dir) {
@@ -140,7 +145,107 @@ export function collectFacts(dir) {
   };
 }
 
+const TEMPLATES_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "templates");
+const TEMPLATE_FILES = ["抖音/SCRIPT.md", "抖音/STORYBOARD.md", "公众号/文章.md", "小红书/卡片.md", "小红书/文案.md"];
+const today = () => new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD，本地时区
+const oneLine = (s) => s.replace(/\s*\n\s*/g, " ").trim();
+const looksPractical = (dir) => existsSync(join(dir, "场景卡.md"));
+const writeRun = (dir, run) => writeFileSync(join(dir, FILES.run), JSON.stringify(run, null, 2) + "\n");
+
+function practicalFacts(dir, run) {
+  const cfg = loadConfig(dir);
+  return collectPracticalFacts(dir, run, { ...defaultRunners(), experienceDir: join(cfg.root, cfg.experienceDir) });
+}
+
+/** 读 run.json；实用类目录没有 run.json 时报错（不能当概念科普处理） */
+function requirePracticalRun(dir) {
+  const run = readRun(dir);
+  if (!run && looksPractical(dir)) throw new Error("这是实用类作品，还没有 run.json：先跑 kv init <作品目录>");
+  return run;
+}
+
+function initRun(dir, args) {
+  if (readRun(dir)) throw new Error("已经有 run.json 了");
+  const practical = looksPractical(dir);
+  const run = JSON.parse(readFileSync(join(TEMPLATES_DIR, practical ? "run-practical.json" : "run.json"), "utf8"));
+  if (practical && args.includes("--fresh")) run.templates = templateHashes(dir, TEMPLATE_FILES);
+  writeRun(dir, run);
+  console.log(`✓ run.json（${TYPE_LABEL[episodeType(run)]}）`);
+  return 0;
+}
+
+/** 选题关通过时同步写「用户确认」行（sc check 读这一行） */
+function syncTopicFile(dir, quote) {
+  const p = join(dir, "选题关.md");
+  const md = readFileSync(p, "utf8");
+  const line = `- 用户确认：${today()} 通过（用户：「${quote}」）`;
+  const re = /^- 用户确认[：:].*$/m;
+  writeFileSync(p, re.test(md) ? md.replace(re, () => line) : `${md.trimEnd()}\n${line}\n`);
+}
+
+function recordGate(dir, args) {
+  const run = requirePracticalRun(dir);
+  if (episodeType(run) !== "practical") throw new Error("kv gate 只用于实用类作品（概念科普按 SKILL.md 手改 run.json）");
+  const [gate, ...rest] = args;
+  const edit = rest.includes("--edit");
+  const quote = oneLine(rest.filter((a) => a !== "--edit").join(" "));
+  const g = run.gates?.[gate];
+  if (!g) throw new Error(`没有这个确认节点：${gate ?? "（空）"}（可选：${Object.keys(P_GATE_LABEL).join("、")}）`);
+  if (!quote) throw new Error('要写用户原话：kv gate <作品> <节点> "用户原话"');
+  if (edit) {
+    run.gates[gate] = { ...g, passed: false, edits: [...(g.edits ?? []), { at: today(), quote }] };
+    writeRun(dir, run);
+    console.log(`✓ 记下 ${P_GATE_LABEL[gate]} 的修改意见，改完再请用户确认`);
+    return 0;
+  }
+  const blocker = gateBlocker(practicalFacts(dir, run), gate);
+  if (blocker) {
+    console.log(`✗ 还不能记 ${P_GATE_LABEL[gate]}：${blocker}`);
+    return 1;
+  }
+  if (gate === "topic") syncTopicFile(dir, quote);
+  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate) };
+  writeRun(dir, run);
+  console.log(`✓ ${P_GATE_LABEL[gate]} 通过（${today()}「${quote}」）`);
+  return 0;
+}
+
+function recordDone(dir, args) {
+  const run = requirePracticalRun(dir);
+  const [key] = args;
+  if (!DRAFT_KEYS.includes(key)) throw new Error(`只能记 ${DRAFT_KEYS.join("、")}：${key ?? "（空）"}`);
+  const blocker = doneBlocker(practicalFacts(dir, run), key);
+  if (blocker) {
+    console.log(`✗ 还不能记 ${key}：${blocker}`);
+    return 1;
+  }
+  run.done = { ...(run.done ?? {}), [key]: today() };
+  writeRun(dir, run);
+  console.log(`✓ ${key} 草稿已记录`);
+  return 0;
+}
+
+function gateText(row, g) {
+  const label = P_GATE_LABEL[row.gate];
+  if (row.gateState === "passed") return `  ${label} ✓ ${g.at}「${g.quote}」`;
+  if (row.gateState === "stale") return `  ${label} 确认后改过`;
+  if (row.gateState === "waiting") return `  ${label} 等用户确认`;
+  return "";
+}
+
+function printPracticalStatus(dir, run) {
+  const s = practicalStatus(practicalFacts(dir, run));
+  console.log("类型：实用技巧");
+  for (const r of s.rows) {
+    console.log(` ${r.done ? "✓" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}`);
+  }
+  console.log(`下一步：${s.next}`);
+  return 0;
+}
+
 function printStatus(dir) {
+  const run = requirePracticalRun(dir);
+  if (episodeType(run) === "practical") return printPracticalStatus(dir, run);
   const f = collectFacts(dir);
   const s = detectStatus(f);
   console.log(`类型：${TYPE_LABEL[f.type]}`);
@@ -156,8 +261,8 @@ function printStatus(dir) {
 }
 
 function main(argv) {
-  const [cmd, target] = argv;
-  if (!target || !["check", "brief", "status"].includes(cmd)) {
+  const [cmd, target, ...rest] = argv;
+  if (!target || !["check", "brief", "status", "init", "gate", "done"].includes(cmd)) {
     console.error(USAGE);
     return 1;
   }
@@ -168,6 +273,9 @@ function main(argv) {
   }
   if (cmd === "check") return printCheck(dir);
   if (cmd === "brief") return writeBrief(dir);
+  if (cmd === "init") return initRun(dir, rest);
+  if (cmd === "gate") return recordGate(dir, rest);
+  if (cmd === "done") return recordDone(dir, rest);
   return printStatus(dir);
 }
 
