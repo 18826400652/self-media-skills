@@ -1,24 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { episode } from "./helpers.mjs";
 
 const KV = fileURLToPath(new URL("../scripts/kv.mjs", import.meta.url));
 const claim = (id) => ({ id, text: "事实", kind: "fact", confidence: "high", sources: [{ title: "T", url: "https://a.com", type: "official", quote: "原文", accessed: "2026-10-07" }] });
 const SCRIPT = "## Line 1 — 钩子 (Frame 1)\n\n**依据:** c01\n\n    它先翻资料再回答。\n";
 
-/** 建一个作品目录：files = { 相对路径: 内容（对象自动转 JSON） } */
-export function episode(files) {
-  const dir = mkdtempSync(join(tmpdir(), "kv-"));
-  for (const [p, v] of Object.entries(files)) {
-    mkdirSync(join(dir, p, ".."), { recursive: true });
-    writeFileSync(join(dir, p), typeof v === "string" ? v : JSON.stringify(v));
-  }
-  return dir;
-}
+export { episode };
 const kv = (...args) => spawnSync(process.execPath, [KV, ...args], { encoding: "utf8" });
 
 test("kv check：研究和脚本都合格 → 退出码 0", () => {
