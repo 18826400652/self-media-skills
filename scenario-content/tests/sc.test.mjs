@@ -1,6 +1,11 @@
 // sc 的纯逻辑测试：node --test tests/*.test.mjs
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { douyinLines } from "../scripts/sc.mjs";
 
 test("douyinLines 读旧版分镜表：行号、口播、情感", () => {
@@ -72,4 +77,32 @@ test("parseDouyinText：按「时长 / 点赞 / 标题 / @作者」切出视频"
     { duration: "02:52", likes: 86, title: "普通人做自媒体别乱冲 #ai博主", author: "舟仔" },
     { duration: "53:00", likes: 869000, title: "Claude Code 零基础终极教程！", author: "木子不写代码" },
   ]);
+});
+
+function ep(files) {
+  const dir = mkdtempSync(join(tmpdir(), "sc-"));
+  for (const [p, v] of Object.entries(files)) {
+    mkdirSync(join(dir, p, ".."), { recursive: true });
+    writeFileSync(join(dir, p), v);
+  }
+  return dir;
+}
+
+test("runChecks：每条问题带 file；选题关没确认单独一条 topic-unconfirmed", async () => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const dir = ep({ "选题关.md": "- 标题候选 1：好\n- 用户确认：（用户看过后写）\n" });
+  const items = runChecks(dir, loadConfig(dir));
+  const gate = items.filter((i) => i.file === "选题关.md");
+  assert.ok(gate.some((i) => i.code === "topic-unconfirmed" && i.level === "✗"));
+  assert.ok(!gate.some((i) => /未填写：.*用户确认/.test(i.msg)));
+  assert.ok(items.some((i) => i.file === "场景卡.md" && i.level === "✗"));
+  assert.ok(items.some((i) => i.file === "实测记录.md"));
+});
+
+test("sc check --json 输出 items，有 ✗ 退出码 1", () => {
+  const SC = fileURLToPath(new URL("../scripts/sc.mjs", import.meta.url));
+  const r = spawnSync(process.execPath, [SC, "check", ep({}), "--json"], { encoding: "utf8" });
+  assert.equal(r.status, 1);
+  const { items } = JSON.parse(r.stdout);
+  assert.ok(items.some((i) => i.file === "场景卡.md" && i.msg === "缺少 场景卡.md"));
 });
