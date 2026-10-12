@@ -6,7 +6,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getProvider } from "../../tts/index.mjs";
 import { applyPronounce, restoreSpans } from "./pronounce.mjs";
-import { frameCuts, splitWordsByFrame } from "./voice-direction.mjs";
+import { adoptPunctuation, dropExtras, frameCuts, splitWordsByFrame, spokenPrompt } from "./voice-direction.mjs";
 
 const KEEP_HEAD = 0.04; // 切静音时句首留一点，避免吃掉字头
 const KEEP_TAIL = 0.08; // 句尾留一点，让尾音自然收住
@@ -86,6 +86,7 @@ export async function synthesizeClean(line, tts, dir, name) {
 /**
  * 按导演稿整段生成几帧的口播，再按逐字时间戳切回每一帧（见 voice-direction.mjs）。
  * 帧与帧之间切在两句中间的停顿处，保留整段说话的自然衔接；只切掉整段的首尾静音。
+ * {语气词} 不进逐字时间，标点按口播原文（导演稿里为停顿加的「…」不影响字幕断句）。
  * @param {{ name: string, frames: number[], prompt: string }} segment
  * @param {{ frame: number, text: string }[]} lines 这一段的口播（按帧顺序）
  * @returns {Promise<{ file: string, speechDuration: number, words: {text: string, start: number, end: number}[] }[]>}
@@ -104,17 +105,18 @@ export async function synthesizeSegment(segment, lines, tts, dir) {
     console.log(`  ✓  ${segment.name}（第 ${lines[0].frame}–${lines.at(-1).frame} 帧，缓存）`);
   } else {
     console.log(`  🎙  ${segment.name}（第 ${lines[0].frame}–${lines.at(-1).frame} 帧）：${text}`);
-    await provider.synthesize({ ...tts, text, direction: segment.prompt, outFile: raw });
+    await provider.synthesize({ ...tts, text, direction: spokenPrompt(segment.prompt), outFile: raw });
   }
 
-  const words = JSON.parse(readFileSync(wordsRaw, "utf8"));
+  // {语气词} 照样念，但不进字幕：从时间戳里去掉，再按原文字数分帧
+  const words = dropExtras(JSON.parse(readFileSync(wordsRaw, "utf8")), segment.prompt);
   const groups = splitWordsByFrame(words, lines.map((l) => l.text));
   const cuts = frameCuts(groups, probeDuration(raw), { head: KEEP_HEAD, tail: KEEP_TAIL });
   return lines.map((line, i) => {
     const { start, end } = cuts[i];
     const file = raw.replace(/\.wav$/, `.f${String(line.frame).padStart(2, "0")}.wav`);
     cutClip(raw, file, start, end);
-    const shifted = groups[i].map((w) => ({
+    const shifted = adoptPunctuation(groups[i], line.text).map((w) => ({
       text: w.text,
       start: round3(Math.max(0, w.start - start)),
       end: round3(Math.min(end, w.end) - start),

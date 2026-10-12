@@ -1,7 +1,7 @@
 // 导演稿 VOICE.md 的纯逻辑测试：node --test tests/*.test.mjs
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkDirection, frameCuts, parseVoiceDirection, quotedText, splitWordsByFrame } from "../scripts/lib/voice-direction.mjs";
+import { adoptPunctuation, checkDirection, dropExtras, frameCuts, parseVoiceDirection, quotedText, splitWordsByFrame, spokenPrompt } from "../scripts/lib/voice-direction.mjs";
 
 const MD = `# VOICE
 
@@ -62,4 +62,31 @@ test("frameCuts：帧之间切在停顿中间，首尾留余量", () => {
   const groups = [[{ text: "好", start: 0.3, end: 0.5 }, { text: "。", start: 0.5, end: 0.5 }], [{ text: "再", start: 0.9, end: 1.2 }]];
   const cuts = frameCuts(groups, 2, { head: 0.04, tail: 0.08 });
   assert.deepEqual(cuts.map((c) => [c.start.toFixed(2), c.end.toFixed(2)]), [["0.26", "0.70"], ["0.70", "1.28"]]);
+});
+
+test("花括号语气词：核对时忽略，发给模型时去掉花括号，没配对报错", () => {
+  const prompt = '语气真诚，说道："可我自己看完…{呃，}一条都不想发。自己却…{却…}刷不下去。"边想边说。';
+  assert.equal(quotedText(prompt), "可我自己看完…一条都不想发。自己却…刷不下去。");
+  assert.equal(spokenPrompt(prompt), '语气真诚，说道："可我自己看完…呃，一条都不想发。自己却…却…刷不下去。"边想边说。');
+  const lines = [{ frame: 1, text: "可我自己看完，一条都不想发。" }, { frame: 2, text: "自己却刷不下去。" }];
+  assert.deepEqual(checkDirection([{ name: "段", frames: [1, 2], prompt }], lines), []);
+  const broken = checkDirection([{ name: "段", frames: [1, 2], prompt: prompt.replace("{却…}", "{却…") }], lines);
+  assert.ok(broken.some((p) => p.includes("没有配对")));
+});
+
+test("dropExtras：按导演稿去掉标出的语气词和重复，模型多加的「嗯」也去掉；改了字报错", () => {
+  const prompt = '说道："看完…{呃，}不想发。却…{却…}刷。"';
+  const w = (text, start) => ({ text, start, end: start + 0.1 });
+  const words = [w("看", 0), w("完", 0.1), w("…", 0.2), w("呃", 0.5), w("，", 0.6), w("不", 0.7), w("想", 0.8), w("发", 0.9), w("。", 1), w("嗯", 1.1), w("却", 1.2), w("…", 1.3), w("却", 1.5), w("…", 1.6), w("刷", 1.7), w("。", 1.8)];
+  const kept = dropExtras(words, prompt).filter((x) => /\p{L}/u.test(x.text));
+  assert.deepEqual(kept.map((x) => [x.text, x.start]), [["看", 0], ["完", 0.1], ["不", 0.7], ["想", 0.8], ["发", 0.9], ["却", 1.2], ["刷", 1.7]]);
+  assert.throws(() => dropExtras([w("看", 0), w("见", 0.1)], prompt), /对不上/);
+});
+
+test("adoptPunctuation：字幕用原文的标点，停顿用的「…」不进字幕", () => {
+  const words = [
+    { text: "看", start: 0, end: 0.1 }, { text: "完…", start: 0.1, end: 0.2 },
+    { text: "DeepSeek", start: 0.3, end: 0.8 }, { text: "发", start: 0.9, end: 1 }, { text: "。", start: 1, end: 1 },
+  ];
+  assert.deepEqual(adoptPunctuation(words, "看完，DeepSeek发。").map((x) => x.text), ["看", "完，", "DeepSeek", "发。"]);
 });
