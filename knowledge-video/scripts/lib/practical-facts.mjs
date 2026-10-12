@@ -18,12 +18,15 @@ function latest(dir, sub, re) {
   return files.sort((a, b) => mtime(b) - mtime(a))[0] ?? null;
 }
 
+// 正式成片：renders/ 里的 mp4，不算「预览-…」之类的压缩预览
+const RENDER_RE = /^(?!预览).*\.mp4$/;
+
 export const GATE_FILES = {
   topic: () => ["选题关.md"],
   script: () => ["抖音/SCRIPT.md", "抖音/VOICE.md"],
   storyboard: () => ["抖音/STORYBOARD.md", "抖音/audio_meta.json"],
   final: (dir) => {
-    const mp4 = latest(dir, "抖音/renders", /\.mp4$/);
+    const mp4 = latest(dir, "抖音/renders", RENDER_RE);
     return mp4 ? [mp4.slice(dir.length + 1)] : [];
   },
 };
@@ -80,12 +83,13 @@ function videoSteps(dir, run, runVoiceCheck) {
   const board = !existsSync(join(dir, "抖音/audio_meta.json")) ? no("还没配音（nv hf-audio）")
     : !written(dir, "抖音/STORYBOARD.md", run.templates) ? no("STORYBOARD.md 还是空模板")
     : !existsSync(sheet) ? no("还没有 snapshots/sheet.jpg")
-    : mtime(sheet) < mtime(sb) ? no("STORYBOARD 改过，要重新 nv hf-build --snap") : ok();
-  const mp4 = latest(dir, "抖音/renders", /\.mp4$/);
+    : mtime(sheet) < Math.max(mtime(sb), mtime(join(dir, "抖音/audio_meta.json"))) ? no("STORYBOARD 或配音改过，要重新 nv hf-build --snap") : ok();
+  const mp4 = latest(dir, "抖音/renders", RENDER_RE);
   let qa = null;
   try { qa = JSON.parse(readFileSync(join(dir, "qa.json"), "utf8")); } catch { qa = null; }
   const render = !mp4 ? no("还没渲染") : mtime(mp4) < mtime(sheet) ? no("分镜改过，要重新 nv render")
-    : !qa ? no("还没写 qa.json") : qa.passed !== true ? no("qa.json 有没修的问题") : ok();
+    : !qa ? no("还没写 qa.json") : mtime(join(dir, "qa.json")) < mtime(mp4) ? no("渲染后还没重新 QA（重写 qa.json）")
+      : qa.passed !== true ? no("qa.json 有没修的问题") : ok();
   return { script: s, storyboard: board, render };
 }
 

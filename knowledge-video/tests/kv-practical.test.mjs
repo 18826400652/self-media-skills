@@ -103,3 +103,13 @@ test("sc 命令不存在：status 不崩，说明原因", () => {
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /找不到 \/nonexistent\/sc 命令/);
 });
+
+test("已通过的节点再提修改意见 → 变回没通过", () => {
+  const dir = practical();
+  kv({}, "init", dir);
+  kv({}, "gate", dir, "topic", "通过");
+  assert.equal(kv({}, "gate", dir, "topic", "--edit", "标题还是改一下").status, 0);
+  const g = readRun(dir).gates.topic;
+  assert.equal(g.passed, false);
+  assert.match(kv({}, "status", dir).stdout, /① 选题关 等用户确认/);
+});

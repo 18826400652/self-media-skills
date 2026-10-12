@@ -49,7 +49,7 @@ test("实测要有录屏；脚本要写过且 VOICE 检查通过", () => {
 
 test("newer：sheet 比 STORYBOARD 旧、mp4 比 sheet 旧都不算做完；qa 要 passed", () => {
   const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true}' });
-  touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000); touch(dir, "抖音/renders/a.mp4", 3000);
+  touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000); touch(dir, "抖音/renders/a.mp4", 3000);
   let f = collect(dir);
   assert.equal(f.steps.storyboard.ok, true);
   assert.equal(f.steps.render.ok, true);
@@ -98,4 +98,31 @@ test("发布记录看置顶评论；复盘看经验库里有没有带简称的�
   f = collect(dir2);
   assert.equal(f.steps.record.ok, true);
   assert.equal(f.steps.retro.ok, true);
+});
+
+test("渲染后还没重新 QA：qa.json 比成片旧不算做完", () => {
+  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true}' });
+  touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000);
+  touch(dir, "qa.json", 2500); touch(dir, "抖音/renders/a.mp4", 3000);
+  const f = collect(dir);
+  assert.equal(f.steps.render.ok, false);
+  assert.match(f.steps.render.why, /重新 QA/);
+});
+
+test("重新配音（audio_meta 比 sheet 新）：第 8 步不算做完", () => {
+  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x" });
+  touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000); touch(dir, "抖音/audio_meta.json", 3000);
+  const f = collect(dir);
+  assert.equal(f.steps.storyboard.ok, false);
+  assert.match(f.steps.storyboard.why, /重新 nv hf-build/);
+});
+
+test("预览-压缩.mp4 不算成片：第 9 步和 ④ 指纹只看正式渲染", () => {
+  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/01.mp4": "old", "抖音/renders/预览-压缩.mp4": "p", "qa.json": '{"passed":true}' });
+  touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000);
+  touch(dir, "抖音/renders/01.mp4", 1500); touch(dir, "抖音/renders/预览-压缩.mp4", 3000); touch(dir, "qa.json", 3500);
+  assert.equal(collect(dir).steps.render.ok, false);
+  const fp = fingerprint(dir, "final");
+  writeFileSync(join(dir, "抖音/renders/预览-压缩.mp4"), "p2");
+  assert.equal(fingerprint(dir, "final"), fp);
 });

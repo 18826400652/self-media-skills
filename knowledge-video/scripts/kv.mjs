@@ -193,7 +193,7 @@ function recordGate(dir, args) {
   if (!g) throw new Error(`没有这个确认节点：${gate ?? "（空）"}（可选：${Object.keys(P_GATE_LABEL).join("、")}）`);
   if (!quote) throw new Error('要写用户原话：kv gate <作品> <节点> "用户原话"');
   if (edit) {
-    g.edits = [...(g.edits ?? []), { at: today(), quote }];
+    run.gates[gate] = { ...g, passed: false, edits: [...(g.edits ?? []), { at: today(), quote }] };
     writeRun(dir, run);
     console.log(`✓ 记下 ${P_GATE_LABEL[gate]} 的修改意见，改完再请用户确认`);
     return 0;
