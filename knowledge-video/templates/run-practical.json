@@ -1,0 +1,11 @@
+{
+  "type": "practical",
+  "gates": {
+    "topic": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] },
+    "script": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] },
+    "storyboard": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] },
+    "final": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] }
+  },
+  "done": {},
+  "templates": {}
+}
