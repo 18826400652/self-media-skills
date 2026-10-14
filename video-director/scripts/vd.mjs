@@ -5,6 +5,7 @@
 //   check  校验 DIRECTOR.md + hyperframes check
 import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
 import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
@@ -76,4 +77,5 @@ export async function main(argv) {
 }
 
 export { COMMANDS };
-if (import.meta.url === `file://${process.argv[1]}`) process.exit(await main(process.argv.slice(2)));
+// 用 pathToFileURL 比较：路径里有中文、空格时 import.meta.url 是百分号编码的
+if (import.meta.url === pathToFileURL(process.argv[1]).href) process.exit(await main(process.argv.slice(2)));
