@@ -10,10 +10,11 @@
 import * as cosyvoice from "./cosyvoice.mjs";
 import * as edge from "./edge.mjs";
 import * as kokoro from "./kokoro.mjs";
+import * as qwenaudio from "./qwenaudio.mjs";
 import * as seedaudio from "./seedaudio.mjs";
 import * as volcengine from "./volcengine.mjs";
 
-const PROVIDERS = { cosyvoice, edge, kokoro, seedaudio, volcengine };
+const PROVIDERS = { cosyvoice, edge, kokoro, qwenaudio, seedaudio, volcengine };
 
 export function getProvider(name) {
   const provider = PROVIDERS[name];

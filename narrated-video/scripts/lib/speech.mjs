@@ -61,8 +61,8 @@ export async function synthesizeClean(line, tts, dir, name) {
   const provider = getProvider(tts.provider);
   // 读音表只对支持 SSML 的服务商生效；送出去的是 ttsText，字幕和关键词仍按 line.text
   const { ttsText, spans } = provider.ssml ? applyPronounce(line.text, tts.pronounce) : { ttsText: line.text, spans: [] };
-  // style / reference 只在填了时才进 key，旧缓存不失效
-  const extra = [tts.style, tts.reference].filter(Boolean);
+  // style / reference / seed 只在填了时才进 key，旧缓存不失效
+  const extra = [tts.style, tts.reference, tts.seed].filter((v) => v !== undefined && v !== "");
   const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, ...extra, ttsText].join("|");
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const raw = join(dir, `${name}-${hash}.wav`);
@@ -95,7 +95,7 @@ export async function synthesizeSegment(segment, lines, tts, dir) {
   const provider = getProvider(tts.provider);
   if (!provider.direction) throw new Error(`${tts.provider} 不支持导演稿（VOICE.md），只有 seedaudio 支持`);
   const text = lines.map((l) => l.text).join("");
-  const extra = [tts.style, tts.reference].filter(Boolean);
+  const extra = [tts.style, tts.reference, tts.seed].filter((v) => v !== undefined && v !== "");
   const key = [tts.provider, tts.model, tts.voice, tts.speed, ...extra, segment.prompt, text].join("|");
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const name = `seg-${String(lines[0].frame).padStart(2, "0")}-${String(lines.at(-1).frame).padStart(2, "0")}`;

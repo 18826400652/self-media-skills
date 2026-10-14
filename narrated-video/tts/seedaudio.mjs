@@ -38,8 +38,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const TAIL = "只说引号里的话，一字不改，不加背景音乐和音效。";
 
 /** 人设：有参考音色时，把「饰演者为@音频1」放进第一个括号（官方示例的写法），没有括号就补一个 */
-export function persona({ style, voice, reference }) {
-  const actor = voice || reference ? "饰演者为@音频1" : "";
+export function persona({ style, voice, reference }, tag = "@音频1") {
+  const actor = voice || reference ? `饰演者为${tag}` : "";
   const base = (style || "").trim().replace(/[。，,.\s]+$/, "");
   if (!actor) return base || "说话人";
   if (/（[^）]*）/.test(base)) return base.replace(/）/, `，${actor}）`);
