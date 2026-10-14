@@ -66,3 +66,9 @@ test("cuesJs：VD.at 算出的时间落在本段之外时抛错（词锚到了�
   vm.runInNewContext(cuesJs({ cues: { "编一套": 2.82 }, segments: [{ id: "a", start: 0, duration: 7.13 }, { id: "b", start: 7.13, duration: 4.05 }] }), ctx);
   assert.throws(() => ctx.window.VD.at("编一套", "b"), /「编一套」在全片 2.82s，不在段 b（7.13–11.18s）里/);
 });
+
+test("cuesJs：用下一段开头的词给本段做退场是允许的（超出段边界 1 秒以内）", () => {
+  const ctx = { window: {} };
+  vm.runInNewContext(cuesJs({ cues: { "因为它只记得": 7.17 }, segments: [{ id: "a", start: 0, duration: 7.13 }] }), ctx);
+  assert.equal(ctx.window.VD.at("因为它只记得", "a"), 7.17);
+});

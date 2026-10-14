@@ -5,7 +5,7 @@ import { project } from "./helpers.mjs";
 
 test("vd cues：DIRECTOR.md 有错时全部列出并返回 1，不写 cues.js", async () => {
   const dir = project({
-    "video-director.config.json": { fontsDir: "/f", brandDir: "b", sfxDir: "/s", hfVersion: "0.8.143" },
+    "video-director.config.json": { fontsDir: "/f", gsap: "/g.js", brandDir: "b", sfxDir: "/s", hfVersion: "0.8.143" },
     "ep/DIRECTOR.md": "# 导演脚本\n没有机器块",
     "ep/audio_meta.json": { voices: [{ frame: 1, duration_s: 1, words: [{ text: "你好", start: 0, end: 1 }] }] },
   });

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 
 const FILE = "video-director.config.json";
-const REQUIRED = ["fontsDir", "brandDir", "sfxDir", "hfVersion"];
+const REQUIRED = ["fontsDir", "gsap", "brandDir", "sfxDir", "hfVersion"];
 
 /** 从 startDir 向上找项目根（含 video-director.config.json 的目录） */
 export function findProjectRoot(startDir) {
@@ -24,5 +24,5 @@ export function loadConfig(root) {
   const abs = (x) => (isAbsolute(x) ? x : join(root, x));
   const nvp = join(root, "narrated-video.config.json");
   const accent = existsSync(nvp) ? JSON.parse(readFileSync(nvp, "utf8"))?.hfKit?.tokens?.accent ?? null : null;
-  return { fontsDir: abs(c.fontsDir), brandDir: abs(c.brandDir), sfxDir: abs(c.sfxDir), hfVersion: c.hfVersion, accent };
+  return { fontsDir: abs(c.fontsDir), gsap: abs(c.gsap), brandDir: abs(c.brandDir), sfxDir: abs(c.sfxDir), hfVersion: c.hfVersion, accent };
 }

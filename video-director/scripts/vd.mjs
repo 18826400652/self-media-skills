@@ -16,8 +16,6 @@ import { run } from "./lib/run.mjs";
 import { staleCopies } from "./lib/stale.mjs";
 
 const USAGE = "用法：vd build|cues|check <视频工程目录>";
-const GSAP = "/home/power/hyperframes/assets/gsap.min.js";
-
 function load(dir) {
   for (const f of ["DIRECTOR.md", "audio_meta.json"]) if (!existsSync(join(dir, f))) throw new Error(`${dir} 里没有 ${f}`);
   const stale = staleCopies(dir);
@@ -47,7 +45,7 @@ const COMMANDS = {
     const duration = sample ? Math.round((built.cues[vd.sample.end.slice(1)] + vd.sample.tail) * 1000) / 1000 : full;
     const only = sample ? vd.sample.segments : null;
     buildAudio(dir, built, config);
-    if (!existsSync(join(dir, "assets/gsap.min.js"))) cpSync(GSAP, join(dir, "assets/gsap.min.js"));
+    if (!existsSync(join(dir, "assets/gsap.min.js"))) cpSync(config.gsap, join(dir, "assets/gsap.min.js"));
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {
       addMusic(vd.music, {
