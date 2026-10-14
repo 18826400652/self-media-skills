@@ -179,30 +179,8 @@ def shot(name):
 
 
 def read_copy(path):
-    """读发布文案（Markdown）：按「## 」分段，标题以「标题」「正文」「话题」开头的段落分别是
-    标题、正文（按行，连续空行合并为一个空串）、话题（#xx，不带 #）。各平台共用这个格式。"""
-    sections, current = {}, None
-    for line in open(path, encoding="utf-8").read().split("\n"):
-        if line.startswith("## "):
-            current = line[3:].strip()
-            sections[current] = []
-        elif current:
-            sections[current].append(line.strip())
-
-    def section(prefix, required=True):
-        key = next((k for k in sections if k.startswith(prefix)), None)
-        if key is None and required:
-            fail(f"文案里缺少「## {prefix}…」段落：{path}")
-        return sections.get(key, [])
-
-    title = next((l for l in section("标题") if l), "")
-    if not title:
-        fail(f"文案的「标题」段落是空的：{path}")
-    paragraphs = []
-    for line in section("正文"):
-        if line or (paragraphs and paragraphs[-1] != ""):
-            paragraphs.append(line)
-    while paragraphs and paragraphs[-1] == "":
-        paragraphs.pop()
-    topics = re.findall(r"#([^\s#]+)", " ".join(section("话题", required=False)))
-    return {"title": title, "paragraphs": paragraphs, "topics": topics}
+    """读发布文案，格式见 copy_format.parse_copy（bd run 把 copy_format.py 拼在本文件前面）。"""
+    try:
+        return parse_copy(path)
+    except CopyFormatError as err:
+        fail(str(err))
