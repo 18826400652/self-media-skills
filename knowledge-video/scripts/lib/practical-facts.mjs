@@ -99,7 +99,9 @@ function draftSteps(dir, run) {
   return {
     wechat: step("wechat", !written(dir, "公众号/文章.md", t) && "公众号/文章.md 还是空模板"),
     xiaohongshu: step("xiaohongshu", !written(dir, "小红书/文案.md", t) && "小红书/文案.md 还是空模板"),
-    douyin: step("douyin", !rendered(dir, "抖音/封面.md", "抖音/out") && "抖音封面还没出图（ic render 抖音/封面.md）"),
+    douyin: step("douyin",
+      !written(dir, "抖音/发布文案.md", t) ? "抖音/发布文案.md 还是空模板"
+        : !rendered(dir, "抖音/封面.md", "抖音/out") && "抖音封面还没出图（ic render 抖音/封面.md）"),
   };
 }
 

@@ -25,7 +25,7 @@ const BANNED = [
   "彻底改变", "颠覆", "一键搞定", "效率提升10倍", "效率提升 10 倍", "进行了一个", "未来已来",
   "拥抱变化", "被时代抛弃", "不可或缺", "至关重要", "毋庸置疑",
 ];
-const LIMITS = { wechatTitle: 30, xhsTitle: 20, douyinLine: 28 };
+const LIMITS = { wechatTitle: 30, xhsTitle: 20, douyinTitle: 30, douyinLine: 28 };
 // 口播（配音原文）检查：TTS 照字读，书面腔会让配音像播报
 const EMOTIONS = ["平静", "开心", "惊讶", "难过", "生气", "害怕", "厌恶",
   "neutral", "happy", "surprised", "sad", "angry", "fearful", "disgusted"];
@@ -198,6 +198,10 @@ function checkPlatforms(ep, config, r) {
   const xhs = read("xiaohongshuCopy");
   const xhsTitle = xhs?.match(/## 标题[^\n]*\n+([^\n#]+)/)?.[1];
   if (xhsTitle && chars(xhsTitle) > LIMITS.xhsTitle) r.warn(`小红书标题 ${chars(xhsTitle)} 字，平台上限 ${LIMITS.xhsTitle}：${xhsTitle.trim()}`, f.xiaohongshuCopy);
+
+  const dyCopy = read("douyinCopy");
+  const dyTitle = dyCopy?.match(/## 标题[^\n]*\n+([^\n#]+)/)?.[1];
+  if (dyTitle && chars(dyTitle) > LIMITS.douyinTitle) r.warn(`抖音标题 ${chars(dyTitle)} 字，平台上限 ${LIMITS.douyinTitle}：${dyTitle.trim()}`, f.douyinCopy);
 
   const douyin = read("douyinScript");
   if (douyin) {

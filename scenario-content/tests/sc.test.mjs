@@ -106,3 +106,12 @@ test("sc check --json 输出 items，有 ✗ 退出码 1", () => {
   const { items } = JSON.parse(r.stdout);
   assert.ok(items.some((i) => i.file === "场景卡.md" && i.msg === "缺少 场景卡.md"));
 });
+
+test("抖音发布文案标题超过 30 字给出 ⚠", async () => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const title = "这是一个特别特别长的抖音标题，用来测试超过三十个字的时候会不会给出提醒呀";
+  const dir = ep({ "抖音/发布文案.md": `## 标题\n\n${title}\n\n## 正文\n\n正文\n` });
+  const config = { ...loadConfig(dir), platformFiles: { douyinCopy: "抖音/发布文案.md" } };
+  const items = runChecks(dir, config);
+  assert.ok(items.some((i) => i.file === "抖音/发布文案.md" && i.level === "⚠" && /抖音标题/.test(i.msg)));
+});

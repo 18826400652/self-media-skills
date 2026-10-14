@@ -73,7 +73,7 @@ test("确认节点：指纹一致 passed，不一致 stale", () => {
 });
 
 test("草稿步骤：内容空模板 content=false；写好没记 done 只差存草稿；抖音封面出图要比源文件新", () => {
-  const dir = episode({ "公众号/文章.md": "tpl", "小红书/文案.md": "tpl", "抖音/封面.md": "f", "抖音/out/01.png": "p" });
+  const dir = episode({ "公众号/文章.md": "tpl", "小红书/文案.md": "tpl", "抖音/发布文案.md": "写好了", "抖音/封面.md": "f", "抖音/out/01.png": "p" });
   touch(dir, "抖音/封面.md", 2000); touch(dir, "抖音/out/01.png", 1000);
   const r = run({ templates: templateHashes(dir, ["公众号/文章.md", "小红书/文案.md"]) });
   let f = collect(dir, r);
@@ -84,6 +84,18 @@ test("草稿步骤：内容空模板 content=false；写好没记 done 只差存
   assert.match(f.steps.douyin.why, /ic render/);
   touch(dir, "抖音/out/01.png", 3000);
   assert.equal(collect(dir, r).steps.douyin.content, true);
+});
+
+test("抖音草稿：发布文案还是空模板时 content=false", () => {
+  const dir = episode({ "抖音/发布文案.md": "tpl", "抖音/封面.md": "f", "抖音/out/01.png": "p" });
+  touch(dir, "抖音/封面.md", 1000); touch(dir, "抖音/out/01.png", 2000);
+  const r = run({ templates: templateHashes(dir, ["抖音/发布文案.md"]) });
+  let f = collect(dir, r);
+  assert.equal(f.steps.douyin.content, false);
+  assert.match(f.steps.douyin.why, /抖音\/发布文案\.md/);
+  writeFileSync(join(dir, "抖音/发布文案.md"), "## 标题\n不露脸也能做\n");
+  f = collect(dir, { ...r, done: { douyin: "2026-10-14" } });
+  assert.equal(f.steps.douyin.ok, true);
 });
 
 test("小红书发视频：只要写好文案，不要卡片", () => {
