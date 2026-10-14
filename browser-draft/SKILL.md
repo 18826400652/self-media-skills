@@ -5,6 +5,8 @@ description: 在用户已登录的浏览器（Edge / Chrome）里，把做好的
 
 # browser-draft：用浏览器自动存草稿
 
+> 各平台命令默认改走手机（phone-draft 的 `pd`），本 skill 作为 `--via browser` 的后备；小红书图文笔记（`ic draft`）只有浏览器方案。发布文案解析在 `lib/copy_format.py`，phone-draft 也用它。
+
 ```bash
 bd tabs                          # 检查能否连上浏览器，列出标签页
 bd run <步骤.py> [载荷.json]      # 执行一个平台的发草稿步骤
@@ -14,9 +16,9 @@ bd run <步骤.py> [载荷.json]      # 执行一个平台的发草稿步骤
 
 | 平台 | 命令 | 步骤脚本 |
 |---|---|---|
-| 公众号 | `wa draft 文章.md` | `wechat-article/scripts/draft_wechat.py` |
+| 公众号 | `wa draft 文章.md --via browser` | `wechat-article/scripts/draft_wechat.py` |
 | 小红书 | `ic draft 文案.md` | `image-cards/scripts/draft_xiaohongshu.py` |
-| 抖音 | `nv draft 成片.mp4 --copy 发布文案.md` | `narrated-video/scripts/draft_douyin.py` |
+| 抖音 | `nv draft 成片.mp4 --copy 发布文案.md --via browser` | `narrated-video/scripts/draft_douyin.py` |
 
 ## 规则
 

@@ -34,7 +34,7 @@ const HOW = {
   storyboard: "nv hf-audio 配音 → 写 STORYBOARD 的 build 行 → nv hf-build --snap（越框检查要通过）",
   render: "nv render 渲染，按 knowledge-video references/qa.md 写 qa.json",
   wechat: "写 公众号/文章.md（wa），wa draft 存草稿成功后 kv done <作品> wechat",
-  xiaohongshu: "写 小红书/卡片.md 和 文案.md，ic render 出图，ic draft 存草稿成功后 kv done <作品> xiaohongshu",
+  xiaohongshu: "写 小红书/文案.md（标题 ≤ 20 字），nv draft <成片.mp4> --copy 小红书/文案.md --to xiaohongshu 存草稿成功后 kv done <作品> xiaohongshu",
   douyin: "ic render 抖音/封面.md 出封面，nv draft 存草稿成功后 kv done <作品> douyin",
   record: "在 发布记录.md 填置顶评论原文",
   retro: "在经验库写这期的复盘（文件名带作品简称）",

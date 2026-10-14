@@ -32,7 +32,7 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 | `kv status <作品>` | 每一步开始前；列出 14 步 ✓/·、确认节点、下一步 |
 | `kv gate <作品> <topic\|script\|storyboard\|final> "用户原话"` | 用户明确说通过之后。前面没做完会被拒绝 |
 | `kv gate <作品> <节点> --edit "用户原话"` | 用户提了修改意见（不算通过） |
-| `kv done <作品> <wechat\|xiaohongshu\|douyin>` | `wa draft` / `ic draft` / `nv draft` 成功之后 |
+| `kv done <作品> <wechat\|xiaohongshu\|douyin>` | `wa draft` / `nv draft --to xiaohongshu` / `nv draft` 成功之后 |
 | `kv init <作品>` | 老作品补 run.json |
 
 14 步：场景卡 → 选题关 ① → 实测 → 母稿 → 费曼检查 → sc check → 抖音脚本 + 配音稿 ② → 配音 + 分镜 ③ → 渲染 + QA ④ → 公众号 → 小红书 → 抖音草稿 → 发布记录 → 复盘。确认之后又改了相关文件（选题关.md；SCRIPT.md / VOICE.md；STORYBOARD.md / 配音；成片），这个节点自动失效，要重新请用户确认。`kv status` 调用 `sc check --json` 和 `nv hf-audio --check`，命令名可用环境变量 `KV_SC_CMD`、`KV_NV_CMD` 换掉。
