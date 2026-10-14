@@ -1,0 +1,63 @@
+"""pd 命令：devices | connect [IP:端口] | ui [名字] | run <步骤.py> [载荷.json]"""
+import os
+import runpy
+import sys
+
+from .connect import DeviceUnavailable, connect, ensure_connected
+
+EXIT_NO_DEVICE = 3
+USAGE = "用法：pd devices | pd connect [IP:端口] | pd ui [名字] | pd run <步骤.py> [载荷.json]"
+
+
+def _no_device(err):
+    print(f"✗ {err}", flush=True)
+    raise SystemExit(EXIT_NO_DEVICE)
+
+
+def cmd_devices():
+    from .device import _state, device
+    d = device()
+    info = d.device_info
+    battery = d.shell("dumpsys battery | grep level").output.strip()
+    print(f"✓ {d.serial}  {info.get('brand')} {info.get('model')}  Android {info.get('version')}  {battery}  屏幕：{_state(d)}")
+
+
+def cmd_ui(name="ui"):
+    from .device import shot, ui_texts
+    shot(name)
+    for text, rid, bounds in ui_texts():
+        print(f"{text}\t{rid}\t{bounds}")
+
+
+def cmd_run(step, payload=None):
+    if not os.path.isfile(step):
+        print(f"✗ 步骤脚本不存在：{step}")
+        raise SystemExit(1)
+    # 必须在步骤脚本 import phone_draft.core 之前设好，core 导入时读取载荷
+    os.environ["PD_PAYLOAD"] = os.path.abspath(payload) if payload else ""
+    ensure_connected()
+    runpy.run_path(step, run_name="__main__")
+
+
+def main(argv):
+    cmd, args = (argv[0], argv[1:]) if argv else ("", [])
+    try:
+        if cmd == "devices":
+            ensure_connected()
+            return cmd_devices()
+        if cmd == "connect":
+            print(f"✓ 已连接 {connect(args[0] if args else None)}")
+            return None
+        if cmd == "ui":
+            ensure_connected()
+            return cmd_ui(*args[:1])
+        if cmd == "run" and args:
+            return cmd_run(*args[:2])
+    except DeviceUnavailable as err:
+        _no_device(err)
+    print(USAGE, file=sys.stderr)
+    raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
