@@ -60,3 +60,9 @@ test("brandHosts：样片总长不到最后一句时不放结尾（否则挂在�
   assert.match(h, /brand-kicker/);
   assert.doesNotMatch(h, /brand-ending/);
 });
+
+test("cuesJs：VD.at 算出的时间落在本段之外时抛错（词锚到了别的段）", () => {
+  const ctx = { window: {} };
+  vm.runInNewContext(cuesJs({ cues: { "编一套": 2.82 }, segments: [{ id: "a", start: 0, duration: 7.13 }, { id: "b", start: 7.13, duration: 4.05 }] }), ctx);
+  assert.throws(() => ctx.window.VD.at("编一套", "b"), /「编一套」在全片 2.82s，不在段 b（7.13–11.18s）里/);
+});

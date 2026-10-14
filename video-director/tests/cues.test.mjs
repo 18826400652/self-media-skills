@@ -57,3 +57,10 @@ test("segmentTimes + buildCues：段时间来自句时间；cues 键名带序号
   assert.ok(b.cues["资料#2"] > 0);
   near(b.total, 61.61);
 });
+
+test("buildCues：没写 #序号 但口播里出现多次的词给出警告（列出出现在第几句）", () => {
+  const parsed = { vd: { segments: [{ id: "a", lines: [1, 17] }] }, tokens: [{ text: "资料", nth: 1 }, { text: "编一套", nth: 1 }, { text: "资料", nth: 2 }] };
+  const b = buildCues(parsed, META);
+  assert.equal(b.warnings.length, 1);
+  assert.match(b.warnings[0], /@资料 在口播里出现了 \d+ 次（第 [\d、]+ 句），现在用的是第 1 次；要别的写 @资料#2/);
+});

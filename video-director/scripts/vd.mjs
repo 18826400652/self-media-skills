@@ -25,7 +25,9 @@ function load(dir) {
   const parsed = parseDirector(readFileSync(join(dir, "DIRECTOR.md"), "utf8"));
   const errors = validateDirector(parsed, meta.voices.length);
   if (errors.length) throw new Error(`DIRECTOR.md 有 ${errors.length} 处问题：\n  - ${errors.join("\n  - ")}`);
-  return { meta, parsed, built: { ...buildCues(parsed, meta), vd: parsed.vd } };
+  const built = { ...buildCues(parsed, meta), vd: parsed.vd };
+  for (const w of built.warnings) console.warn(`⚠ ${w}`);
+  return { meta, parsed, built };
 }
 
 const COMMANDS = {

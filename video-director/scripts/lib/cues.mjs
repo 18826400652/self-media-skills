@@ -36,7 +36,7 @@ export function resolveCue(stream, text, nth = 1) {
   if (!hits.length) throw new Error(`口播里找不到「${text}」。最接近的：${closest(hay, needle).join("、")}`);
   if (nth > hits.length) throw new Error(`「${text}」只出现了 ${hits.length} 次，没有第 ${nth} 次`);
   const i = hits[nth - 1];
-  return { start: stream[i].start, end: stream[i + needle.length - 1].end };
+  return { start: stream[i].start, end: stream[i + needle.length - 1].end, lines: hits.map((h) => stream[h].line) };
 }
 
 /** 同长度子串里，和目标逐字相同最多的 3 个（去重） */
@@ -66,6 +66,12 @@ export function buildCues({ vd, tokens }, meta) {
   const stream = charStream(meta);
   const lines = lineTimes(meta);
   const cues = {};
-  for (const t of tokens) cues[t.nth > 1 ? `${t.text}#${t.nth}` : t.text] = resolveCue(stream, t.text, t.nth).start;
-  return { cues, segments: segmentTimes(vd.segments, lines), lines, total: lines.at(-1).end };
+  const warnings = [];
+  for (const t of tokens) {
+    const r = resolveCue(stream, t.text, t.nth);
+    cues[t.nth > 1 ? `${t.text}#${t.nth}` : t.text] = r.start;
+    if (t.nth === 1 && r.lines.length > 1)
+      warnings.push(`@${t.text} 在口播里出现了 ${r.lines.length} 次（第 ${r.lines.join("、")} 句），现在用的是第 1 次；要别的写 @${t.text}#2`);
+  }
+  return { cues, warnings, segments: segmentTimes(vd.segments, lines), lines, total: lines.at(-1).end };
 }

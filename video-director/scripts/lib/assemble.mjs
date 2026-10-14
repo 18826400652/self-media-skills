@@ -26,7 +26,10 @@ window.VD = {
   at(name, segId) {
     if (!(name in this.cues)) throw new Error("cues 里没有「" + name + "」：先在 DIRECTOR.md 里写 @" + name + "，再跑 vd build");
     if (!(segId in this.seg)) throw new Error("没有段 " + segId);
-    return Math.round((this.cues[name] - this.seg[segId].start) * 1000) / 1000;
+    const s = this.seg[segId], t = this.cues[name] - s.start, r2 = (x) => Math.round(x * 100) / 100;
+    if (t < -0.001 || t > s.duration + 0.001)
+      throw new Error("「" + name + "」在全片 " + r2(this.cues[name]) + "s，不在段 " + segId + "（" + r2(s.start) + "–" + r2(s.start + s.duration) + "s）里：同一个词出现多次时写 @" + name + "#2");
+    return Math.round(t * 1000) / 1000;
   },
 };
 `;
