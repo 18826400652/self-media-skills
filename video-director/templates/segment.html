@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        /* id 一律加段前缀（如 #s01-stamp），避免和别的段冲突 */
+        #SEG_ID { position: absolute; inset: 0; }
+      </style>
+      <div id="SEG_ID" data-composition-id="SEG_ID" data-width="1080" data-height="1920">
+        <!-- 画面元素 -->
+      </div>
+      <script>
+        (() => {
+          const SEG = "SEG_ID";
+          const at = (w) => VD.at(w, SEG);   // 相对本段开头的秒数
+          const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out", immediateRender: false } });
+          // 入场前状态用 gsap.set 给出；每个动作锚定到 @词：tl.fromTo(el, {...}, {...}, at("编一套"))
+          window.__timelines[SEG] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
