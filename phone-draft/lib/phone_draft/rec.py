@@ -6,7 +6,7 @@ import time
 from .apps import load_app
 from .core import fail, log
 from .device import device, type_text, ui_texts, fail_with_ui
-from .rec_logic import answer_done, content_labels, dnd_on, rec_info, same_text, type_plan, was_sent
+from .rec_logic import answer_done, content_labels, dnd_on, page_text, rec_info, same_text, type_plan, was_sent
 from .recorder import Recorder, finish_video
 
 USAGE = "用法：pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout 秒]"
@@ -106,6 +106,7 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
     page = _labels()
     time.sleep(TAIL)
     rec.stop()
+    copied = mod.copy_answer() if hasattr(mod, "copy_answer") else None  # 录屏已停，滑动不进画面
     finish_video(mkv, out)
     for f in (mkv, mkv + ".log"):
         os.remove(f)
@@ -114,7 +115,7 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
         json.dump(info, f, ensure_ascii=False, indent=2)
         f.write("\n")
     with open(base + ".txt", "w", encoding="utf-8") as f:
-        f.write("\n".join(page) + "\n")
+        f.write(page_text(page, copied))
     log(f"界面文字：{base}.txt")
     print(f"✓ {out}（发送后 {info['seconds']} 秒回答完；视频里 {info['sentAt']}s 发送、{info['doneAt']}s 结束）",
           flush=True)

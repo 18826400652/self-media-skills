@@ -70,3 +70,8 @@ def test_unexpected_labels_ignores_leftover_input_text():
     labels = ["新对话", "打电话", "用版本二，按阿杰的反应再改一版"]
     assert doubao.unexpected_labels(labels, input_text="用版本二，按阿杰的反应再改一版") == []
     assert doubao.unexpected_labels(labels) == ["用版本二，按阿杰的反应再改一版"]
+
+
+def test_deepseek_done_marker_is_in_input_bar_not_below_answer():
+    # 回答比一屏长时「复制」在屏幕外、不在界面结构里；输入栏的语音键生成时变成停止键，回答完才回来
+    assert deepseek.DONE_DESC == "切换至语音"

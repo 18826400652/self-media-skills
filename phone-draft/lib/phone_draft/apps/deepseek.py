@@ -5,7 +5,9 @@ from ..device import device, fail_with_ui, hide_keyboard, open_app, tap_desc, ui
 from ..rec_logic import BOUNDS, chip_on, content_labels
 
 PACKAGE = "com.deepseek.chat"
-DONE_DESC = "复制"                 # 回答结束后出现
+DONE_DESC = "切换至语音"           # 输入栏右下角：生成回答时是停止键，回答完才变回语音键
+COPY_DESC = "复制"                 # 回答下面的复制按钮（长回答时在屏幕外，要往下滑）
+MAX_SWIPES = 15
 # 空白新对话里只有这些按钮，加一行问候语（每次不一样：「你好，我能帮什么忙吗？」「欢迎回来，想从哪里开始？」）
 CHROME = {"打开侧边栏", "自动朗读", "开启新对话", "发消息或按住说话", "深度思考", "智能搜索", "上传文件", "切换至语音"}
 HINT = "发消息或按住说话"
@@ -83,3 +85,22 @@ def input_text():
 
 def send():
     tap_desc("发送")
+
+
+def copy_answer():
+    """录屏停止后：滑到回答末尾点「复制」，读剪贴板拿完整回答（界面结构里只有屏幕上那一段）。读不到返回 None。"""
+    d = device()
+    for _ in range(MAX_SWIPES):
+        if d(description=COPY_DESC).exists:
+            break
+        d.swipe_ext("up", scale=0.6)
+        time.sleep(0.6)
+    btn = d(description=COPY_DESC)
+    if not btn.exists:
+        return None
+    btn[btn.count - 1].click()
+    time.sleep(1)
+    try:
+        return d.clipboard or None
+    except Exception:  # 读剪贴板失败不影响录屏结果
+        return None

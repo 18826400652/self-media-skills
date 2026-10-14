@@ -70,6 +70,12 @@ def dnd_on(zen_mode):
     return v not in ("", "0", "null")
 
 
+def page_text(labels, copied):
+    """.txt 内容：回答结束时界面上的文字（长回答只有屏幕上那一段），加上复制按钮拿到的完整回答（有的话）。"""
+    text = "\n".join(labels) + "\n"
+    return text + f"\n## 复制的完整回答\n\n{copied.strip()}\n" if copied else text
+
+
 def rec_info(marks, app, think, search):
     r = lambda x: round(x, 2)  # noqa: E731
     return {"seconds": r(marks["done"] - marks["sent"]), "pastedAt": r(marks["typed"]), "sentAt": r(marks["sent"]),

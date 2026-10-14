@@ -95,3 +95,11 @@ def test_was_sent_when_input_no_longer_holds_prompt():
     assert was_sent("", "第一行\n第二行")
     assert was_sent("发消息或按住说话...", "第一行\n第二行")
     assert not was_sent("第一行 第二行", "第一行\n第二行")
+
+
+from phone_draft.rec_logic import page_text
+
+
+def test_page_text_appends_copied_answer():
+    assert page_text(["问", "答（前半）"], None) == "问\n答（前半）\n"
+    assert page_text(["问"], "完整回答\n第二段") == "问\n\n## 复制的完整回答\n\n完整回答\n第二段\n"
