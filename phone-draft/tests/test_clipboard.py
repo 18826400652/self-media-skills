@@ -36,7 +36,7 @@ import io
 import pytest
 from PIL import Image
 
-from phone_draft.clipboard import html_chunks, shrink_data_images
+from phone_draft.html_parts import html_chunks, shrink_data_images
 
 
 def png_data_uri(size=(1200, 1600)):
