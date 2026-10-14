@@ -1,0 +1,105 @@
+// dykit 组件：按锁定的提交号从 GitHub 下载 hyperframes 仓库，按 registry 清单把组件装进工程
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { run } from "./run.mjs";
+
+export const REPO = "18826400652/hyperframes";
+const LOCK = "components.lock.json";
+const SHA_RE = /^[0-9a-f]{40}$/;
+
+function parseSha(stdout) {
+  try {
+    return JSON.parse(stdout).sha;
+  } catch {
+    return null;
+  }
+}
+
+/** GitHub main 分支的最新提交号（走 curl，自动用系统代理） */
+export function latestSha(runFn = run) {
+  const url = `https://api.github.com/repos/${REPO}/commits/main`;
+  const r = runFn("curl", ["-fsSL", "--max-time", "30", url]);
+  const sha = r.status === 0 ? parseSha(r.stdout) : null;
+  if (!SHA_RE.test(sha ?? "")) throw new Error(`取不到 ${REPO} 的最新提交号（${url}）：检查网络和代理。${(r.stderr || "").trim()}`);
+  return sha;
+}
+
+export function readLock(dir) {
+  const p = join(dir, LOCK);
+  if (!existsSync(p)) return null;
+  const lock = JSON.parse(readFileSync(p, "utf8"));
+  if (!SHA_RE.test(lock.sha ?? "")) throw new Error(`${LOCK} 里的 sha 不是 40 位提交号：${lock.sha}。删掉这个文件重新构建会锁定到最新版`);
+  return lock;
+}
+
+export function writeLock(dir, sha) {
+  writeFileSync(join(dir, LOCK), JSON.stringify({ repo: REPO, sha }, null, 2) + "\n");
+}
+
+/** 返回这个工程要用的提交号：有锁文件就用它（不联网），没有或 update 时取最新并写入 */
+export function ensureLock(dir, { update = false } = {}, runFn = run) {
+  const lock = readLock(dir);
+  if (lock && !update) return lock.sha;
+  const sha = latestSha(runFn);
+  writeLock(dir, sha);
+  console.log(`✓ 组件库锁定到 ${REPO}@${sha.slice(0, 7)}`);
+  return sha;
+}
+
+/** 下载并解包到 cacheRoot/<sha>；先解到临时目录，成功后再改名，失败不留半截 */
+export function fetchArchive(sha, cacheRoot, runFn = run) {
+  const dest = join(cacheRoot, sha);
+  if (existsSync(join(dest, "registry/registry.json"))) return dest;
+  mkdirSync(cacheRoot, { recursive: true });
+  const tmp = mkdtempSync(join(cacheRoot, ".tmp-"));
+  const url = `https://codeload.github.com/${REPO}/tar.gz/${sha}`;
+  try {
+    const tgz = join(tmp, "repo.tgz");
+    const dl = runFn("curl", ["-fsSL", "--max-time", "300", "-o", tgz, url]);
+    if (dl.status !== 0) throw new Error(`下载组件库失败（${url}）：检查网络和代理。${(dl.stderr || "").trim()}`);
+    mkdirSync(join(tmp, "repo"));
+    const x = runFn("tar", ["-xzf", tgz, "-C", join(tmp, "repo"), "--strip-components=1"]);
+    if (x.status !== 0) throw new Error(`解包组件库失败（${url}）：${(x.stderr || "").trim()}`);
+    if (!existsSync(join(tmp, "repo/registry/registry.json"))) throw new Error(`下载的组件库里没有 registry/registry.json（${url}）`);
+    rmSync(dest, { recursive: true, force: true });
+    renameSync(join(tmp, "repo"), dest);
+    return dest;
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+function distance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+
+function readItem(archiveDir, name) {
+  const p = join(archiveDir, "registry/blocks", name, "registry-item.json");
+  if (existsSync(p)) return JSON.parse(readFileSync(p, "utf8"));
+  const all = JSON.parse(readFileSync(join(archiveDir, "registry/registry.json"), "utf8")).items.map((i) => i.name);
+  const near = all.map((n) => [distance(n, name), n]).sort((a, b) => a[0] - b[0]).slice(0, 3).map((x) => x[1]);
+  throw new Error(`组件库里没有 ${name}。相近的：${near.join("、")}（全部组件见仓库的 catalog/catalog.json）`);
+}
+
+/** 把组件（连同 registryDependencies，如 dykit 资源包）复制进工程；返回写入的相对路径 */
+export function installComponent(archiveDir, name, projectDir, seen = new Set()) {
+  if (seen.has(name)) return [];
+  seen.add(name);
+  const item = readItem(archiveDir, name);
+  const deps = (item.registryDependencies ?? []).flatMap((dep) => installComponent(archiveDir, dep, projectDir, seen));
+  const own = item.files.map((f) => {
+    // 有 url 的文件引用仓库里的原路径（dykit 资源包），没有的放在 registry/blocks/<name>/ 下
+    const src = f.url ? join(archiveDir, f.path) : join(archiveDir, "registry/blocks", name, f.path);
+    if (!existsSync(src)) throw new Error(`组件 ${name} 缺文件 ${f.path}（缓存可能不完整：删掉 ${archiveDir} 重新构建）`);
+    const dst = join(projectDir, f.target);
+    mkdirSync(dirname(dst), { recursive: true });
+    cpSync(src, dst);
+    return f.target;
+  });
+  return [...deps, ...own];
+}

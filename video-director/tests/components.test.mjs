@@ -1,0 +1,99 @@
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
+import { REPO, ensureLock, fetchArchive, installComponent, latestSha, readLock } from "../scripts/lib/components.mjs";
+import { project } from "./helpers.mjs";
+
+const SHA = "a".repeat(40), SHA2 = "b".repeat(40);
+const ok = (sha) => () => ({ status: 0, stdout: JSON.stringify({ sha }), stderr: "" });
+const never = () => { throw new Error("不应联网"); };
+
+/** 假仓库：registry 清单 + 组件源 + dykit 资源包 */
+function fakeRepo() {
+  return project({
+    "registry/registry.json": { items: [{ name: "dykit" }, { name: "dy-scene-title" }, { name: "dy-scene-steps" }] },
+    "registry/blocks/dykit/registry-item.json": { name: "dykit", files: [
+      { path: "assets/dykit/dykit.css", url: "https://x/main/assets/dykit/dykit.css", target: "assets/dykit/dykit.css" },
+      { path: "assets/dykit/theme.css", url: "https://x/main/assets/dykit/theme.css", target: "assets/dykit/theme.css" } ] },
+    "registry/blocks/dy-scene-title/registry-item.json": { name: "dy-scene-title", registryDependencies: ["dykit"], files: [{ path: "dy-scene-title.html", target: "compositions/dy-scene-title.html" }] },
+    "registry/blocks/dy-scene-title/dy-scene-title.html": "<html>title</html>",
+    "assets/dykit/dykit.css": "/* css */", "assets/dykit/theme.css": "/* theme */",
+  });
+}
+
+test("latestSha：解析 GitHub API 的 sha；失败给中文错误", () => {
+  assert.equal(latestSha(ok(SHA)), SHA);
+  assert.throws(() => latestSha(() => ({ status: 6, stdout: "", stderr: "Could not resolve host" })), /取不到 18826400652\/hyperframes 的最新提交号.*网络/);
+  assert.throws(() => latestSha(() => ({ status: 0, stdout: "<html>", stderr: "" })), /取不到/);
+});
+
+test("ensureLock：没有锁文件时取最新并写入；已有锁文件不变（不联网）；update 换成最新", () => {
+  const dir = project({});
+  assert.equal(ensureLock(dir, {}, ok(SHA)), SHA);
+  assert.deepEqual(readLock(dir), { repo: REPO, sha: SHA });
+  assert.equal(ensureLock(dir, {}, never), SHA);
+  assert.equal(ensureLock(dir, { update: true }, ok(SHA2)), SHA2);
+  assert.equal(readLock(dir).sha, SHA2);
+});
+
+test("readLock：锁文件内容不对时报中文错误", () => {
+  const dir = project({ "components.lock.json": { repo: REPO, sha: "main" } });
+  assert.throws(() => readLock(dir), /components\.lock\.json.*提交号/);
+});
+
+test("fetchArchive：已缓存直接返回，不下载", () => {
+  const cache = project({ [`${SHA}/registry/registry.json`]: "{}" });
+  assert.equal(fetchArchive(SHA, cache, never), join(cache, SHA));
+});
+
+test("fetchArchive 下载失败不留半截缓存，报中文错误并给出地址", () => {
+  const cache = project({});
+  assert.throws(() => fetchArchive(SHA, cache, () => ({ status: 22, stdout: "", stderr: "404" })), /下载组件库失败.*codeload\.github\.com\/18826400652\/hyperframes\/tar\.gz\/a{40}/);
+  assert.equal(existsSync(join(cache, SHA)), false);
+});
+
+test("fetchArchive：下载、解包到 <sha> 目录，临时文件清掉", () => {
+  const cache = project({}), src = fakeRepo();
+  // 假 curl：把假仓库打成 tar.gz（带一层顶级目录，和 codeload 一样）
+  const fake = (cmd, args) => {
+    if (cmd === "curl") {
+      const out = args[args.indexOf("-o") + 1];
+      return { status: 0, stdout: "", stderr: "", ...runTar(out, src) };
+    }
+    return realRun(cmd, args);
+  };
+  const dest = fetchArchive(SHA, cache, fake);
+  assert.equal(dest, join(cache, SHA));
+  assert.ok(existsSync(join(dest, "registry/registry.json")));
+  assert.deepEqual(readdir(cache), [SHA]);
+});
+
+test("installComponent：复制组件和 dykit 资源包（资源从仓库路径取，不看 url）", () => {
+  const repo = fakeRepo(), proj = project({});
+  const files = installComponent(repo, "dy-scene-title", proj);
+  assert.deepEqual(files.sort(), ["assets/dykit/dykit.css", "assets/dykit/theme.css", "compositions/dy-scene-title.html"]);
+  assert.equal(readFileSync(join(proj, "compositions/dy-scene-title.html"), "utf8"), "<html>title</html>");
+});
+
+test("installComponent 组件不存在：报错并列出相近的组件名", () => {
+  assert.throws(() => installComponent(fakeRepo(), "dy-scene-titel", project({})), /组件库里没有 dy-scene-titel.*dy-scene-title/);
+});
+
+test("installComponent：缓存的仓库里缺文件时报错，不装空文件", () => {
+  const repo = fakeRepo();
+  writeFileSync(join(repo, "registry/blocks/dy-scene-title/registry-item.json"), JSON.stringify({ name: "dy-scene-title", files: [{ path: "nope.html", target: "compositions/nope.html" }] }));
+  assert.throws(() => installComponent(repo, "dy-scene-title", project({})), /组件 dy-scene-title 缺文件 nope\.html/);
+});
+
+// ---- 测试用小工具 ----
+const readdir = (d) => readdirSync(d).sort();
+const realRun = (cmd, args) => { const r = spawnSync(cmd, args, { encoding: "utf8" }); return { status: r.status, stdout: r.stdout, stderr: r.stderr }; };
+function runTar(out, src) {
+  const stage = mkdtempSync(join(tmpdir(), "vd-tar-"));
+  cpSync(src, join(stage, "hyperframes-xyz"), { recursive: true });
+  const r = spawnSync("tar", ["-czf", out, "-C", stage, "hyperframes-xyz"], { encoding: "utf8" });
+  return { status: r.status, stderr: r.stderr };
+}
