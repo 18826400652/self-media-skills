@@ -1,12 +1,13 @@
-"""pd 命令：devices | connect [IP:端口] | ui [名字] | run <步骤.py> [载荷.json]"""
+"""pd 命令：devices | connect [IP:端口] | ui [名字] | run <步骤.py> [载荷.json] | rec <App> <提问.txt> <输出.mp4>"""
 import os
 import runpy
 import sys
 
+from . import rec
 from .connect import DeviceUnavailable, connect, ensure_connected
 
 EXIT_NO_DEVICE = 3
-USAGE = "用法：pd devices | pd connect [IP:端口] | pd ui [名字] | pd run <步骤.py> [载荷.json]"
+USAGE = "用法：pd devices | pd connect [IP:端口] | pd ui [名字] | pd run <步骤.py> [载荷.json] | pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout 秒]"
 
 
 def _no_device(err):
@@ -57,6 +58,11 @@ def main(argv):
             return cmd_ui(*args[:1])
         if cmd == "run" and args:
             return cmd_run(*args[:2])
+        if cmd == "rec" and args:
+            opts = rec.parse_args(args)
+            ensure_connected()
+            rec.record(**opts)
+            return None
     except DeviceUnavailable as err:
         _no_device(err)
     print(USAGE, file=sys.stderr)

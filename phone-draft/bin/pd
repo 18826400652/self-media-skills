@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # phone-draft 入口：通过 adb 操作安卓手机上的 App 存草稿。
 #   pd devices | pd connect [IP:端口] | pd ui [名字] | pd run <步骤.py> [载荷.json]
+#   pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search]   在 AI App 里提问并录屏
 set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 PY="$SKILL_DIR/.venv/bin/python"

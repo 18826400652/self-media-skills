@@ -54,3 +54,47 @@ def test_run_step_sees_payload_through_package_import(monkeypatch, tmp_path):
     cli.main(["run", str(step), str(payload)])
     assert out.read_text(encoding="utf-8") == "本次"
     assert phone_draft.PAYLOAD is phone_draft.core.PAYLOAD
+
+
+from phone_draft import rec
+
+
+def test_rec_parse_args_flags(tmp_path):
+    p = tmp_path / "q.txt"
+    p.write_text("问", encoding="utf-8")
+    a = rec.parse_args(["deepseek", str(p), str(tmp_path / "o.mp4"), "--think", "--timeout", "120"])
+    assert a == {"app": "deepseek", "prompt": str(p), "out": str(tmp_path / "o.mp4"), "think": True,
+                 "search": False, "timeout": 120}
+
+
+def test_rec_parse_args_requires_mp4_and_existing_prompt(tmp_path, capsys):
+    with pytest.raises(SystemExit):
+        rec.parse_args(["deepseek", str(tmp_path / "missing.txt"), str(tmp_path / "o.mp4")])
+    assert "找不到提问文件" in capsys.readouterr().out
+    p = tmp_path / "q.txt"
+    p.write_text("问", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        rec.parse_args(["deepseek", str(p), str(tmp_path / "o.mkv")])
+
+
+def test_rec_exits_3_when_no_device(monkeypatch, tmp_path):
+    p = tmp_path / "q.txt"
+    p.write_text("问", encoding="utf-8")
+
+    def unavailable():
+        raise DeviceUnavailable("手机没连上")
+
+    monkeypatch.setattr(cli, "ensure_connected", unavailable)
+    with pytest.raises(SystemExit) as err:
+        cli.main(["rec", "deepseek", str(p), str(tmp_path / "o.mp4")])
+    assert err.value.code == cli.EXIT_NO_DEVICE
+
+
+def test_rec_calls_record_with_parsed_args(monkeypatch, tmp_path):
+    p = tmp_path / "q.txt"
+    p.write_text("问", encoding="utf-8")
+    seen = {}
+    monkeypatch.setattr(cli, "ensure_connected", lambda: "serial")
+    monkeypatch.setattr(rec, "record", lambda **kw: seen.update(kw) or {})
+    cli.main(["rec", "doubao", str(p), str(tmp_path / "o.mp4")])
+    assert seen["app"] == "doubao" and seen["think"] is False and seen["timeout"] == 300
