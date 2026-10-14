@@ -50,11 +50,19 @@ const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m
 /** 色块上的文字：深色墨水和白色里对比度高的那个 */
 const onColor = (hex) => (contrast(hex, INK) >= contrast(hex, WHITE) ? INK : WHITE);
 
-/** 这条视频的配色和字体 → dykit custom 主题的 --hf-custom-* 变量 */
+const READABLE = 3; // 组件会把强调色当文字、描边色用：和底色的对比度至少 3:1（WCAG 大字）
+const readable = (bg, ...colors) => colors.find((c) => contrast(c, bg) >= READABLE);
+
+/**
+ * 这条视频的配色和字体 → dykit custom 主题的 --hf-custom-* 变量。
+ * 荧光笔底色（highlight）固定用 palette.accent；组件强调色依次取 accent、alert、ink 里第一个在底色上看得清的。
+ */
 export function customVars(p, fonts = {}) {
-  return `--hf-custom-bg:${p.bg};--hf-custom-text:${p.ink};--hf-custom-muted:${p.muted};--hf-custom-accent:${p.accent};--hf-custom-alert:${p.alert};` +
+  const accent = readable(p.bg, p.accent, p.alert, p.ink);
+  const alert = readable(p.bg, p.alert, p.ink);
+  return `--hf-custom-bg:${p.bg};--hf-custom-text:${p.ink};--hf-custom-muted:${p.muted};--hf-custom-accent:${accent};--hf-custom-alert:${alert};--hf-custom-highlight:${p.accent};` +
     `--hf-custom-font-title:${FONT_VAR[fonts.title ?? "serif"]};--hf-custom-font-body:${FONT_VAR[fonts.body ?? "sans"]};` +
-    `--hf-custom-on-accent:${onColor(p.accent)};--hf-custom-on-alert:${onColor(p.alert)}`;
+    `--hf-custom-on-accent:${onColor(accent)};--hf-custom-on-alert:${onColor(alert)}`;
 }
 
 /** 有组件段落时在 <head> 引入 dykit 的样式和工具脚本 */

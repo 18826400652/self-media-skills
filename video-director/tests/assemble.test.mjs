@@ -75,14 +75,17 @@ test("cuesJs：用下一段开头的词给本段做退场是允许的（超出�
 
 const PAL = { bg: "#F1ECE2", ink: "#1C1A17", muted: "#6E675C", accent: "#FFD84D", alert: "#D2372A" };
 
-test("customVars：配色和字体变成 --hf-custom-* 变量；强调色上的文字取对比度高的那个", () => {
+test("customVars：配色和字体变成 --hf-custom-* 变量；荧光笔用 accent，组件强调色取和底色对比度够的", () => {
   const v = customVars(PAL, { title: "serif", body: "sans" });
-  assert.match(v, /--hf-custom-bg:#F1ECE2;--hf-custom-text:#1C1A17;--hf-custom-muted:#6E675C;--hf-custom-accent:#FFD84D;--hf-custom-alert:#D2372A/);
+  // 纸面上荧光黄当文字看不清（< 3:1），组件强调色改用 alert 红；荧光笔底色仍是黄
+  assert.match(v, /--hf-custom-bg:#F1ECE2;--hf-custom-text:#1C1A17;--hf-custom-muted:#6E675C;--hf-custom-accent:#D2372A;--hf-custom-alert:#D2372A;--hf-custom-highlight:#FFD84D/);
   assert.match(v, /--hf-custom-font-title:var\(--vd-serif\);--hf-custom-font-body:var\(--vd-sans\)/);
-  assert.match(v, /--hf-custom-on-accent:#1C1A17;--hf-custom-on-alert:#FFFFFF/);
-  const dark = customVars({ ...PAL, bg: "#101114", ink: "#F4F1EA", accent: "#2B59C3" }, {});
-  assert.match(dark, /--hf-custom-on-accent:#FFFFFF/);
-  assert.match(customVars(PAL, {}), /--hf-custom-font-title:var\(--vd-serif\);--hf-custom-font-body:var\(--vd-sans\)/);
+  assert.match(v, /--hf-custom-on-accent:#FFFFFF;--hf-custom-on-alert:#FFFFFF/);
+  // 深色底：荧光黄够亮，直接当强调色，上面的字用墨色
+  const dark = customVars({ ...PAL, bg: "#101114", ink: "#F4F1EA", alert: "#FF5A5F" }, {});
+  assert.match(dark, /--hf-custom-accent:#FFD84D;.*--hf-custom-on-accent:#1C1A17/);
+  // accent、alert 都不够时退回正文色
+  assert.match(customVars({ ...PAL, alert: "#F7D9D2" }, {}), /--hf-custom-accent:#1C1A17;--hf-custom-alert:#1C1A17/);
 });
 
 test("segmentHosts：组件段落用组件源文件、custom 主题、变量", () => {
