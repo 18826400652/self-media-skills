@@ -75,27 +75,23 @@ def _wait_answer(app, rec, baseline, prompt, sent, timeout, mkv):
             fail_with_ui(f"等了 {timeout} 秒回答还没结束（原始录屏留在 {mkv}）")
 
 
-def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT):
-    mod = load_app(app)
-    text = open(prompt, encoding="utf-8").read().strip()
-    d = device()
-    if not dnd_on(d.shell("settings get global zen_mode").output):
-        fail("手机没开勿扰模式：录屏会录到弹出的通知。请先打开勿扰再录")
-    mod.open_new_chat()               # 之后才开始录：侧边栏、历史对话不进画面
-    before = mod.current_toggles()    # 录完改回用户原来的开关
-    mod.set_toggles(think, search)
-    mod.prepare_input()
+def _restore(mod, before):
+    """改回用户原来的开关。失败只提示，不盖住原来的错误。"""
+    try:
+        mod.set_toggles(*before)
+    except (Exception, SystemExit):  # noqa: BLE001
+        log(f"没能把开关改回原来的设置（深度思考、智能搜索：{before}），请在 App 里手动改回")
+
+
+def _capture(mod, rec, text, mkv, timeout):
+    """录屏中的一轮：打字、发送、等回答。返回 (marks, 回答结束时的界面文字)。"""
     before_typing = _labels()         # 含输入框提示文字：发送后它会重新出现，不能算「新文字」
-    base = out[:-len(".mp4")]
-    mkv = base + ".raw.mkv"
-    rec = Recorder(d.serial, mkv)
     rec.start()
     time.sleep(LEAD_IN)
     mod.focus_input()
     marks = {"typed": rec.now()}
     _type(text)
     if not same_text(mod.input_text(), text):
-        rec.stop()
         fail_with_ui(f"输入框里的文字和提问不一致，没有发送：{mod.input_text()[:40]}…")
     time.sleep(BEFORE_SEND)
     baseline = before_typing + _labels()
@@ -106,9 +102,11 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
     marks["done"] = rec.now()
     page = _labels()
     time.sleep(TAIL)
-    rec.stop()
-    copied = mod.copy_answer() if hasattr(mod, "copy_answer") else None  # 录屏已停，滑动不进画面
-    mod.set_toggles(*before)
+    return marks, page
+
+
+def _write_outputs(out, mkv, marks, page, copied, app, think, search):
+    base = out[:-len(".mp4")]
     finish_video(mkv, out)
     for f in (mkv, mkv + ".log"):
         os.remove(f)
@@ -122,3 +120,25 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
     print(f"✓ {out}（发送后 {info['seconds']} 秒回答完；视频里 {info['sentAt']}s 发送、{info['doneAt']}s 结束）",
           flush=True)
     return info
+
+
+def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT):
+    mod = load_app(app)
+    text = open(prompt, encoding="utf-8").read().strip()
+    d = device()
+    if not dnd_on(d.shell("settings get global zen_mode").output):
+        fail("手机没开勿扰模式：录屏会录到弹出的通知。请先打开勿扰再录")
+    mod.open_new_chat()               # 之后才开始录：侧边栏、历史对话不进画面
+    before = mod.current_toggles()    # 录完（包括中途失败）都改回用户原来的开关
+    mkv = out[:-len(".mp4")] + ".raw.mkv"
+    rec = Recorder(d.serial, mkv)
+    try:
+        mod.set_toggles(think, search)
+        mod.prepare_input()
+        marks, page = _capture(mod, rec, text, mkv, timeout)
+        rec.stop()
+        copied = mod.copy_answer(page) if hasattr(mod, "copy_answer") else None  # 录屏已停，滑动不进画面
+    finally:
+        rec.stop()
+        _restore(mod, before)
+    return _write_outputs(out, mkv, marks, page, copied, app, think, search)

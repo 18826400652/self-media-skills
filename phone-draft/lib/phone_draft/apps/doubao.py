@@ -69,9 +69,14 @@ def open_new_chat():
         fail_with_ui("找不到侧边栏的「新对话」按钮")
     new_chat.click()
     time.sleep(2)
-    extra = unexpected_labels(content_labels(ui_texts()), input_text())
+    refuse_if_not_empty(content_labels(ui_texts()), input_text())
+
+
+def refuse_if_not_empty(labels, input_text=""):
+    """新对话里有不认识的文字就停下。不用 fail_with_ui：它会把整屏截图和全部文字存成文件，那是私人对话。"""
+    extra = unexpected_labels(labels, input_text)
     if extra:
-        fail_with_ui(f"豆包新对话里有不认识的内容，为免录到私人对话已停下：{short_labels(extra)}")
+        fail(f"豆包新对话里有不认识的内容，为免录到私人对话已停下：{short_labels(extra)}")
 
 
 def current_toggles():

@@ -103,3 +103,26 @@ from phone_draft.rec_logic import page_text
 def test_page_text_appends_copied_answer():
     assert page_text(["问", "答（前半）"], None) == "问\n答（前半）\n"
     assert page_text(["问"], "完整回答\n第二段") == "问\n\n## 复制的完整回答\n\n完整回答\n第二段\n"
+
+
+def test_answer_not_done_with_only_short_status_text():
+    base = ["新对话", "发消息..."]
+    waiting = ["新对话", "帮我写一条消息", "思考中", "发消息..."]
+    assert not answer_done([waiting] * 6, base, "帮我写一条消息")
+
+
+def test_answer_not_done_when_bubble_differs_from_prompt_only_in_spaces():
+    base = ["新对话"]
+    waiting = ["新对话", "第一行 第二行"]
+    assert not answer_done([waiting] * 6, base, "第一行\n第二行")
+
+
+from phone_draft.rec_logic import accept_copied
+
+
+def test_accept_copied_needs_change_and_overlap_with_answer():
+    labels = ["帮我写", "阿杰，活动页的图大概什么时候能好呀？"]
+    assert accept_copied("阿杰，活动页的图大概什么时候能好呀？这边等着上线", "<<pd>>", labels)
+    assert not accept_copied("<<pd>>", "<<pd>>", labels)           # 复制没生效
+    assert not accept_copied("的图。", "<<pd>>", labels)            # 剪贴板是提问的最后一段
+    assert not accept_copied(None, "<<pd>>", labels)

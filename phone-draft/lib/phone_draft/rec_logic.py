@@ -6,6 +6,8 @@ STATUS_BAR = 120      # 像素：手机状态栏高度（MEIZU 20 实测 116）�
 OUT_W, OUT_H = 1080, 1920
 MAX_TYPE_STEPS = 40   # 整段提问最多分几次输入（长提问每次多打几个字，打字过程不会太长）
 MIN_STEP = 2
+MIN_ANSWER_CHARS = 8  # 新出现的文字至少这么多字才算回答（「思考中」之类的状态字不算）
+OVERLAP = 8           # 复制到的回答要包含屏幕上某段回答开头这么多个字
 BOUNDS = re.compile(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]")
 
 
@@ -43,12 +45,22 @@ def answer_done(history, baseline, prompt, marker_ok=True, stable=3):
     last = history[-1]
     if any(h != last for h in history[-(stable + 1):]):
         return False
-    return bool(set(last) - set(baseline) - {prompt})
+    new = [t for t in set(last) - set(baseline) if not same_text(t, prompt)]
+    return sum(len(t) for t in new) >= MIN_ANSWER_CHARS
 
 
 def was_sent(input_now, prompt):
     """发送后输入框不再是这段提问（清空或回到提示文字），才算发出去了。"""
     return not same_text(input_now, prompt)
+
+
+def accept_copied(copied, sentinel, labels):
+    """点「复制」后剪贴板变了，并且和屏幕上的某段回答对得上，才算拿到了回答（没点上时剪贴板是提问的最后一段）。"""
+    if not copied or copied == sentinel:
+        return False
+    flat = re.sub(r"\s+", "", copied)
+    heads = [re.sub(r"\s+", "", t)[:OVERLAP] for t in labels]
+    return any(len(h) == OVERLAP and h in flat for h in heads)
 
 
 def chip_on(rgb):

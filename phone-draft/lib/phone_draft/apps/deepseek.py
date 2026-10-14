@@ -2,12 +2,14 @@
 import time
 
 from ..device import device, fail_with_ui, hide_keyboard, open_app, tap_desc, ui_texts
-from ..rec_logic import BOUNDS, chip_on, content_labels
+from ..core import fail
+from ..rec_logic import BOUNDS, accept_copied, chip_on, content_labels
 
 PACKAGE = "com.deepseek.chat"
 DONE_DESC = "切换至语音"           # 输入栏右下角：生成回答时是停止键，回答完才变回语音键
 COPY_DESC = "复制"                 # 回答下面的复制按钮（长回答时在屏幕外，要往下滑）
 MAX_SWIPES = 15
+SENTINEL = "<<pd-rec 复制前>>"
 # 空白新对话里只有这些按钮，加一行问候语（每次不一样：「你好，我能帮什么忙吗？」「欢迎回来，想从哪里开始？」）
 CHROME = {"打开侧边栏", "自动朗读", "开启新对话", "发消息或按住说话", "深度思考", "智能搜索", "上传文件", "切换至语音"}
 HINT = "发消息或按住说话"
@@ -25,8 +27,13 @@ def open_new_chat():
     open_app(PACKAGE)
     tap_desc("开启新对话")
     time.sleep(1.5)
-    if not is_empty_chat(content_labels(ui_texts())):
-        fail_with_ui("没进到 DeepSeek 的空白新对话，不录")
+    refuse_if_not_empty(content_labels(ui_texts()))
+
+
+def refuse_if_not_empty(labels):
+    """不是空白新对话就停下。不用 fail_with_ui：它会把整屏截图和全部文字存成文件，那是私人对话。"""
+    if not is_empty_chat(labels):
+        fail("没进到 DeepSeek 的空白新对话（屏幕上有别的对话），为免录到私人内容已停下")
 
 
 def _find(label):
@@ -91,20 +98,23 @@ def send():
     tap_desc("发送")
 
 
-def copy_answer():
-    """录屏停止后：滑到回答末尾点「复制」，读剪贴板拿完整回答（界面结构里只有屏幕上那一段）。读不到返回 None。"""
-    d = device()
-    for _ in range(MAX_SWIPES):
-        if d(description=COPY_DESC).exists:
-            break
-        d.swipe_ext("up", scale=0.6)
-        time.sleep(0.6)
-    btn = d(description=COPY_DESC)
-    if not btn.exists:
-        return None
-    btn[btn.count - 1].click()
-    time.sleep(1)
+def copy_answer(labels):
+    """录屏停止后：滑到回答末尾点「复制」，读剪贴板拿完整回答（界面结构里只有屏幕上那一段）。
+    先把剪贴板设成占位文字，复制到的内容变了且和屏幕上的回答对得上才用；任何出错都返回 None，不影响录屏结果。"""
     try:
-        return d.clipboard or None
-    except Exception:  # 读剪贴板失败不影响录屏结果
+        d = device()
+        d.clipboard = SENTINEL
+        for _ in range(MAX_SWIPES):
+            if d(description=COPY_DESC).exists:
+                break
+            d.swipe_ext("up", scale=0.6)
+            time.sleep(0.6)
+        btn = d(description=COPY_DESC)
+        if not btn.exists:
+            return None
+        btn[btn.count - 1].click()
+        time.sleep(1)
+        copied = d.clipboard
+        return copied if accept_copied(copied, SENTINEL, labels) else None
+    except Exception:  # noqa: BLE001 —— 拿不到完整回答只是少一段，录屏照常出
         return None
