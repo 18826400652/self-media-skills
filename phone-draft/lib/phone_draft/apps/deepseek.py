@@ -53,6 +53,10 @@ def _toggle_on(label):
     return chip_on(img.getpixel((x1 - CHIP_BG_OFFSET, (y1 + y2) // 2)))
 
 
+def current_toggles():
+    return _toggle_on(TOGGLES["think"]), _toggle_on(TOGGLES["search"])
+
+
 def set_toggles(think, search):
     """App 会记住上次的开关，每轮都按要求设一遍并核对。"""
     for key, want in (("think", think), ("search", search)):

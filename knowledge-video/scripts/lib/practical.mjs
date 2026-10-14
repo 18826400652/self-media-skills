@@ -26,7 +26,7 @@ export const STEPS = [
 const HOW = {
   scenario: "按 scenario-content 第 1 步写 场景卡.md",
   topic: "按 scenario-content 第 2 步：sc bench 抓对标，写 选题关.md",
-  test: "按 scenario-content 第 3 步实测（nv rec 录屏，同一提问跑两轮），写 实测记录.md",
+  test: "按 scenario-content 第 3 步实测（nv rec --app 手机录屏，同一提问跑两轮），写 实测记录.md",
   draft: "按 scenario-content 第 4 步写 母稿.md",
   feynman: "按 scenario-content 第 5 步写 费曼检查.md，补回母稿",
   selfcheck: "跑 sc check，修好所有 ✗",

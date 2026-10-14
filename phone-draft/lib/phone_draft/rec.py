@@ -82,6 +82,7 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
     if not dnd_on(d.shell("settings get global zen_mode").output):
         fail("手机没开勿扰模式：录屏会录到弹出的通知。请先打开勿扰再录")
     mod.open_new_chat()               # 之后才开始录：侧边栏、历史对话不进画面
+    before = mod.current_toggles()    # 录完改回用户原来的开关
     mod.set_toggles(think, search)
     mod.prepare_input()
     before_typing = _labels()         # 含输入框提示文字：发送后它会重新出现，不能算「新文字」
@@ -107,6 +108,7 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
     time.sleep(TAIL)
     rec.stop()
     copied = mod.copy_answer() if hasattr(mod, "copy_answer") else None  # 录屏已停，滑动不进画面
+    mod.set_toggles(*before)
     finish_video(mkv, out)
     for f in (mkv, mkv + ".log"):
         os.remove(f)

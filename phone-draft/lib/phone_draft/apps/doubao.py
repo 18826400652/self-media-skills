@@ -74,6 +74,10 @@ def open_new_chat():
         fail_with_ui(f"豆包新对话里有不认识的内容，为免录到私人对话已停下：{short_labels(extra)}")
 
 
+def current_toggles():
+    return False, False
+
+
 def set_toggles(think, search):
     if think or search:
         fail("豆包没有「深度思考」「智能搜索」开关，不能用 --think / --search")
