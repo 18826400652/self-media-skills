@@ -8,5 +8,8 @@
   },
   "dependencies": {
     "@wenyan-md/cli": "2.0.12"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
   }
 }
