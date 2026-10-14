@@ -55,3 +55,25 @@ test("--via 的值不对就报错", () => {
   assert.equal(r.status, 1);
   assert.match(r.stderr, /phone 或 browser/);
 });
+
+test("--to xiaohongshu 走手机：调用 pd run phone_xiaohongshu.py", () => {
+  const { dir, env } = setup();
+  const r = run([...[join(dir, "成片.mp4"), "--copy", join(dir, "文案.md")], "--to", "xiaohongshu"], env);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(calls(dir), /^pd run .*phone_xiaohongshu\.py /);
+});
+
+test("--to xiaohongshu 不支持浏览器", () => {
+  const { dir, env } = setup();
+  const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--to", "xiaohongshu", "--via", "browser"], env);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /小红书.*手机/);
+  assert.equal(calls(dir), "");
+});
+
+test("--to 的值不对就报错", () => {
+  const { dir, env } = setup();
+  const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--to", "weibo"], env);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /douyin 或 xiaohongshu/);
+});

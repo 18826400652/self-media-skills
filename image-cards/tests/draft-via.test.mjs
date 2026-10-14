@@ -28,31 +28,31 @@ function setup() {
 const calls = (dir) => (existsSync(join(dir, "calls.log")) ? readFileSync(join(dir, "calls.log"), "utf8") : "");
 const run = (args, env, extra = {}) => spawnSync("node", [SCRIPT, ...args], { env, encoding: "utf8", ...extra });
 
-test("默认走手机：调用 pd run phone_xiaohongshu.py", () => {
+test("默认走浏览器：调用 bd run draft_xiaohongshu.py", () => {
   const { dir, env } = setup();
   const r = run([join(dir, "文案.md")], env);
-  assert.equal(r.status, 0, r.stderr);
-  assert.match(calls(dir), /^pd run .*phone_xiaohongshu\.py /);
-});
-
-test("--via browser 调用 bd run draft_xiaohongshu.py", () => {
-  const { dir, env } = setup();
-  const r = run([...[join(dir, "文案.md")], "--via", "browser"], env);
   assert.equal(r.status, 0, r.stderr);
   assert.match(calls(dir), /^bd run .*draft_xiaohongshu\.py /);
 });
 
-test("手机不可用时报错、提示 --via browser，不回落到浏览器", () => {
+test("--via browser 调用 bd run draft_xiaohongshu.py", () => {
   const { dir, env } = setup();
-  const r = run([join(dir, "文案.md")], { ...env, FAKE_PD_EXIT: "3" });
+  const r = run([join(dir, "文案.md"), "--via", "browser"], env);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(calls(dir), /^bd run .*draft_xiaohongshu\.py /);
+});
+
+test("--via phone 报错，指向 nv draft --to xiaohongshu（小红书手机端发视频）", () => {
+  const { dir, env } = setup();
+  const r = run([join(dir, "文案.md"), "--via", "phone"], env);
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /--via browser/);
-  assert.doesNotMatch(calls(dir), /^bd /m);
+  assert.match(r.stderr, /nv draft .*--to xiaohongshu/);
+  assert.equal(calls(dir), "");
 });
 
 test("--via 的值不对就报错", () => {
   const { dir, env } = setup();
-  const r = run([...[join(dir, "文案.md")], "--via", "usb"], env);
+  const r = run([join(dir, "文案.md"), "--via", "usb"], env);
   assert.equal(r.status, 1);
   assert.match(r.stderr, /phone 或 browser/);
 });
