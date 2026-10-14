@@ -18,7 +18,7 @@ def cmd_devices():
     from .device import _state, device
     d = device()
     info = d.device_info
-    battery = d.shell("dumpsys battery | grep level").output.strip()
+    battery = d.shell("dumpsys battery | grep -m1 ' level:'").output.strip()
     print(f"✓ {d.serial}  {info.get('brand')} {info.get('model')}  Android {info.get('version')}  {battery}  屏幕：{_state(d)}")
 
 
