@@ -64,3 +64,9 @@ test("buildCues：没写 #序号 但口播里出现多次的词给出警告（�
   assert.equal(b.warnings.length, 1);
   assert.match(b.warnings[0], /@资料 在口播里出现了 \d+ 次（第 [\d、]+ 句），现在用的是第 1 次；要别的写 @资料#2/);
 });
+
+test("segmentTimes：组件段落带上 component 和 vars", () => {
+  const [s] = segmentTimes([{ id: "a", lines: [1, 2], component: "dy-scene-steps", vars: { title: "x" } }], lineTimes(META));
+  assert.equal(s.component, "dy-scene-steps");
+  assert.deepEqual(s.vars, { title: "x" });
+});

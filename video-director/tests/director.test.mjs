@@ -83,3 +83,8 @@ test("组件候选：没有第 8 节时报缺章节，候选为空", () => {
   assert.match(p.errors.join(), /缺少章节「## 8. 组件候选」/);
   assert.deepEqual(p.candidates, []);
 });
+
+test("fonts：title、body 只能是 serif 或 sans", () => {
+  assert.deepEqual(parseDirector(doc({ ...VD, fonts: { title: "serif", body: "sans" } })).errors, []);
+  assert.match(parseDirector(doc({ ...VD, fonts: { title: "宋体" } })).errors.join(), /fonts\.title 只能是 serif 或 sans/);
+});

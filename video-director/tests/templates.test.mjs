@@ -11,9 +11,9 @@ test("templates/DIRECTOR.md：章节齐全、机器块合法，唯一的问题�
   assert.ok(p.vd.segments.length > 0);
 });
 
-test("templates/index.html：三个 vd 标记都在", () => {
+test("templates/index.html：四个 vd 标记都在", () => {
   const html = read("index.html");
-  for (const n of ["audio", "segments", "brand"]) assert.ok(html.includes(`<!-- vd:${n} --><!-- /vd:${n} -->`), n);
+  for (const n of ["head", "audio", "segments", "brand"]) assert.ok(html.includes(`<!-- vd:${n} --><!-- /vd:${n} -->`), n);
 });
 
 test("账号固定元素和单段模板只用 var(--vd-*) 字体变量（hyperframes lint 看不到跨文件的 @font-face）", () => {

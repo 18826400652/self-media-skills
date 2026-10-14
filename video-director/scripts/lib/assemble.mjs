@@ -36,11 +36,42 @@ window.VD = {
 `;
 }
 
-const host = (id, src, start, duration, track, extra = "") =>
-  `    <div id="host-${id}" class="clip" data-composition-id="${id}" data-composition-src="${src}" data-start="${start}" data-duration="${duration}" data-track-index="${track}" data-width="1080" data-height="1920" ${extra}style="position:absolute;inset:0"></div>\n`;
+const host = (id, src, start, duration, track, extra = "", hostId = id, style = "") =>
+  `    <div id="host-${hostId}" class="clip" data-composition-id="${id}" data-composition-src="${src}" data-start="${start}" data-duration="${duration}" data-track-index="${track}" data-width="1080" data-height="1920" ${extra}style="position:absolute;inset:0${style ? ";" + style : ""}"></div>\n`;
 
-export function segmentHosts(segments, only = null) {
-  return "\n" + segments.filter((s) => !only || only.includes(s.id)).map((s, i) => host(s.id, `compositions/frames/${s.id}.html`, s.start, s.duration, 2 + i)).join("");
+const FONT_VAR = { serif: "var(--vd-serif)", sans: "var(--vd-sans)" };
+const INK = "#1C1A17", WHITE = "#FFFFFF";
+
+function luminance(hex) {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const contrast = (a, b) => { const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+/** 色块上的文字：深色墨水和白色里对比度高的那个 */
+const onColor = (hex) => (contrast(hex, INK) >= contrast(hex, WHITE) ? INK : WHITE);
+
+/** 这条视频的配色和字体 → dykit custom 主题的 --hf-custom-* 变量 */
+export function customVars(p, fonts = {}) {
+  return `--hf-custom-bg:${p.bg};--hf-custom-text:${p.ink};--hf-custom-muted:${p.muted};--hf-custom-accent:${p.accent};--hf-custom-alert:${p.alert};` +
+    `--hf-custom-font-title:${FONT_VAR[fonts.title ?? "serif"]};--hf-custom-font-body:${FONT_VAR[fonts.body ?? "sans"]};` +
+    `--hf-custom-on-accent:${onColor(p.accent)};--hf-custom-on-alert:${onColor(p.alert)}`;
+}
+
+/** 有组件段落时在 <head> 引入 dykit 的样式和工具脚本 */
+export function headBlock(hasComponents) {
+  return hasComponents ? `\n    <link rel="stylesheet" href="assets/dykit/dykit.css" />\n    <script src="assets/dykit/hf-kit.js"></script>\n    ` : "";
+}
+
+/** 写 vd:head 块；旧工程没有这个标记、也没用组件时原样返回 */
+export function applyHead(html, hasComponents) {
+  if (!hasComponents && !html.includes("<!-- vd:head -->")) return html;
+  return replaceBlock(html, "head", headBlock(hasComponents));
+}
+
+export function segmentHosts(segments, only = null, palette = null, fonts = {}) {
+  return "\n" + segments.filter((s) => !only || only.includes(s.id)).map((s, i) => s.component
+    ? host(s.component, `compositions/${s.component}.html`, s.start, s.duration, 2 + i, `data-theme="custom" ${vars(s.vars ?? {})} `, s.id, customVars(palette, fonts))
+    : host(s.id, `compositions/frames/${s.id}.html`, s.start, s.duration, 2 + i)).join("");
 }
 
 export function brandHosts({ vd, groups, lines, duration }) {
@@ -69,8 +100,10 @@ export function assemble(dir, built, config, { only = null, duration, music = nu
   if (!existsSync(join(dir, "assets/fonts/fonts.css"))) cpSync(config.fontsDir, join(dir, "assets/fonts"), { recursive: true });
   const groups = JSON.parse(readFileSync(join(dir, "caption_groups.json"), "utf8")).groups.filter((g) => g.start < duration);
   let html = readFileSync(idx, "utf8");
+  const used = built.segments.filter((s) => !only || only.includes(s.id));
+  html = applyHead(html, used.some((s) => s.component));
   html = replaceBlock(html, "audio", audioHosts({ duration, music }));
-  html = replaceBlock(html, "segments", segmentHosts(built.segments, only) + "    ");
+  html = replaceBlock(html, "segments", segmentHosts(built.segments, only, built.vd.palette, built.vd.fonts) + "    ");
   html = replaceBlock(html, "brand", brandHosts({ vd: built.vd, groups, lines: built.lines, duration }) + "    ");
   writeFileSync(idx, setRootDuration(html, duration));
 }

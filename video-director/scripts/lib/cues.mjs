@@ -58,7 +58,8 @@ export function segmentTimes(segments, lines) {
   return segments.map((s) => {
     const a = byLine.get(s.lines[0]), b = byLine.get(s.lines[1]);
     if (!a || !b) throw new Error(`段 ${s.id} 的句号 ${s.lines.join("–")} 超出配音范围（共 ${lines.length} 句）`);
-    return { id: s.id, start: a.start, duration: round(b.end - a.start) };
+    const seg = { id: s.id, start: a.start, duration: round(b.end - a.start) };
+    return s.component ? { ...seg, component: s.component, vars: s.vars ?? {} } : seg;
   });
 }
 

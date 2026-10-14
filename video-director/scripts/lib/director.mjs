@@ -55,6 +55,7 @@ function checkVd(vd) {
     if (s.component !== undefined && !COMPONENT.test(s.component)) e.push(`segments[${i}].component 必须是 dykit 组件名（dy-开头）`);
     if (s.vars !== undefined && (typeof s.vars !== "object" || s.vars === null || Array.isArray(s.vars))) e.push(`segments[${i}].vars 必须是对象`);
   });
+  for (const k of ["title", "body"]) if (vd.fonts?.[k] !== undefined && !["serif", "sans"].includes(vd.fonts[k])) e.push(`fonts.${k} 只能是 serif 或 sans`);
   (vd.sfx ?? []).forEach((s, i) => { if (!/^@\S/.test(s.at ?? "")) e.push(`sfx[${i}].at 必须写成 @词`); });
   if (vd.music && !/^@\S/.test(vd.music.drop ?? "")) e.push("music.drop 必须写成 @词（或把 music 写成 null）");
   for (const k of ["next", "question", "cta"]) if (!vd.ending?.[k]) e.push(`ending.${k} 不能为空`);

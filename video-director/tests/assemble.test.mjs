@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import vm from "node:vm";
-import { audioHosts, brandHosts, cuesJs, replaceBlock, segmentHosts, setRootDuration } from "../scripts/lib/assemble.mjs";
+import { applyHead, audioHosts, brandHosts, cuesJs, customVars, headBlock, replaceBlock, segmentHosts, setRootDuration } from "../scripts/lib/assemble.mjs";
 
 const HTML = `<div id="root" data-composition-id="main" data-start="0" data-duration="10">
 <!-- vd:segments -->old<!-- /vd:segments -->
@@ -71,4 +71,51 @@ test("cuesJs：用下一段开头的词给本段做退场是允许的（超出�
   const ctx = { window: {} };
   vm.runInNewContext(cuesJs({ cues: { "因为它只记得": 7.17 }, segments: [{ id: "a", start: 0, duration: 7.13 }] }), ctx);
   assert.equal(ctx.window.VD.at("因为它只记得", "a"), 7.17);
+});
+
+const PAL = { bg: "#F1ECE2", ink: "#1C1A17", muted: "#6E675C", accent: "#FFD84D", alert: "#D2372A" };
+
+test("customVars：配色和字体变成 --hf-custom-* 变量；强调色上的文字取对比度高的那个", () => {
+  const v = customVars(PAL, { title: "serif", body: "sans" });
+  assert.match(v, /--hf-custom-bg:#F1ECE2;--hf-custom-text:#1C1A17;--hf-custom-muted:#6E675C;--hf-custom-accent:#FFD84D;--hf-custom-alert:#D2372A/);
+  assert.match(v, /--hf-custom-font-title:var\(--vd-serif\);--hf-custom-font-body:var\(--vd-sans\)/);
+  assert.match(v, /--hf-custom-on-accent:#1C1A17;--hf-custom-on-alert:#FFFFFF/);
+  const dark = customVars({ ...PAL, bg: "#101114", ink: "#F4F1EA", accent: "#2B59C3" }, {});
+  assert.match(dark, /--hf-custom-on-accent:#FFFFFF/);
+  assert.match(customVars(PAL, {}), /--hf-custom-font-title:var\(--vd-serif\);--hf-custom-font-body:var\(--vd-sans\)/);
+});
+
+test("segmentHosts：组件段落用组件源文件、custom 主题、变量", () => {
+  const segs = [{ id: "seg-02", start: 3, duration: 4, component: "dy-scene-steps", vars: { title: "三步" } }];
+  const h = segmentHosts(segs, null, PAL, {});
+  assert.match(h, /id="host-seg-02"[^>]*data-composition-id="dy-scene-steps" data-composition-src="compositions\/dy-scene-steps.html"/);
+  assert.match(h, /data-theme="custom"/);
+  assert.match(h, /--hf-custom-bg:#F1ECE2/);
+  assert.match(h, /data-variable-values='\{"title":"三步"\}'/);
+});
+
+test("segmentHosts：手写段落不变，没有 custom 主题", () => {
+  const h = segmentHosts([{ id: "seg-01", start: 0, duration: 3 }], null, PAL, {});
+  assert.match(h, /id="host-seg-01" class="clip" data-composition-id="seg-01" data-composition-src="compositions\/frames\/seg-01.html"/);
+  assert.doesNotMatch(h, /data-theme|--hf-custom/);
+});
+
+test("同一组件用两次：宿主 id 不重复，变量各自独立", () => {
+  const segs = [{ id: "a", start: 0, duration: 2, component: "dy-scene-steps", vars: { title: "一" } }, { id: "b", start: 2, duration: 2, component: "dy-scene-steps", vars: { title: "二" } }];
+  const h = segmentHosts(segs, null, PAL, {});
+  assert.match(h, /id="host-a"[^>]*"title":"一"/);
+  assert.match(h, /id="host-b"[^>]*"title":"二"/);
+  assert.equal(h.match(/id="host-/g).length, 2);
+});
+
+test("headBlock：有组件才引入 dykit 样式和脚本", () => {
+  assert.equal(headBlock(false), "");
+  assert.match(headBlock(true), /<link rel="stylesheet" href="assets\/dykit\/dykit.css" \/>[\s\S]*<script src="assets\/dykit\/hf-kit.js"><\/script>/);
+});
+
+test("applyHead：旧工程没有 vd:head 标记、也没用组件时照常构建；用了组件才要求标记", () => {
+  const old = "<head><script src=\"cues.js\"></script></head>";
+  assert.equal(applyHead(old, false), old);
+  assert.throws(() => applyHead(old, true), /index.html 缺少标记 <!-- vd:head -->/);
+  assert.match(applyHead("<!-- vd:head --><!-- /vd:head -->", true), /dykit\.css/);
 });
