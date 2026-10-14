@@ -42,7 +42,7 @@ case "${1:-}" in
     export BD_PAYLOAD="${3:-}"
     export BD_OUT="${BD_OUT:-${TMPDIR:-/tmp}/browser-draft}"
     mkdir -p "$BD_OUT"
-    exec browser-harness -c "$(cat "$SKILL_DIR/lib/bd.py" "$step")"
+    exec browser-harness -c "$(cat "$SKILL_DIR/lib/copy_format.py" "$SKILL_DIR/lib/bd.py" "$step")"
     ;;
   tabs)
     resolve_ws

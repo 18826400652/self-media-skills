@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# phone-draft 入口：通过 adb 操作安卓手机上的 App 存草稿。
+#   pd devices | pd connect [IP:端口] | pd ui [名字] | pd run <步骤.py> [载荷.json]
+#   pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search]   在 AI App 里提问并录屏
+set -euo pipefail
+SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+PY="$SKILL_DIR/.venv/bin/python"
+if [[ ! -x "$PY" ]]; then
+  echo "✗ 未安装依赖：cd $SKILL_DIR && uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt" >&2
+  exit 1
+fi
+command -v adb >/dev/null || { echo "✗ 需要 adb（Android platform-tools）" >&2; exit 1; }
+export PYTHONPATH="$SKILL_DIR/lib:$SKILL_DIR/../browser-draft/lib${PYTHONPATH:+:$PYTHONPATH}"
+exec "$PY" -m phone_draft.cli "$@"

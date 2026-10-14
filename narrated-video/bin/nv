@@ -10,11 +10,11 @@
 #   nv hf-kit <HyperFrames 工程>        装入画面组件库（kit.js，带项目品牌色）
 #   nv hf-frames <HyperFrames 工程>     按 STORYBOARD 每帧的 build 生成画面（帧模板）
 #   nv hf-build <HyperFrames 工程> [--snap]  一键组装：音效、素材、字体、字幕、index、转场、检查
-#   nv rec <输出.mp4> --prompt <文件>   录 AI 对话实测：粘贴 → 发送 → 回答完（手机竖屏）
+#   nv rec <输出.mp4> --prompt <文件> --app deepseek|doubao   录 AI 对话实测（手机 App；--url 走浏览器）
 #   nv rec-flow <输出.mp4> --steps <步骤.py>  按步骤操作网页并录屏（电脑横屏，软件演示用）
 #   nv render <视频目录> [参数]         渲染到 <视频目录>/renders/，完成后自动做成片检查
 #   nv verify <成片.mp4>                成片检查：帧数、时长、声音、尺寸、黑屏
-#   nv draft <成片.mp4> --copy <发布文案.md>  用已登录的浏览器暂存到抖音（不发布，需要 browser-draft 的 bd）
+#   nv draft <成片.mp4> --copy <发布文案.md> [--via phone|browser]  存进抖音草稿（不发布；默认操作手机，需要 phone-draft 的 pd；browser 用 bd）
 #   nv <其他>                           透传给 hyperframes（check/snapshot/preview/doctor/lint…）
 set -euo pipefail
 

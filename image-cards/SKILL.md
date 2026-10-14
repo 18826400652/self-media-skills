@@ -11,7 +11,7 @@ description: >
 ```bash
 ic render  <卡片.md> [--preset xiaohongshu] [--out 目录]   # 输出 01.png、02.png……（默认在 <卡片.md 目录>/out/）
 ic preview <卡片.md>                                        # 只生成 卡片预览.html，在浏览器里看
-ic draft   <文案.md> [--images 目录]                         # 图片 + 文案存进小红书草稿箱（浏览器自动化）
+ic draft   <文案.md> [--images 目录]                         # 图片 + 文案存进小红书草稿箱（浏览器自动化；手机端发视频用 nv draft --to xiaohongshu）
 ```
 
 渲染时如果有卡片内容溢出，会提示第几张，并以退出码 2 结束。**渲染后一定要看图**（拼成总览图更快）：
@@ -94,6 +94,8 @@ footer: "@账号名"           # 可选，页脚文字
 路径相对配置文件。优先级：命令行参数 > 卡片 frontmatter > 项目配置 > 默认值。
 
 ## 存进小红书草稿箱（ic draft）
+
+小红书**手机端发的是视频**（和抖音同一个成片）：`nv draft <成片.mp4> --copy 小红书/文案.md --to xiaohongshu`，见 narrated-video。`ic draft` 是图文笔记，只有浏览器方案（`--via phone` 会报错提示）。
 
 用已登录小红书创作服务平台的浏览器（依赖 browser-draft 的 `bd`）：上传图片 → 填标题 → 粘贴正文 → 逐个从联想里选话题（选中才是可点的话题）→ 点「暂存离开」。**不点发布。**
 
