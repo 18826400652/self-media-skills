@@ -32,7 +32,7 @@ HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免
 | 1 | 新建导演工程（下面的命令），按 `templates/DIRECTOR.md` 写导演脚本；`vd cues .` 确认每个 @词都找得到 | **③a 请用户审 DIRECTOR.md** |
 | 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build . --sample`；在每个 @词 截图检查；`npx hyperframes render` 出样片 | **③b 请用户看样片** |
 | 3 | 写其余各段，每写一段 `vd build . --no-music` + 截图；全部写完 `vd build .` | — |
-| 4 | 全片在每个 @词 截图检查，问题记进 `qa.json`；`nv render <工程>`；和旧版做对比视频 | **④ 请用户看成片** |
+| 4 | 全片在每个 @词 截图检查，问题记进 `qa.json`；`nv render <工程>`；和旧版做对比视频；`vd check` 列出组件候选 | **④ 请用户看成片 + 组件候选** |
 
 用户没明确说通过，不往下走。
 
@@ -53,8 +53,8 @@ cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-dir
 | 命令 | 作用 |
 |---|---|
 | `vd cues <工程>` | 校验 DIRECTOR.md，把所有 @词 换算成秒数写进 `cues.js`，并打印出来 |
-| `vd build <工程> [--sample] [--no-music]` | 拼配音 + 混音效 → 写 `index.html` 的 `vd:audio` / `vd:segments` / `vd:brand` 三块 → 配乐取曲、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
-| `vd check <工程>` | 校验 DIRECTOR.md + `hyperframes check` |
+| `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
+| `vd check <工程>` | 校验 DIRECTOR.md + 列出组件候选 + `hyperframes check` |
 
 `index.html` 里标记块之外的内容（背景、贯穿元素）是手写的，`vd build` 不会动。
 
@@ -66,3 +66,17 @@ cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-dir
 - 时间只用 `at("词")`（相对本段开头的秒数），不写死数字；词必须在 DIRECTOR.md 里以 `@词` 出现过。
 - 元素 id 加段前缀；栏目标签和字幕不要自己画（账号固定元素会画）。
 - 写完在这段每个 @词 的时间点截图看一遍（`references/director-rules.md` 第 11–17 条）。
+
+## 用 dykit 组件
+
+dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独维护）。分段里写 `"component": "dy-…"` 和 `"vars": {…}` 就直接用组件，配色自动套用这条视频的 `palette`（dykit 的 custom 主题）。可用组件和变量见仓库的 `catalog/catalog.json`。
+
+- 第一次 `vd build` 把最新提交号写进 `components.lock.json`，之后一直用这个版本，重新渲染不会变样；要用新版组件：`vd build . --update-components`
+- 下载的仓库缓存在 `~/.cache/video-director/hyperframes/<提交号>/`，断网时已缓存的版本照常能用
+- 配色怎么套：`palette.accent` 是荧光笔底色；组件里当文字、描边用的强调色取 `accent`、`alert`、`ink` 里第一个在底色上看得清的（对比度 ≥ 3:1）。纸面 + 荧光黄的配色下，组件强调色会是 `alert` 红——如果本片红色代表「错的」，用组件前想清楚会不会混淆
+- 字体：机器块可写 `"fonts": { "title": "serif" | "sans", "body": "serif" | "sans" }`，默认标题宋体、正文黑体
+- 旧工程的 `index.html` 要用组件时，在 `<script src="cues.js"></script>` 下一行加 `<!-- vd:head --><!-- /vd:head -->`
+
+## 组件候选（让组件库越用越全）
+
+`DIRECTOR.md` 第 8 节记录「换文字就能复用」的画面。每做完一段回来填；`vd check` 会列出来；**关卡 ④ 交成片时把候选一起交给用户**，用户决定哪些提交到 hyperframes（按 hyperframes 仓库 `dykit-storyboard` 技能的新组件流程：测试 + 5 主题对比图 + 用户确认）。
