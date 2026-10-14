@@ -2,7 +2,6 @@
 手机 Edge 运行时开放 localabstract:chrome_devtools_remote，经 adb forward 用 CDP 驱动。"""
 import json
 import time
-import urllib.request
 
 import websocket
 
@@ -34,8 +33,20 @@ def copy_steps(html, chunk=CHUNK):
     return steps
 
 
-def _url(path):
-    return f"http://127.0.0.1:{LOCAL_PORT}{path}"
+def _connect(path):
+    # 本机端口不走代理（环境里有 http_proxy）
+    return websocket.create_connection(f"ws://127.0.0.1:{LOCAL_PORT}{path}", timeout=60,
+                                       suppress_origin=True, http_no_proxy=["127.0.0.1"])
+
+
+def _browser_call(method, params):
+    """手机 Edge 不支持 /json/new，标签页用浏览器级的 Target.* 命令开关。"""
+    ws = _connect("/devtools/browser")
+    try:
+        ws.send(json.dumps({"id": 1, "method": method, "params": params}))
+        return json.loads(ws.recv()).get("result", {})
+    finally:
+        ws.close()
 
 
 def _open_edge_tab():
@@ -48,8 +59,10 @@ def _open_edge_tab():
     else:
         fail("手机 Edge 没有开放调试接口：确认手机装了 Edge 且「USB 调试」已开")
     d.adb_device.forward(f"tcp:{LOCAL_PORT}", DEVTOOLS_SOCKET)
-    req = urllib.request.Request(_url("/json/new?about:blank"), method="PUT")
-    return json.load(urllib.request.urlopen(req, timeout=10))
+    target_id = _browser_call("Target.createTarget", {"url": "about:blank"}).get("targetId")
+    if not target_id:
+        fail("手机 Edge 新开标签页失败")
+    return target_id
 
 
 def _evaluate(ws, expr, msg_id):
@@ -62,8 +75,8 @@ def _evaluate(ws, expr, msg_id):
 
 
 def paste_html(html, back_to, focus):
-    target = _open_edge_tab()
-    ws = websocket.create_connection(target["webSocketDebuggerUrl"], timeout=60, suppress_origin=True)
+    target_id = _open_edge_tab()
+    ws = _connect(f"/devtools/page/{target_id}")
     try:
         copied = None
         for i, expr in enumerate(copy_steps(html), start=1):
@@ -72,8 +85,7 @@ def paste_html(html, back_to, focus):
             fail("手机 Edge 复制富文本失败（execCommand('copy') 返回 false）")
     finally:
         ws.close()
-        # /json/close 返回纯文本，不做 JSON 解析
-        urllib.request.urlopen(_url(f"/json/close/{target['id']}"), timeout=10).read()
+        _browser_call("Target.closeTarget", {"targetId": target_id})
     log(f"已复制 {len(html)} 字符的富文本")
     device().shell(f"monkey -p {back_to} -c android.intent.category.LAUNCHER 1")
     time.sleep(2)
