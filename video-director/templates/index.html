@@ -10,6 +10,8 @@
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 1080px; height: 1920px; overflow: hidden; }
       #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+      /* 字体只在这里写名字；子画面一律用 var(--vd-sans / --vd-serif / --vd-mono)（hyperframes lint 看不到跨文件的 @font-face） */
+      :root { --vd-sans: "Noto Sans SC Variable", sans-serif; --vd-serif: "Noto Serif SC Variable", serif; --vd-mono: "JetBrains Mono", monospace; }
       /* 手写：全片背景、贯穿元素的样式 */
     </style>
   </head>
