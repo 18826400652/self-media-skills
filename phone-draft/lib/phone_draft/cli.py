@@ -33,8 +33,12 @@ def cmd_run(step, payload=None):
     if not os.path.isfile(step):
         print(f"✗ 步骤脚本不存在：{step}")
         raise SystemExit(1)
-    # 必须在步骤脚本 import phone_draft.core 之前设好，core 导入时读取载荷
     os.environ["PD_PAYLOAD"] = os.path.abspath(payload) if payload else ""
+    # `python -m phone_draft.cli` 启动时包已导入、PAYLOAD 已读过（当时还没有载荷）：
+    # 原地刷新同一个字典，步骤脚本 `from phone_draft import PAYLOAD` 拿到的就是本次载荷
+    from .core import PAYLOAD, load_payload
+    PAYLOAD.clear()
+    PAYLOAD.update(load_payload())
     ensure_connected()
     runpy.run_path(step, run_name="__main__")
 

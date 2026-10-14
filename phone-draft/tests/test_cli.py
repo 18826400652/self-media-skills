@@ -40,3 +40,17 @@ def test_public_api_exports():
     import phone_draft
     for name in ["PAYLOAD", "read_copy", "tap_text", "paste_html", "push_media", "clean_media", "check_readback"]:
         assert hasattr(phone_draft, name)
+
+
+def test_run_step_sees_payload_through_package_import(monkeypatch, tmp_path):
+    """phone_draft 包在 cli 启动时已被导入，步骤脚本拿到的 PAYLOAD 仍要是本次的载荷。"""
+    import phone_draft
+    payload = tmp_path / "p.json"
+    payload.write_text('{"title": "本次"}', encoding="utf-8")
+    out = tmp_path / "out.txt"
+    step = tmp_path / "step.py"
+    step.write_text(f"from phone_draft import PAYLOAD\nopen({str(out)!r}, 'w', encoding='utf-8').write(PAYLOAD['title'])\n")
+    monkeypatch.setattr(cli, "ensure_connected", lambda: "serial")
+    cli.main(["run", str(step), str(payload)])
+    assert out.read_text(encoding="utf-8") == "本次"
+    assert phone_draft.PAYLOAD is phone_draft.core.PAYLOAD
