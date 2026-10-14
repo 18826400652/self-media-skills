@@ -6,7 +6,7 @@ import time
 from .apps import load_app
 from .core import fail, log
 from .device import device, type_text, ui_texts, fail_with_ui
-from .rec_logic import answer_done, content_labels, dnd_on, rec_info, same_text, type_plan
+from .rec_logic import answer_done, content_labels, dnd_on, rec_info, same_text, type_plan, was_sent
 from .recorder import Recorder, finish_video
 
 USAGE = "用法：pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout 秒]"
@@ -16,6 +16,7 @@ TYPE_GAP = 0.12
 BEFORE_SEND = 0.8
 TAIL = 2           # 秒：回答结束后多录一会
 POLL = 1
+SEND_CHECK = 5     # 秒：发送后输入框要在这么久内清空
 
 
 def parse_args(args):
@@ -49,6 +50,16 @@ def _type(prompt):
         else:
             type_text(step)
         time.sleep(TYPE_GAP)
+
+
+def _check_sent(app, rec, prompt, mkv):
+    deadline = time.time() + SEND_CHECK
+    while time.time() < deadline:
+        time.sleep(0.5)
+        if was_sent(app.input_text(), prompt):
+            return
+    rec.stop()
+    fail_with_ui(f"点了发送，但提问还在输入框里，没发出去（原始录屏留在 {mkv}）")
 
 
 def _wait_answer(app, rec, baseline, prompt, sent, timeout, mkv):
@@ -89,6 +100,7 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
     baseline = before_typing + _labels()
     marks["sent"] = rec.now()
     mod.send()
+    _check_sent(mod, rec, text, mkv)
     _wait_answer(mod, rec, baseline, text, marks["sent"], timeout, mkv)
     marks["done"] = rec.now()
     page = _labels()

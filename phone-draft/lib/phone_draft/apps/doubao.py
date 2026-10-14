@@ -16,8 +16,9 @@ EMPTY_LABELS = {"新对话", "内容由 AI 生成", "打电话", "视频通话",
                 "发消息或按住说话...", "发消息..."}
 
 
-def unexpected_labels(labels):
-    return [t for t in labels if t not in EMPTY_LABELS]
+def unexpected_labels(labels, input_text=""):
+    """input_text：输入框里上次没发出去的文字，接下来会清空，不算对话内容。"""
+    return [t for t in labels if t not in EMPTY_LABELS and t != input_text]
 
 
 def _bounds(sel):
@@ -32,6 +33,13 @@ def closest_right(anchor, candidates):
             if best is None or b["left"] < candidates[best]["left"]:
                 best = i
     return best
+
+
+def send_button(box, candidates):
+    """输入框右边同一行里最靠下的图标：两行以上时上面多出一个「展开全屏」，发送键在下面。"""
+    right = [i for i, b in enumerate(candidates)
+             if b["left"] >= box["right"] - 5 and b["top"] < box["bottom"] and b["bottom"] > box["top"]]
+    return max(right, key=lambda i: candidates[i]["bottom"]) if right else None
 
 
 def _right_of(anchor, class_name):
@@ -61,7 +69,7 @@ def open_new_chat():
         fail_with_ui("找不到侧边栏的「新对话」按钮")
     new_chat.click()
     time.sleep(2)
-    extra = unexpected_labels(content_labels(ui_texts()))
+    extra = unexpected_labels(content_labels(ui_texts()), input_text())
     if extra:
         fail_with_ui(f"豆包新对话里有不认识的内容，为免录到私人对话已停下：{short_labels(extra)}")
 
@@ -100,7 +108,9 @@ def input_text():
 
 def send():
     box = device()(className=EDIT)
-    btn = _right_of(_bounds(box), IMAGE)
-    if btn is None:
+    sel = device()(className=IMAGE, clickable=True)
+    views = [sel[i] for i in range(sel.count)]
+    i = send_button(_bounds(box), [_bounds(v) for v in views])
+    if i is None:
         fail_with_ui("找不到豆包的发送键")
-    btn.click()
+    views[i].click()

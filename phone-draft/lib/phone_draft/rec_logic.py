@@ -46,6 +46,11 @@ def answer_done(history, baseline, prompt, marker_ok=True, stable=3):
     return bool(set(last) - set(baseline) - {prompt})
 
 
+def was_sent(input_now, prompt):
+    """发送后输入框不再是这段提问（清空或回到提示文字），才算发出去了。"""
+    return not same_text(input_now, prompt)
+
+
 def chip_on(rgb):
     r, _g, b = rgb[:3]
     return b - r >= 10

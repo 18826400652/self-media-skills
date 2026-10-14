@@ -86,3 +86,12 @@ def test_rec_info_rounds_and_labels_phone():
     info = rec_info({"typed": 2.0412, "sent": 8.0805, "done": 17.9642}, "deepseek", False, False)
     assert info == {"seconds": 9.88, "pastedAt": 2.04, "sentAt": 8.08, "doneAt": 17.96, "viewport": [1080, 1920],
                     "app": "deepseek", "device": "phone", "think": False, "search": False}
+
+
+from phone_draft.rec_logic import was_sent
+
+
+def test_was_sent_when_input_no_longer_holds_prompt():
+    assert was_sent("", "第一行\n第二行")
+    assert was_sent("发消息或按住说话...", "第一行\n第二行")
+    assert not was_sent("第一行 第二行", "第一行\n第二行")

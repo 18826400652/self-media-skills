@@ -55,3 +55,18 @@ def test_closest_right_picks_nearest_in_same_row():
 def test_unexpected_labels_error_is_short():
     long = "先懂孩子，再教孩子\n" + "很长的私人内容" * 50
     assert len(doubao.short_labels([long, "豆包"])) < 80
+
+
+def test_send_button_is_lowest_icon_right_of_input():
+    box = {"left": 33, "right": 925, "top": 1121, "bottom": 1459}
+    expand = {"left": 925, "right": 1047, "top": 1121, "bottom": 1271}
+    send = {"left": 925, "right": 1047, "top": 1318, "bottom": 1473}
+    assert doubao.send_button(box, [expand, send]) == 1
+    assert doubao.send_button(box, [send]) == 0
+    assert doubao.send_button(box, []) is None
+
+
+def test_unexpected_labels_ignores_leftover_input_text():
+    labels = ["新对话", "打电话", "用版本二，按阿杰的反应再改一版"]
+    assert doubao.unexpected_labels(labels, input_text="用版本二，按阿杰的反应再改一版") == []
+    assert doubao.unexpected_labels(labels) == ["用版本二，按阿杰的反应再改一版"]
