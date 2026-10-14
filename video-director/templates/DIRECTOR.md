@@ -15,6 +15,7 @@
 ## 2. 分段
 
 按意思分段（不是一句一帧）。每段：包含哪几句、起止时间、画面、每个动作的 @词、和下一段怎么连（由哪个元素连起来）。
+功能性的画面（步骤、对比、数字、手机录屏框……）先查 dykit 组件库（hyperframes 仓库的 `catalog/catalog.json`），有就写「用组件 dy-…」，机器块里给这段写 `component` 和 `vars`。
 
 ### 段 1 · （名字）（第 ? 句）
 
@@ -53,11 +54,23 @@
 
 做哪几段、到哪个词结束、为什么（要包含第一个重拍和至少一次转场）：（待填）
 
+## 8. 组件候选
+
+做完每一段都回来填：这段里有没有「换文字就能复用」的画面？有就写一行，交成片时一起给用户决定要不要提交到 hyperframes（dykit）。没有就保留「无」。
+
+| 画面 | 建议组件名 | 变量 | 来源段 |
+|---|---|---|---|
+| 无 | | | |
+
 ```json vd
 {
   "kicker": "AI 概念一分钟 · 第 1 期",
   "palette": { "bg": "#F1ECE2", "ink": "#1C1A17", "muted": "#6E675C", "accent": "#FFD84D", "alert": "#D2372A" },
-  "segments": [{ "id": "seg-01-hook", "lines": [1, 2] }],
+  "fonts": { "title": "serif", "body": "sans" },
+  "segments": [
+    { "id": "seg-01-hook", "lines": [1, 2] },
+    { "id": "seg-02-steps", "lines": [3, 3], "component": "dy-scene-steps", "vars": { "title": "……", "steps": "第一步::说明|第二步::说明" } }
+  ],
   "sfx": [{ "name": "pop", "at": "@词", "volume": 0.6 }],
   "music": { "intent": "light curious lo-fi explainer, clear steady beat", "drop": "@词", "volume": 0.4 },
   "ending": { "next": "下一期：……", "question": "……？", "cta": "评论区说说 ↓", "hold": 2.0 },

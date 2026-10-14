@@ -11,7 +11,7 @@ const VD = {
   ending: { next: "下一期", question: "你被编过什么？", cta: "评论区说说 ↓", hold: 2 },
   sample: { segments: ["seg-01-hook"], end: "@根本没这条", tail: 0.9 },
 };
-const SECTIONS = ["## 1. 视觉方案", "## 2. 分段", "## 3. 导演规则自检", "## 4. 音乐", "## 5. 账号固定元素", "## 6. 新增内容", "## 7. 样片范围"];
+const SECTIONS = ["## 1. 视觉方案", "## 2. 分段", "## 3. 导演规则自检", "## 4. 音乐", "## 5. 账号固定元素", "## 6. 新增内容", "## 7. 样片范围", "## 8. 组件候选"];
 const doc = (vd = VD, extra = "说到 @编一套 时盖章；第二次说到 @资料#2，再到「@根本没这条」。") =>
   ["# 导演脚本", ...SECTIONS.flatMap((s) => [s, extra]), "```json vd", JSON.stringify(vd, null, 2), "```"].join("\n\n");
 
@@ -59,4 +59,27 @@ test("validateDirector：sample.segments 必须是已有的段", () => {
 test("parseDirector：反引号里的 @词 是说明文字，不算锚点", () => {
   const p = parseDirector(doc(VD, "写法：动作写成 `@词`，多次出现写 `@词#2`；本段 @编一套。"));
   assert.deepEqual(p.tokens.map((t) => t.text), ["编一套", "根本没这条"]);
+});
+
+test("分段可以直接用 dykit 组件：component 名必须是 dy-…，vars 必须是对象", () => {
+  const ok = parseDirector(doc({ ...VD, segments: [{ id: "seg-01-hook", lines: [1, 2], component: "dy-scene-title", vars: { title: "x" } }, { id: "seg-02-why", lines: [3, 3] }] }));
+  assert.deepEqual(ok.errors, []);
+  const bad = parseDirector(doc({ ...VD, segments: [{ id: "a", lines: [1, 3], component: "scene-title", vars: "x" }, { id: "b", lines: [4, 4], vars: ["x"] }] }));
+  const e = bad.errors.join("\n");
+  assert.match(e, /segments\[0\]\.component 必须是 dykit 组件名（dy-开头）/);
+  assert.match(e, /segments\[0\]\.vars 必须是对象/);
+  assert.match(e, /segments\[1\]\.vars 必须是对象/);
+});
+
+test("组件候选：读第 8 节的表格，跳过表头、分隔行和「无」", () => {
+  const table = ["| 画面 | 建议组件名 | 变量 | 来源段 |", "|---|---|---|---|", "| 文件被盖红章 | dy-stamp | text, color | seg-01-hook |", "| 无 | | | |"].join("\n");
+  const md = doc().replace("## 8. 组件候选\n\n", `## 8. 组件候选\n\n${table}\n\n`);
+  assert.deepEqual(parseDirector(md).candidates, [{ scene: "文件被盖红章", name: "dy-stamp", vars: "text, color", from: "seg-01-hook" }]);
+  assert.deepEqual(parseDirector(doc()).candidates, []);
+});
+
+test("组件候选：没有第 8 节时报缺章节，候选为空", () => {
+  const p = parseDirector(doc().replace("## 8. 组件候选", "## 8. 其他"));
+  assert.match(p.errors.join(), /缺少章节「## 8. 组件候选」/);
+  assert.deepEqual(p.candidates, []);
 });

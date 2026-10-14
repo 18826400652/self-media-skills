@@ -1,9 +1,10 @@
 // 解析 DIRECTOR.md：给人看的正文 + 一个 ```json vd 机器块
-export const SECTIONS = ["## 1. 视觉方案", "## 2. 分段", "## 3. 导演规则自检", "## 4. 音乐", "## 5. 账号固定元素", "## 6. 新增内容", "## 7. 样片范围"];
+export const SECTIONS = ["## 1. 视觉方案", "## 2. 分段", "## 3. 导演规则自检", "## 4. 音乐", "## 5. 账号固定元素", "## 6. 新增内容", "## 7. 样片范围", "## 8. 组件候选"];
 const BLOCK = /```json vd\s*\n([\s\S]*?)\n```/g;
 // @词：遇到空白、@、#、中英文标点、引号、括号即结束；可带 #序号
 const TOKEN = /@([^\s@#，。、：；！？,.;:!?"'`「」『』“”‘’（）()\[\]【】<>]+)(?:#(\d+))?/g;
 const HEX = /^#[0-9A-Fa-f]{6}$/;
+const COMPONENT = /^dy-[a-z0-9-]+$/;
 
 export function parseDirector(md) {
   const errors = [];
@@ -27,7 +28,22 @@ export function parseDirector(md) {
     const key = `${t.text}#${t.nth}`;
     if (!seen.has(key)) { seen.add(key); tokens.push(t); }
   }
-  return { vd, tokens, errors };
+  return { vd, tokens, errors, candidates: parseCandidates(md) };
+}
+
+/** 第 8 节「组件候选」的表格：| 画面 | 建议组件名 | 变量 | 来源段 |，跳过表头、分隔行和「无」 */
+function parseCandidates(md) {
+  const at = md.indexOf("## 8. 组件候选");
+  if (at < 0) return [];
+  const out = [];
+  for (const line of md.slice(at).split("\n").slice(1)) {
+    if (line.startsWith("## ") || line.startsWith("```")) break;
+    if (!line.trim().startsWith("|")) continue;
+    const [scene = "", name = "", vars = "", from = ""] = line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+    if (!scene || scene === "画面" || scene === "无" || /^:?-+:?$/.test(scene)) continue;
+    out.push({ scene, name, vars, from });
+  }
+  return out;
 }
 
 function checkVd(vd) {
@@ -35,6 +51,10 @@ function checkVd(vd) {
   for (const k of ["bg", "ink", "muted", "accent", "alert"]) if (!HEX.test(vd.palette?.[k] ?? "")) e.push(`palette.${k} 必须是 #RRGGBB`);
   if (!vd.kicker) e.push("缺少 kicker（栏目标签文字）");
   if (!Array.isArray(vd.segments) || !vd.segments.length) e.push("segments 不能为空");
+  (Array.isArray(vd.segments) ? vd.segments : []).forEach((s, i) => {
+    if (s.component !== undefined && !COMPONENT.test(s.component)) e.push(`segments[${i}].component 必须是 dykit 组件名（dy-开头）`);
+    if (s.vars !== undefined && (typeof s.vars !== "object" || s.vars === null || Array.isArray(s.vars))) e.push(`segments[${i}].vars 必须是对象`);
+  });
   (vd.sfx ?? []).forEach((s, i) => { if (!/^@\S/.test(s.at ?? "")) e.push(`sfx[${i}].at 必须写成 @词`); });
   if (vd.music && !/^@\S/.test(vd.music.drop ?? "")) e.push("music.drop 必须写成 @词（或把 music 写成 null）");
   for (const k of ["next", "question", "cta"]) if (!vd.ending?.[k]) e.push(`ending.${k} 不能为空`);
