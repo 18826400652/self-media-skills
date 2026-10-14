@@ -5,7 +5,7 @@ import pytest
 from phone_draft import core
 
 
-@pytest.mark.parametrize("text", ["发布", "发表", "群发", "立即发布", "发布笔记", " 发布 ", "定时发布"])
+@pytest.mark.parametrize("text", ["发布", "发表", "群发", "立即发布", "发布笔记", " 发布 ", "定时发布", "发作品", "限时日常", " 限时日常"])
 def test_publish_buttons_are_forbidden(text):
     assert core.is_forbidden(text)
 

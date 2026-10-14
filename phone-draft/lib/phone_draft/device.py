@@ -68,6 +68,17 @@ def tap_text(text, contains=False, timeout=10):
     sel.click()
 
 
+def tap_desc(desc, contains=False, timeout=10):
+    """按无障碍描述点击（抖音等 App 的 resource-id 是混淆过的，描述更稳定）。"""
+    sel = device()(descriptionContains=desc) if contains else device()(description=desc)
+    if not sel.wait(timeout=timeout):
+        fail_with_ui(f"找不到描述为「{desc}」的控件")
+    actual = sel.info.get("contentDescription") or desc
+    if is_forbidden(actual):
+        fail(f"拒绝点击「{actual}」：只存草稿，发布由你在手机上确认后操作")
+    sel.click()
+
+
 def tap_id(resource_id, timeout=10):
     sel = device()(resourceId=resource_id)
     if not sel.wait(timeout=timeout):

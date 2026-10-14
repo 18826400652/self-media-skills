@@ -7,7 +7,7 @@ import tempfile
 from copy_format import CopyFormatError, parse_copy
 
 OUT_DIR = os.path.join(os.environ.get("TMPDIR") or tempfile.gettempdir(), "phone-draft")
-FORBIDDEN_WORDS = ("发表", "发布", "群发")
+FORBIDDEN_WORDS = ("发表", "发布", "群发", "发作品", "日常")  # 抖音的发布按钮叫「发作品」，「限时日常」也是直接发出
 DRAFT_WORD = "草稿"
 
 
@@ -29,7 +29,7 @@ def fail(msg):
 
 
 def is_forbidden(text):
-    """只存草稿：含发表 / 发布 / 群发、又不是「草稿」类的按钮一律不点。"""
+    """只存草稿：含发表 / 发布 / 群发 / 发作品 / 日常、又不是「草稿」类的按钮一律不点。"""
     t = text.strip()
     return any(w in t for w in FORBIDDEN_WORDS) and DRAFT_WORD not in t
 
