@@ -89,8 +89,7 @@ def fill_publish_page():
         fail(f"标题 {len(title)} 字，超过抖音上限 {TITLE_MAX}：{title}")
     fill_field(0, title, "标题")
     fill_field(1, description(), "作品描述")
-    device().press("back")  # 收起键盘
-    time.sleep(1)
+    hide_keyboard()
     shot("douyin-filled")
     log(f"标题：{title}｜话题 {len(COPY['topics'])} 个")
 
@@ -108,10 +107,11 @@ def save_draft():
     wait_text("首页", what="抖音首页")
 
 
-push_media([PAYLOAD["video"]])
+REMOTES = push_media([PAYLOAD["video"]])
 open_home()
 before = draft_count()
 open_album()
+check_newest(REMOTES)
 pick_video()
 fill_publish_page()
 save_draft()

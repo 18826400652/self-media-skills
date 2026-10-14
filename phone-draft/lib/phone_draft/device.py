@@ -1,4 +1,5 @@
 """uiautomator2 操作：按文字找控件、等待、输入、截图。失败时留下截图和界面文字。"""
+import atexit
 import os
 import time
 import xml.etree.ElementTree as ET
@@ -7,7 +8,7 @@ import uiautomator2 as u2
 
 from .connect import DeviceUnavailable, ensure_connected
 from .core import OUT_DIR, fail, is_forbidden, log
-from .screen import screen_state
+from .screen import keyboard_shown, longer_timeout, screen_state
 
 APP_START_WAIT = 3
 _device = None
@@ -22,7 +23,18 @@ def device():
             fail(str(err))
         _device = u2.connect(serial)
         ensure_screen_ready()
+        keep_awake(_device)
     return _device
+
+
+def keep_awake(d):
+    """运行期间临时调长自动熄屏时间，退出时（含失败退出）改回原值。"""
+    current = d.shell("settings get system screen_off_timeout").output.strip()
+    longer = longer_timeout(current)
+    if longer is None:
+        return
+    d.shell(f"settings put system screen_off_timeout {longer}")
+    atexit.register(lambda: d.shell(f"settings put system screen_off_timeout {current}"))
 
 
 def _state(d):
@@ -101,6 +113,13 @@ def dismiss(texts, rounds=2):
 
 def type_text(text):
     device().send_keys(text, clear=False)
+
+
+def hide_keyboard():
+    """键盘弹着时按返回收起；没弹时不按，免得退出编辑页。"""
+    if keyboard_shown(device().shell("dumpsys input_method").output):
+        device().press("back")
+        time.sleep(1)
 
 
 def paste():

@@ -32,6 +32,8 @@ pd run <步骤.py> [载荷.json]   # 执行一个平台的手机发草稿步骤
 - 失败时停在原地，不自动后退或放弃；截图和界面文字存到 `$TMPDIR/phone-draft/`（未设时 `/tmp/phone-draft/`），输出写清卡在哪一步。
 - App 里有上次没编辑完的内容（如抖音「继续编辑作品吗？」）时点「存草稿」保留，不替人丢弃。
 - 每一步都要核对：填进去的标题、正文读回比对（`check_readback`，被截断会明确报出来）；存草稿后看草稿箱数量有没有加一。
+- 从相册选文件前用 `check_newest` 核对相册最新的几项就是刚推的文件：运行中进来新照片（截图、微信自动保存）会让格子错位，选到别人的照片，这时停下不选。
+- 运行期间临时把自动熄屏调到 30 分钟（等视频导入、图片上传时没有触摸），退出时改回原值。
 - 视频、图片推到手机 `DCIM/phone-draft/`，存草稿成功后清理（三个 App 存草稿时都会把文件复制进自己的草稿箱，实测删掉相册文件后草稿仍可播放）。
 
 ## 前提
@@ -57,14 +59,15 @@ pd run <步骤.py> [载荷.json]   # 执行一个平台的手机发草稿步骤
 | `tap_text(文字)` / `tap_desc(描述)` / `tap_id(id)` | 按文字 / 无障碍描述 / resource-id 点击，带「只存草稿」保护 |
 | `dismiss([文字…])` | 依次关掉功能介绍类弹窗 |
 | `type_text(文字)` | 向当前焦点输入（支持中文和 emoji） |
+| `hide_keyboard()` | 键盘弹着时按返回收起；没弹时不按（直接按返回会退出编辑页） |
 | `check_readback(期望, 实际, 名称)` | 读回比对，被截断时明确报出 |
 | `paste()` | 粘贴（keyevent 279） |
 | `paste_html(html, back_to, focus)` | 手机 Edge 复制富文本 → 切回 `back_to` 包 → `focus()` → 光标移到末尾 → 粘贴；大内容自动缩图、分段 |
-| `push_media([路径…])` / `clean_media()` | 按顺序推进相册（最新的排在相册最前）/ 清理 |
+| `push_media([路径…])` / `check_newest(推上去的路径)` / `clean_media()` | 按顺序推进相册（最新的排在相册最前，返回手机上的路径）/ 选格子前核对相册最新几项就是它们 / 清理 |
 | `ui_texts()` | 界面上所有文字 / 描述 / id / 位置 |
 | `shot(名字)` / `fail_with_ui(说明)` / `log()` / `fail()` | 截图、留现场后退出、输出进度、出错退出 |
 
-`phone_draft.html_parts` 还有 `split_images`（按图片切开 HTML）、`save_data_uri`（内联图写成文件），给只能从相册插图的编辑器用。
+`phone_draft.html_parts` 还有 `split_images`（按图片切开 HTML）、`save_data_uri`（内联图写成文件），给只能从相册插图的编辑器用；`text_length` / `body_complete` 用 App 显示的字数核对正文有没有粘贴全。
 
 ## 踩过的坑
 

@@ -3,6 +3,7 @@ import base64
 import io
 import os
 import re
+from html import unescape
 from html.parser import HTMLParser
 
 CLIP_LIMIT = 300_000      # 一次粘贴的 HTML 字符数上限：Android 剪贴板（binder）约 1MB，HTML 按 UTF-16 存且另附纯文本
@@ -128,3 +129,16 @@ def save_data_uri(uri, path_base):
     with open(path, "wb") as f:
         f.write(base64.b64decode(m.group(2)))
     return path
+
+
+BODY_MIN_RATIO = 0.6  # App 显示的字数低于正文字数的这个比例，就当粘贴丢了内容（各 App 计数规则略有不同，留余量）
+TAG = re.compile(r"<[^>]+>")
+
+
+def text_length(html):
+    """正文的字数（去掉标签和空白），用来核对粘贴后 App 显示的字数。"""
+    return len(re.sub(r"\s+", "", unescape(TAG.sub("", html))))
+
+
+def body_complete(count, expected):
+    return count is None or count >= expected * BODY_MIN_RATIO
