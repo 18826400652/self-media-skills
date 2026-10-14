@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseResolved, pickBeat, resolveMusic } from "../scripts/lib/music.mjs";
+import { addMusic, alignMusic, parseResolved, pickBeat, resolveMusic } from "../scripts/lib/music.mjs";
 import { project } from "./helpers.mjs";
 
 const BEATS = [{ time: 0.007, strength: 1 }, { time: 14.0, strength: 0.6 }, { time: 16.596, strength: 0.857 }, { time: 17.0, strength: 0.857 }, { time: 29.5, strength: 1 }];
@@ -31,4 +31,33 @@ test("resolveMusic：已有 assets/audio/bgm.* 时不再调用曲库", () => {
   const dir = project({ "assets/audio/bgm.mp3": "x" });
   const never = () => { throw new Error("不应调用"); };
   assert.equal(resolveMusic(dir, "lo-fi", "0.8.143", never), "assets/audio/bgm.mp3");
+});
+
+test("alignMusic：beats 命令成功但没写出节拍文件时，退回从头播放（返回 0），不抛错", () => {
+  const dir = project({ "assets/audio/bgm.wav": "x" });
+  const ok = () => ({ status: 0, stdout: "", stderr: "" });
+  assert.equal(alignMusic(dir, { src: "assets/audio/bgm.wav", drop: 10, duration: 20 }, "0.8.143", ok), 0);
+});
+
+test("addMusic：对位或避让失败时去掉配乐继续出片，并给出警告", () => {
+  const calls = [];
+  const deps = {
+    resolveMusic: () => "assets/audio/bgm.wav",
+    alignMusic: () => 1.5,
+    carve: () => { throw new Error("人声避让失败：boom"); },
+    assemble: (music) => calls.push(music),
+  };
+  const warns = [];
+  const r = addMusic({ intent: "x", drop: 10, volume: 0.4 }, deps, (m) => warns.push(m));
+  assert.equal(r, null);
+  assert.equal(calls.at(-1), null, "最后一次总装必须不带配乐");
+  assert.match(warns.join("\n"), /人声避让失败：boom/);
+});
+
+test("addMusic：一切正常时返回带 mediaStart 的配乐，最后一次总装带配乐", () => {
+  const calls = [];
+  const deps = { resolveMusic: () => "assets/audio/bgm.wav", alignMusic: () => 1.5, carve: () => {}, assemble: (m) => calls.push(m) };
+  const r = addMusic({ intent: "x", drop: 10, volume: 0.4 }, deps, () => {});
+  assert.deepEqual(r, { src: "assets/audio/bgm.wav", mediaStart: 1.5, volume: 0.4 });
+  assert.deepEqual(calls.at(-1), r);
 });

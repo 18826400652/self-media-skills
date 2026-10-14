@@ -36,7 +36,14 @@ export function resolveMusic(dir, intent, hfVersion, runFn = run) {
 export function alignMusic(dir, { src, drop, duration }, hfVersion, runFn = run) {
   const r = runFn("npx", ["--yes", `hyperframes@${hfVersion}`, "beats", ".", "--json"], { cwd: dir });
   if (r.status !== 0) { console.warn(`⚠ 节拍分析失败，配乐从头播放：${r.stderr.trim()}`); return 0; }
-  const beats = JSON.parse(readFileSync(join(dir, "beats", `${src}.json`), "utf8")).beats;
+  let beats;
+  try {
+    beats = JSON.parse(readFileSync(join(dir, "beats", `${src}.json`), "utf8")).beats;
+    if (!Array.isArray(beats)) throw new Error("节拍文件里没有 beats 数组");
+  } catch (err) {
+    console.warn(`⚠ 读不到节拍结果，配乐从头播放：${err.message}`);
+    return 0;
+  }
   const trackLen = Number(runFn("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", join(dir, src)]).stdout);
   const pick = pickBeat(beats, drop, duration, trackLen);
   if (!pick) { console.warn(`⚠ 配乐 ${trackLen.toFixed(1)} 秒，找不到能让重拍落在 ${drop} 秒的节拍，配乐从头播放`); return 0; }
@@ -51,4 +58,26 @@ export function carve(dir, hfVersion, runFn = run) {
   }
   const c = runFn("node", [CARVE, "--comp", "index.html", "--bed", "music", "--voice", "vo"], { cwd: dir });
   if (c.status !== 0) throw new Error(`人声避让失败：${c.stderr || c.stdout}`);
+}
+
+/**
+ * 配乐整步：取曲 → 带配乐总装 → 对位 → 再总装 → 人声避让。任何一步失败都去掉配乐、警告、继续出片。
+ * deps：resolveMusic() → src|null；alignMusic(src) → mediaStart；carve()；assemble(music|null)
+ * 返回最终用上的配乐，或 null
+ */
+export function addMusic({ volume }, deps, warn = console.warn) {
+  const src = deps.resolveMusic();
+  if (!src) return null;
+  const music = { src, mediaStart: 0, volume: volume ?? 0.4 };
+  try {
+    deps.assemble(music);
+    music.mediaStart = deps.alignMusic(src);
+    deps.assemble(music);
+    deps.carve();
+    return music;
+  } catch (err) {
+    warn(`⚠ 配乐处理失败，本次不加配乐：${err.message}`);
+    deps.assemble(null);
+    return null;
+  }
 }

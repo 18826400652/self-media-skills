@@ -10,7 +10,7 @@ import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
-import { alignMusic, carve, resolveMusic } from "./lib/music.mjs";
+import { addMusic, alignMusic, carve, resolveMusic } from "./lib/music.mjs";
 import { run } from "./lib/run.mjs";
 
 const USAGE = "用法：vd build|cues|check <视频工程目录>";
@@ -44,14 +44,12 @@ const COMMANDS = {
     if (!existsSync(join(dir, "assets/gsap.min.js"))) cpSync(GSAP, join(dir, "assets/gsap.min.js"));
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {
-      const src = resolveMusic(dir, vd.music.intent, config.hfVersion);
-      if (src) {
-        const music = { src, mediaStart: 0, volume: vd.music.volume ?? 0.4 };
-        assemble(dir, built, config, { only, duration, music });
-        music.mediaStart = alignMusic(dir, { src, drop: built.cues[vd.music.drop.slice(1)], duration }, config.hfVersion);
-        assemble(dir, built, config, { only, duration, music });
-        carve(dir, config.hfVersion);
-      }
+      addMusic(vd.music, {
+        resolveMusic: () => resolveMusic(dir, vd.music.intent, config.hfVersion),
+        alignMusic: (src) => alignMusic(dir, { src, drop: built.cues[vd.music.drop.slice(1)], duration }, config.hfVersion),
+        carve: () => carve(dir, config.hfVersion),
+        assemble: (music) => assemble(dir, built, config, { only, duration, music }),
+      });
     }
     console.log(`✓ 总装完成：${sample ? `样片 ${only.join("、")}` : "整片"}，${duration}s`);
     return COMMANDS.check(dir, [], config);
