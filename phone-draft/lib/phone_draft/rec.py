@@ -19,7 +19,13 @@ POLL = 1
 SEND_CHECK = 5     # 秒：发送后输入框要在这么久内清空
 
 
+FLAGS = {"--think", "--search", "--timeout"}
+
+
 def parse_args(args):
+    unknown = [a for a in args if a.startswith("--") and a not in FLAGS]
+    if unknown:
+        fail(f"不认识的参数：{' '.join(unknown)}。{USAGE}")
     pos = [a for a in args if not a.startswith("--")]
     timeout = DEFAULT_TIMEOUT
     if "--timeout" in args:
@@ -37,6 +43,29 @@ def parse_args(args):
         fail(f"输出要是 .mp4：{out}")
     return {"app": app, "prompt": prompt, "out": out, "think": "--think" in args, "search": "--search" in args,
             "timeout": timeout}
+
+
+def read_prompt(path):
+    """统一换行符：Windows 写的文件是 \r\n，\r 会被当成字符打进输入框。"""
+    with open(path, encoding="utf-8", newline="") as f:
+        return f.read().replace("\r\n", "\n").replace("\r", "\n").strip()
+
+
+def _clipboard(d):
+    try:
+        return d.clipboard
+    except Exception:  # noqa: BLE001 —— 读不到就不恢复
+        return None
+
+
+def _restore_clipboard(d, saved):
+    """打字（uiautomator2 经剪贴板粘贴）和「复制」都会改剪贴板，录完放回用户原来复制的内容。"""
+    if saved is None:
+        return
+    try:
+        d.clipboard = saved
+    except Exception:  # noqa: BLE001
+        log("没能恢复手机剪贴板里原来的内容")
 
 
 def _labels():
@@ -124,12 +153,13 @@ def _write_outputs(out, mkv, marks, page, copied, app, think, search):
 
 def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT):
     mod = load_app(app)
-    text = open(prompt, encoding="utf-8").read().strip()
+    text = read_prompt(prompt)
     d = device()
     if not dnd_on(d.shell("settings get global zen_mode").output):
         fail("手机没开勿扰模式：录屏会录到弹出的通知。请先打开勿扰再录")
     mod.open_new_chat()               # 之后才开始录：侧边栏、历史对话不进画面
-    before = mod.current_toggles()    # 录完（包括中途失败）都改回用户原来的开关
+    before = mod.current_toggles()    # 录完（包括中途失败）都改回用户原来的开关和剪贴板
+    saved_clip = _clipboard(d)
     mkv = out[:-len(".mp4")] + ".raw.mkv"
     rec = Recorder(d.serial, mkv)
     try:
@@ -141,4 +171,5 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
     finally:
         rec.stop()
         _restore(mod, before)
+        _restore_clipboard(d, saved_clip)
     return _write_outputs(out, mkv, marks, page, copied, app, think, search)

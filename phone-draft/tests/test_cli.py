@@ -98,3 +98,17 @@ def test_rec_calls_record_with_parsed_args(monkeypatch, tmp_path):
     monkeypatch.setattr(rec, "record", lambda **kw: seen.update(kw) or {})
     cli.main(["rec", "doubao", str(p), str(tmp_path / "o.mp4")])
     assert seen["app"] == "doubao" and seen["think"] is False and seen["timeout"] == 300
+
+
+def test_rec_parse_args_rejects_unknown_flag(tmp_path, capsys):
+    p = tmp_path / "q.txt"
+    p.write_text("问", encoding="utf-8")
+    with pytest.raises(SystemExit):
+        rec.parse_args(["deepseek", str(p), str(tmp_path / "o.mp4"), "--serach"])
+    assert "--serach" in capsys.readouterr().out
+
+
+def test_read_prompt_normalizes_windows_line_endings(tmp_path):
+    p = tmp_path / "q.txt"
+    p.write_bytes("第一行\r\n第二行\r\n".encode("utf-8"))
+    assert rec.read_prompt(str(p)) == "第一行\n第二行"

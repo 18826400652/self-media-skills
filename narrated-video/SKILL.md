@@ -36,7 +36,7 @@ nv render <视频目录>                  # 6. 输出 <视频目录>/renders/<�
 
 | 步骤 | 做什么 |
 |---|---|
-| `nv rec <工程>/capture/assets/rec.mp4 --prompt 提问.txt --app deepseek\|doubao` | （可选，强烈推荐）在真手机的 AI App 里录真实操作：打字 → 发送 → 回答完，输出 1080×1920（裁掉状态栏，左右补 App 背景色）；同时输出用时（.json）和界面文字（.txt，DeepSeek 另附复制按钮拿到的完整回答，写进实测记录）。DeepSeek 默认关深度思考 / 智能搜索，要开加 `--think` / `--search`，录完恢复成原来的开关。录前手机解锁、开勿扰（没开会拒绝录）。调用 phone-draft 的 `pd rec`。没有手机时用 `--url <AI 网址>`（或 `--via browser` 录当前标签页）走浏览器：录前确认已登录、新对话、模型开关与实测一致、侧边栏收起 |
+| `nv rec <工程>/capture/assets/rec.mp4 --prompt 提问.txt --app deepseek\|doubao` | （可选，强烈推荐）在真手机的 AI App 里录真实操作：打字 → 发送 → 回答完，输出 1080×1920（裁掉状态栏，左右补 App 背景色）；同时输出用时（.json）和界面文字（.txt，DeepSeek 另附复制按钮拿到的完整回答，写进实测记录）。DeepSeek 默认关深度思考 / 智能搜索，要开加 `--think` / `--search`，录完恢复成原来的开关；回答特别长时加 `--timeout 秒`（默认 300）。录前手机解锁、开勿扰（没开会拒绝录）。调用 phone-draft 的 `pd rec`。没有手机时用 `--url <AI 网址>`（或 `--via browser` 录当前标签页）走浏览器：录前确认已登录、新对话、模型开关与实测一致、侧边栏收起 |
 | `nv rec-flow <输出.mp4> --steps 步骤.py --url <网址>` | 录「按步骤操作网页」的电脑横屏录屏（软件演示、多步向导），16:9，1920×1080。步骤脚本是 Python，可用 `click_text` / `click_css` / `type_into` / `wait_until` / `mark` / `shot`（见 `scripts/rec/flow.py` 开头）；等待时持续录帧，最高 15 帧/秒。输出 `.json` 里有每个 `mark` 在视频里的秒数，剪辑时用来快进等待段。在单独的浏览器窗口、单独的连接里录，不受同时在用这个浏览器的其他会话影响 |
 | `/faceless-explainer` | 建工程、写 BRIEF.md / STORYBOARD.md / frame.md、SCRIPT.md |
 | `nv hf-audio <工程>` | 用项目配置的 TTS 配音，带逐字时间（替代官方 TTS）。SCRIPT.md 每帧可写 `**情感:**`、`**重点词:**`。工程里有 `VOICE.md`（配音导演稿，写法见 `references/voice-direction.md`）且服务商是 seedaudio 时，按段整段生成再切回每帧；`--check` 只核对导演稿和口播是否一致，不生成 |

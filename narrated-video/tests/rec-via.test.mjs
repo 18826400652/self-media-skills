@@ -56,3 +56,10 @@ test("--app 和 --url 同时给：报错", () => {
   assert.equal(calls(dir), "");
   assert.match(r.stderr, /只能选一种/);
 });
+
+test("--timeout 传给 pd rec", () => {
+  const { dir, env } = setup();
+  const r = run([join(dir, "rec.mp4"), "--prompt", join(dir, "提问.txt"), "--app", "deepseek", "--timeout", "600"], env);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(calls(dir), /--timeout 600\n$/);
+});

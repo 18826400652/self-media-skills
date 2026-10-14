@@ -36,16 +36,21 @@ def test_record_restores_toggles_and_stops_recorder_on_failure(monkeypatch, tmp_
     prompt = tmp_path / "q.txt"
     prompt.write_text("问", encoding="utf-8")
     monkeypatch.setattr(rec, "load_app", lambda name: fake_app(calls))
-    monkeypatch.setattr(rec, "device", lambda: types.SimpleNamespace(
-        shell=lambda cmd: types.SimpleNamespace(output="1"), serial="s"))
+    phone = types.SimpleNamespace(shell=lambda cmd: types.SimpleNamespace(output="1"), serial="s", clipboard="用户复制的内容")
+
+    def typing(text):
+        phone.clipboard = text[-2:]  # uiautomator2 打字是经剪贴板粘贴的
+
+    monkeypatch.setattr(rec, "device", lambda: phone)
     monkeypatch.setattr(rec, "Recorder", lambda *a: recs.append(FakeRecorder()) or recs[-1])
     monkeypatch.setattr(rec, "_labels", lambda: [])
-    monkeypatch.setattr(rec, "_type", lambda text: None)
+    monkeypatch.setattr(rec, "_type", typing)
     monkeypatch.setattr(rec.time, "sleep", lambda s: None)
     with pytest.raises(SystemExit):
         rec.record("deepseek", str(prompt), str(tmp_path / "o.mp4"))
     assert calls == [(False, False), (True, True)]
     assert recs[0].stopped >= 1
+    assert phone.clipboard == "用户复制的内容"
 
 
 @pytest.mark.parametrize("mod, labels", [

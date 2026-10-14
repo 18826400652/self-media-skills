@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 用法：nv rec <输出.mp4> --prompt <文字文件> --app deepseek|doubao [--think] [--search]   （手机，推荐）
+// 用法：nv rec <输出.mp4> --prompt <文字文件> --app deepseek|doubao [--think] [--search] [--timeout 秒]   （手机，推荐）
 //       nv rec <输出.mp4> --prompt <文字文件> --url <网址> | --via browser [--input …] [--hide …] [--size 540x960]   （浏览器）
 //
 // 手机：调用 phone-draft 的 pd rec，在真手机的 AI App 里打字、发送、等回答结束并录屏（输出格式和浏览器版相同）。
@@ -19,15 +19,15 @@ import { SKILL_DIR, loadConfig } from "./lib/config.mjs";
 import { cdpEndpoint, encode } from "./lib/rec-common.mjs";
 
 function parseArgs(argv) {
-  const opts = { size: "540x960", input: "textarea", hide: "", url: "", app: "", via: "", think: false, search: false };
+  const opts = { size: "540x960", input: "textarea", hide: "", url: "", app: "", via: "", timeout: "", think: false, search: false };
   const rest = [];
   for (let i = 0; i < argv.length; i++) {
-    const m = argv[i].match(/^--(prompt|url|input|hide|size|app|via)$/);
+    const m = argv[i].match(/^--(prompt|url|input|hide|size|app|via|timeout)$/);
     if (m) opts[m[1]] = argv[++i];
     else if (argv[i] === "--think" || argv[i] === "--search") opts[argv[i].slice(2)] = true;
     else rest.push(argv[i]);
   }
-  const usage = "用法：nv rec <输出.mp4> --prompt <提问.txt> --app deepseek|doubao [--think] [--search]（手机）\n" +
+  const usage = "用法：nv rec <输出.mp4> --prompt <提问.txt> --app deepseek|doubao [--think] [--search] [--timeout 秒]（手机）\n" +
     "      nv rec <输出.mp4> --prompt <提问.txt> --url <网址> | --via browser（浏览器）";
   if (!rest[0] || !opts.prompt) throw new Error(usage);
   const browser = Boolean(opts.url) || opts.via === "browser";
@@ -41,7 +41,8 @@ function parseArgs(argv) {
 const EXIT_NO_DEVICE = 3;
 
 function recPhone(o) {
-  const args = ["rec", o.app, o.prompt, o.out, ...(o.think ? ["--think"] : []), ...(o.search ? ["--search"] : [])];
+  const args = ["rec", o.app, o.prompt, o.out, ...(o.think ? ["--think"] : []), ...(o.search ? ["--search"] : []),
+    ...(o.timeout ? ["--timeout", o.timeout] : [])];
   const r = spawnSync("pd", args, { stdio: "inherit" });
   if (r.error) throw new Error(`调用 pd 失败：${r.error.message}（phone-draft 装好了吗？）`);
   if (r.status === EXIT_NO_DEVICE) throw new Error("手机不可用（没连上或锁屏）。处理好再录，或改用 --url <网址> 走浏览器");
