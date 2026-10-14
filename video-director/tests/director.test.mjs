@@ -88,3 +88,9 @@ test("fonts：title、body 只能是 serif 或 sans", () => {
   assert.deepEqual(parseDirector(doc({ ...VD, fonts: { title: "serif", body: "sans" } })).errors, []);
   assert.match(parseDirector(doc({ ...VD, fonts: { title: "宋体" } })).errors.join(), /fonts\.title 只能是 serif 或 sans/);
 });
+
+test("组件候选：单元格里的 \\| 是转义的竖线，不分列", () => {
+  const table = ["| 画面 | 建议组件名 | 变量 | 来源段 |", "|---|---|---|---|", "| 小票 | dy-receipt | rows（a \\| b）, total | seg-01 |"].join("\n");
+  const md = doc().replace("## 8. 组件候选\n\n", `## 8. 组件候选\n\n${table}\n\n`);
+  assert.deepEqual(parseDirector(md).candidates, [{ scene: "小票", name: "dy-receipt", vars: "rows（a | b）, total", from: "seg-01" }]);
+});

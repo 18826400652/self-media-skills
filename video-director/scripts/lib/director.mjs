@@ -39,7 +39,7 @@ function parseCandidates(md) {
   for (const line of md.slice(at).split("\n").slice(1)) {
     if (line.startsWith("## ") || line.startsWith("```")) break;
     if (!line.trim().startsWith("|")) continue;
-    const [scene = "", name = "", vars = "", from = ""] = line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+    const [scene = "", name = "", vars = "", from = ""] = line.trim().replace(/^\||\|$/g, "").split(/(?<!\\)\|/).map((c) => c.replaceAll("\\|", "|").trim());
     if (!scene || scene === "画面" || scene === "无" || /^:?-+:?$/.test(scene)) continue;
     out.push({ scene, name, vars, from });
   }
