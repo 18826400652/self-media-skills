@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // 用法：vd build|cues|check <视频工程目录>
 //   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）
-//   build  cues → 音轨 → index.html 标记块 → 配乐对位与避让 → hyperframes check
-//   check  校验 DIRECTOR.md + hyperframes check
+//   build  cues → 音轨 → dykit 组件 → index.html 标记块 → 配乐对位与避让 → hyperframes check
+//          [--sample] [--no-music] [--update-components]（组件库换成 GitHub 上的最新提交）
+//   check  校验 DIRECTOR.md + 列出组件候选 + hyperframes check
 import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
+import { ensureLock, fetchArchive, installComponent } from "./lib/components.mjs";
 import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
@@ -15,7 +18,25 @@ import { addMusic, alignMusic, carve, resolveMusic } from "./lib/music.mjs";
 import { run } from "./lib/run.mjs";
 import { staleCopies } from "./lib/stale.mjs";
 
-const USAGE = "用法：vd build|cues|check <视频工程目录>";
+const USAGE = "用法：vd build|cues|check <视频工程目录> [--sample] [--no-music] [--update-components]";
+const CACHE = join(homedir(), ".cache/video-director/hyperframes");
+
+/** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
+export function installAll(dir, built, { update = false, only = null } = {}, deps = { ensureLock, fetchArchive, installComponent }) {
+  const segs = built.segments.filter((s) => s.component && (!only || only.includes(s.id)));
+  const names = [...new Set(segs.map((s) => s.component))];
+  if (!names.length) return [];
+  const sha = deps.ensureLock(dir, { update });
+  const repo = deps.fetchArchive(sha, CACHE);
+  const files = [...new Set(names.flatMap((n) => deps.installComponent(repo, n, dir)))];
+  console.log(`✓ 组件 ${names.join("、")}（${sha.slice(0, 7)}，${files.length} 个文件）`);
+  return files;
+}
+
+export function candidatesText(c) {
+  if (!c.length) return "◇ 组件候选：无";
+  return `◇ 组件候选 ${c.length} 个（交成片时请用户决定要不要提交到 hyperframes）：\n${c.map((x) => `  - ${x.name}：${x.scene}（来自 ${x.from}）`).join("\n")}`;
+}
 function load(dir) {
   for (const f of ["DIRECTOR.md", "audio_meta.json"]) if (!existsSync(join(dir, f))) throw new Error(`${dir} 里没有 ${f}`);
   const stale = staleCopies(dir);
@@ -45,6 +66,7 @@ const COMMANDS = {
     const duration = sample ? Math.round((built.cues[vd.sample.end.slice(1)] + vd.sample.tail) * 1000) / 1000 : full;
     const only = sample ? vd.sample.segments : null;
     buildAudio(dir, built, config);
+    installAll(dir, built, { update: rest.includes("--update-components"), only });
     if (!existsSync(join(dir, "assets/gsap.min.js"))) cpSync(config.gsap, join(dir, "assets/gsap.min.js"));
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {
@@ -59,7 +81,8 @@ const COMMANDS = {
     return COMMANDS.check(dir, [], config);
   },
   check(dir, _rest, config = loadConfig(findProjectRoot(dir))) {
-    load(dir);
+    const { parsed } = load(dir);
+    console.log(candidatesText(parsed.candidates));
     const r = run("npx", ["--yes", `hyperframes@${config.hfVersion}`, "check", "."], { cwd: dir });
     process.stdout.write(r.stdout);
     if (r.status !== 0) { console.error(r.stderr); return 1; }
