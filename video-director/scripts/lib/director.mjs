@@ -20,7 +20,9 @@ export function parseDirector(md) {
 
   const seen = new Set();
   const tokens = [];
-  for (const m of md.matchAll(TOKEN)) {
+  // 反引号里的 `@词` 是说明文字，不当锚点（``` 围栏不受影响：围栏内换行，匹配不到）
+  const prose = md.replace(/`[^`\n]+`/g, "");
+  for (const m of prose.matchAll(TOKEN)) {
     const t = { text: m[1], nth: m[2] ? Number(m[2]) : 1, raw: m[0] };
     const key = `${t.text}#${t.nth}`;
     if (!seen.has(key)) { seen.add(key); tokens.push(t); }

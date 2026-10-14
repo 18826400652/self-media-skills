@@ -55,3 +55,8 @@ test("validateDirector：sample.segments 必须是已有的段", () => {
   const p = parseDirector(doc({ ...VD, sample: { segments: ["seg-09"], end: "@编一套", tail: 1 } }));
   assert.match(validateDirector(p, 3).join(), /sample.segments 里的 seg-09 不是已定义的段/);
 });
+
+test("parseDirector：反引号里的 @词 是说明文字，不算锚点", () => {
+  const p = parseDirector(doc(VD, "写法：动作写成 `@词`，多次出现写 `@词#2`；本段 @编一套。"));
+  assert.deepEqual(p.tokens.map((t) => t.text), ["编一套", "根本没这条"]);
+});
