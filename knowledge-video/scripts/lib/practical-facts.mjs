@@ -98,10 +98,7 @@ function draftSteps(dir, run) {
   const step = (key, contentWhy) => contentWhy ? no(contentWhy, { content: false }) : run.done?.[key] ? ok() : no("还没存草稿", { content: true });
   return {
     wechat: step("wechat", !written(dir, "公众号/文章.md", t) && "公众号/文章.md 还是空模板"),
-    xiaohongshu: step("xiaohongshu",
-      !written(dir, "小红书/卡片.md", t) ? "小红书/卡片.md 还是空模板"
-        : !written(dir, "小红书/文案.md", t) ? "小红书/文案.md 还是空模板"
-          : !rendered(dir, "小红书/卡片.md", "小红书/out") && "卡片改过还没出图（ic render 小红书/卡片.md）"),
+    xiaohongshu: step("xiaohongshu", !written(dir, "小红书/文案.md", t) && "小红书/文案.md 还是空模板"),
     douyin: step("douyin", !rendered(dir, "抖音/封面.md", "抖音/out") && "抖音封面还没出图（ic render 抖音/封面.md）"),
   };
 }

@@ -72,17 +72,26 @@ test("确认节点：指纹一致 passed，不一致 stale", () => {
   assert.equal(collect(dir, run()).gates.script.passed, false);
 });
 
-test("草稿步骤：内容空模板 content=false；写好没记 done 只差存草稿；出图要比源文件新", () => {
-  const dir = episode({ "公众号/文章.md": "tpl", "小红书/卡片.md": "c", "小红书/文案.md": "w", "小红书/out/01.png": "p", "抖音/封面.md": "f" });
-  touch(dir, "小红书/卡片.md", 2000); touch(dir, "小红书/out/01.png", 1000);
-  const r = run({ templates: templateHashes(dir, ["公众号/文章.md"]) });
+test("草稿步骤：内容空模板 content=false；写好没记 done 只差存草稿；抖音封面出图要比源文件新", () => {
+  const dir = episode({ "公众号/文章.md": "tpl", "小红书/文案.md": "tpl", "抖音/封面.md": "f", "抖音/out/01.png": "p" });
+  touch(dir, "抖音/封面.md", 2000); touch(dir, "抖音/out/01.png", 1000);
+  const r = run({ templates: templateHashes(dir, ["公众号/文章.md", "小红书/文案.md"]) });
   let f = collect(dir, r);
   assert.equal(f.steps.wechat.content, false);
   assert.equal(f.steps.xiaohongshu.content, false);
-  assert.match(f.steps.xiaohongshu.why, /ic render/);
+  assert.match(f.steps.xiaohongshu.why, /小红书\/文案\.md/);
   assert.equal(f.steps.douyin.content, false);
-  touch(dir, "小红书/out/01.png", 3000);
-  f = collect(dir, { ...r, done: { xiaohongshu: "2026-10-12" } });
+  assert.match(f.steps.douyin.why, /ic render/);
+  touch(dir, "抖音/out/01.png", 3000);
+  assert.equal(collect(dir, r).steps.douyin.content, true);
+});
+
+test("小红书发视频：只要写好文案，不要卡片", () => {
+  const dir = episode({ "小红书/文案.md": "## 标题\n不露脸也能做\n" });
+  let f = collect(dir, run());
+  assert.equal(f.steps.xiaohongshu.content, true);
+  assert.equal(f.steps.xiaohongshu.ok, false);
+  f = collect(dir, run({ done: { xiaohongshu: "2026-10-14" } }));
   assert.equal(f.steps.xiaohongshu.ok, true);
 });
 

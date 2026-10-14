@@ -146,7 +146,7 @@ export function collectFacts(dir) {
 }
 
 const TEMPLATES_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "templates");
-const TEMPLATE_FILES = ["抖音/SCRIPT.md", "抖音/STORYBOARD.md", "公众号/文章.md", "小红书/卡片.md", "小红书/文案.md"];
+const TEMPLATE_FILES = ["抖音/SCRIPT.md", "抖音/STORYBOARD.md", "公众号/文章.md", "小红书/文案.md"];
 const today = () => new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD，本地时区
 const oneLine = (s) => s.replace(/\s*\n\s*/g, " ").trim();
 const looksPractical = (dir) => existsSync(join(dir, "场景卡.md"));

@@ -26,7 +26,7 @@ pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout
 | 抖音 | `nv draft 成片.mp4 --copy 发布文案.md` | `narrated-video/scripts/phone_douyin.py` |
 | 小红书（视频） | `nv draft 成片.mp4 --copy 小红书/文案.md --to xiaohongshu` | `narrated-video/scripts/phone_xiaohongshu.py` |
 
-小红书图文笔记（卡片图片）只有浏览器方案：`ic draft 文案.md`。
+小红书图文笔记（卡片图片，项目不走图文时用不到）只有浏览器方案：`ic draft 文案.md`。
 
 ## 规则
 
