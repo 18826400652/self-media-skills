@@ -67,7 +67,7 @@ pd run <步骤.py> [载荷.json]   # 执行一个平台的手机发草稿步骤
 | `ui_texts()` | 界面上所有文字 / 描述 / id / 位置 |
 | `shot(名字)` / `fail_with_ui(说明)` / `log()` / `fail()` | 截图、留现场后退出、输出进度、出错退出 |
 
-`phone_draft.html_parts` 还有 `split_images`（按图片切开 HTML）、`save_data_uri`（内联图写成文件），给只能从相册插图的编辑器用；`text_length` / `body_complete` 用 App 显示的字数核对正文有没有粘贴全。
+`phone_draft.html_parts` 还有 `split_images`（按图片切开 HTML）、`save_data_uri`（内联图写成文件），给只能从相册插图的编辑器用；`text_tail` / `tail_present` 在粘贴后的界面文字里找这一段的结尾，核对有没有粘贴全（公众号助手不显示字数，WebView 的段落文字在界面结构里读得到）。
 
 ## 踩过的坑
 

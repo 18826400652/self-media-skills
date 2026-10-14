@@ -36,15 +36,16 @@ def test_save_data_uri_writes_file_with_extension(tmp_path):
     assert os.path.exists(path)
 
 
-from phone_draft.html_parts import body_complete, text_length
+from phone_draft.html_parts import tail_present, text_tail
 
 
-def test_text_length_ignores_tags_whitespace_and_images():
-    html = wrap("<p>一 二&amp;</p>\n", '<p><img src="data:image/png;base64,QUJD"></p>', "<h2>三</h2>")
-    assert text_length(html) == 4
+def test_text_tail_is_last_chars_without_tags_or_whitespace():
+    html = wrap("<p>一 二&amp;</p>\n", "<h2>三四五</h2>")
+    assert text_tail(html, 4) == "&三四五"
+    assert text_tail(wrap("<p>短</p>"), 15) == "短"
 
 
-def test_body_complete_fails_when_count_far_below_expected():
-    assert body_complete(900, 1000)
-    assert not body_complete(300, 1000)
-    assert body_complete(None, 1000)  # 读不到字数时不判失败，由调用方提示人工核对
+def test_tail_present_matches_inside_a_paragraph_node_ignoring_spaces():
+    labels = ["保存", "下一课：下午就要开会，上午才收到 50 页文件，怎么让 AI 帮你读？"]
+    assert tail_present("50页文件，怎么让AI帮你读？", labels)
+    assert not tail_present("评论区聊聊。", labels)

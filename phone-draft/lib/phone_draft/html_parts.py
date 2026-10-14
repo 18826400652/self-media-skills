@@ -131,14 +131,18 @@ def save_data_uri(uri, path_base):
     return path
 
 
-BODY_MIN_RATIO = 0.6  # App 显示的字数低于正文字数的这个比例，就当粘贴丢了内容（各 App 计数规则略有不同，留余量）
 TAG = re.compile(r"<[^>]+>")
+SPACE = re.compile(r"\s+")
 
 
-def text_length(html):
-    """正文的字数（去掉标签和空白），用来核对粘贴后 App 显示的字数。"""
-    return len(re.sub(r"\s+", "", unescape(TAG.sub("", html))))
+def _plain(text):
+    return SPACE.sub("", unescape(TAG.sub("", text)))
 
 
-def body_complete(count, expected):
-    return count is None or count >= expected * BODY_MIN_RATIO
+def text_tail(html, n=15):
+    """正文最后 n 个字（去掉标签和空白）：粘贴后在编辑器里找它，确认这一段粘全了。"""
+    return _plain(html)[-n:]
+
+
+def tail_present(tail, labels):
+    return any(tail in _plain(label) for label in labels)
