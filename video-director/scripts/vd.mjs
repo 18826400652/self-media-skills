@@ -9,7 +9,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
-import { ensureLock, fetchArchive, installComponent } from "./lib/components.mjs";
+import { REPO, ensureLock, fetchArchive, installComponent, writeLock } from "./lib/components.mjs";
 import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
@@ -22,13 +22,21 @@ const USAGE = "用法：vd build|cues|check <视频工程目录> [--sample] [--n
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
 /** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
-export function installAll(dir, built, { update = false, only = null } = {}, deps = { ensureLock, fetchArchive, installComponent }) {
+export function installAll(dir, built, { update = false, only = null } = {}, deps = { ensureLock, fetchArchive, installComponent, writeLock }) {
   const segs = built.segments.filter((s) => s.component && (!only || only.includes(s.id)));
   const names = [...new Set(segs.map((s) => s.component))];
-  if (!names.length) return [];
-  const sha = deps.ensureLock(dir, { update });
+  if (!names.length) {
+    if (update) console.log("◇ 本次构建没有用到组件，--update-components 没有效果");
+    return [];
+  }
+  const { sha, changed } = deps.ensureLock(dir, { update });
   const repo = deps.fetchArchive(sha, CACHE);
   const files = [...new Set(names.flatMap((n) => deps.installComponent(repo, n, dir)))];
+  // 下载、安装都成功才写锁文件：失败时还停在旧版本
+  if (changed) {
+    deps.writeLock(dir, sha);
+    console.log(`✓ 组件库锁定到 ${REPO}@${sha.slice(0, 7)}`);
+  }
   console.log(`✓ 组件 ${names.join("、")}（${sha.slice(0, 7)}，${files.length} 个文件）`);
   return files;
 }

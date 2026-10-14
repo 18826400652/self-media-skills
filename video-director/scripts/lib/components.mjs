@@ -1,6 +1,6 @@
 // dykit 组件：按锁定的提交号从 GitHub 下载 hyperframes 仓库，按 registry 清单把组件装进工程
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { run } from "./run.mjs";
 
 export const REPO = "18826400652/hyperframes";
@@ -27,7 +27,12 @@ export function latestSha(runFn = run) {
 export function readLock(dir) {
   const p = join(dir, LOCK);
   if (!existsSync(p)) return null;
-  const lock = JSON.parse(readFileSync(p, "utf8"));
+  let lock;
+  try {
+    lock = JSON.parse(readFileSync(p, "utf8"));
+  } catch (err) {
+    throw new Error(`${LOCK} 不是合法的 JSON（${err.message}）：删掉这个文件重新构建会锁定到最新版`);
+  }
   if (!SHA_RE.test(lock.sha ?? "")) throw new Error(`${LOCK} 里的 sha 不是 40 位提交号：${lock.sha}。删掉这个文件重新构建会锁定到最新版`);
   return lock;
 }
@@ -36,14 +41,15 @@ export function writeLock(dir, sha) {
   writeFileSync(join(dir, LOCK), JSON.stringify({ repo: REPO, sha }, null, 2) + "\n");
 }
 
-/** 返回这个工程要用的提交号：有锁文件就用它（不联网），没有或 update 时取最新并写入 */
+/**
+ * 这个工程要用的提交号：有锁文件就用它（不联网）；没有或 update 时取最新。
+ * 不写文件——下载、安装都成功后由调用方 writeLock，失败时旧锁和旧缓存照常能用。
+ */
 export function ensureLock(dir, { update = false } = {}, runFn = run) {
   const lock = readLock(dir);
-  if (lock && !update) return lock.sha;
+  if (lock && !update) return { sha: lock.sha, changed: false };
   const sha = latestSha(runFn);
-  writeLock(dir, sha);
-  console.log(`✓ 组件库锁定到 ${REPO}@${sha.slice(0, 7)}`);
-  return sha;
+  return { sha, changed: sha !== lock?.sha };
 }
 
 /** 下载并解包到 cacheRoot/<sha>；先解到临时目录，成功后再改名，失败不留半截 */
@@ -61,8 +67,12 @@ export function fetchArchive(sha, cacheRoot, runFn = run) {
     const x = runFn("tar", ["-xzf", tgz, "-C", join(tmp, "repo"), "--strip-components=1"]);
     if (x.status !== 0) throw new Error(`解包组件库失败（${url}）：${(x.stderr || "").trim()}`);
     if (!existsSync(join(tmp, "repo/registry/registry.json"))) throw new Error(`下载的组件库里没有 registry/registry.json（${url}）`);
-    rmSync(dest, { recursive: true, force: true });
-    renameSync(join(tmp, "repo"), dest);
+    try {
+      renameSync(join(tmp, "repo"), dest);
+    } catch (err) {
+      // 另一个进程同时下载并先放好了：用它的，不删（它可能正在被读）
+      if (!existsSync(join(dest, "registry/registry.json"))) throw err;
+    }
     return dest;
   } finally {
     rmSync(tmp, { recursive: true, force: true });
@@ -96,7 +106,8 @@ export function installComponent(archiveDir, name, projectDir, seen = new Set())
     // 有 url 的文件引用仓库里的原路径（dykit 资源包），没有的放在 registry/blocks/<name>/ 下
     const src = f.url ? join(archiveDir, f.path) : join(archiveDir, "registry/blocks", name, f.path);
     if (!existsSync(src)) throw new Error(`组件 ${name} 缺文件 ${f.path}（缓存可能不完整：删掉 ${archiveDir} 重新构建）`);
-    const dst = join(projectDir, f.target);
+    const dst = resolve(projectDir, f.target);
+    if (!dst.startsWith(resolve(projectDir) + sep)) throw new Error(`组件 ${name} 的目标路径不在工程里：${f.target}`);
     mkdirSync(dirname(dst), { recursive: true });
     cpSync(src, dst);
     return f.target;

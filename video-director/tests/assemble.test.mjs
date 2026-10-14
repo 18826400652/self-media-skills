@@ -122,3 +122,7 @@ test("applyHead：旧工程没有 vd:head 标记、也没用组件时照常构�
   assert.throws(() => applyHead(old, true), /index.html 缺少标记 <!-- vd:head -->/);
   assert.match(applyHead("<!-- vd:head --><!-- /vd:head -->", true), /dykit\.css/);
 });
+
+test("customVars：正文色和底色对比度都不够时报中文错误，指出该改哪个颜色", () => {
+  assert.throws(() => customVars({ ...PAL, ink: "#E8E2D6", alert: "#F7D9D2" }, {}), /palette\.ink.*palette\.bg.*对比度/);
+});

@@ -4,7 +4,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { REPO, ensureLock, fetchArchive, installComponent, latestSha, readLock } from "../scripts/lib/components.mjs";
+import { REPO, ensureLock, fetchArchive, installComponent, latestSha, readLock, writeLock } from "../scripts/lib/components.mjs";
 import { project } from "./helpers.mjs";
 
 const SHA = "a".repeat(40), SHA2 = "b".repeat(40);
@@ -30,13 +30,35 @@ test("latestSha：解析 GitHub API 的 sha；失败给中文错误", () => {
   assert.throws(() => latestSha(() => ({ status: 0, stdout: "<html>", stderr: "" })), /取不到/);
 });
 
-test("ensureLock：没有锁文件时取最新并写入；已有锁文件不变（不联网）；update 换成最新", () => {
+test("ensureLock：没有锁文件时取最新但不写文件（下载安装成功后才写）；已有锁文件不联网；update 换成最新", () => {
   const dir = project({});
-  assert.equal(ensureLock(dir, {}, ok(SHA)), SHA);
+  assert.deepEqual(ensureLock(dir, {}, ok(SHA)), { sha: SHA, changed: true });
+  assert.equal(readLock(dir), null);
+  writeLock(dir, SHA);
   assert.deepEqual(readLock(dir), { repo: REPO, sha: SHA });
-  assert.equal(ensureLock(dir, {}, never), SHA);
-  assert.equal(ensureLock(dir, { update: true }, ok(SHA2)), SHA2);
-  assert.equal(readLock(dir).sha, SHA2);
+  assert.deepEqual(ensureLock(dir, {}, never), { sha: SHA, changed: false });
+  assert.deepEqual(ensureLock(dir, { update: true }, ok(SHA2)), { sha: SHA2, changed: true });
+  assert.equal(readLock(dir).sha, SHA);
+});
+
+test("readLock：锁文件不是 JSON 时报中文错误", () => {
+  assert.throws(() => readLock(project({ "components.lock.json": "{bad" })), /components\.lock\.json.*删掉/);
+});
+
+test("fetchArchive：别的进程已经放好同一个 sha 时，用现成的，不删", () => {
+  const cache = project({}), src = fakeRepo();
+  const fake = (cmd, args) => {
+    if (cmd === "curl") {
+      // 下载期间另一个进程先完成了
+      cpSync(src, join(cache, SHA), { recursive: true });
+      writeFileSync(join(cache, SHA, "marker"), "other");
+      return { status: 0, stdout: "", stderr: "", ...runTar(args[args.indexOf("-o") + 1], src) };
+    }
+    return realRun(cmd, args);
+  };
+  assert.equal(fetchArchive(SHA, cache, fake), join(cache, SHA));
+  assert.ok(existsSync(join(cache, SHA, "marker")));
+  assert.deepEqual(readdir(cache), [SHA]);
 });
 
 test("readLock：锁文件内容不对时报中文错误", () => {
@@ -97,3 +119,9 @@ function runTar(out, src) {
   const r = spawnSync("tar", ["-czf", out, "-C", stage, "hyperframes-xyz"], { encoding: "utf8" });
   return { status: r.status, stderr: r.stderr };
 }
+
+test("installComponent：目标路径跑出工程目录时报错", () => {
+  const repo = fakeRepo();
+  writeFileSync(join(repo, "registry/blocks/dy-scene-title/registry-item.json"), JSON.stringify({ name: "dy-scene-title", files: [{ path: "dy-scene-title.html", target: "../escape.html" }] }));
+  assert.throws(() => installComponent(repo, "dy-scene-title", project({})), /目标路径不在工程里/);
+});
