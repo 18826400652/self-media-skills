@@ -56,7 +56,9 @@ cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-dir
 | `vd build <工程> [--sample] [--no-music]` | 拼配音 + 混音效 → 写 `index.html` 的 `vd:audio` / `vd:segments` / `vd:brand` 三块 → 配乐取曲、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
 | `vd check <工程>` | 校验 DIRECTOR.md + `hyperframes check` |
 
-`index.html` 里标记块之外的内容（背景、贯穿元素）是手写的，`vd build` 不会动；重新配音后重跑 `vd build`，所有时间自动更新。
+`index.html` 里标记块之外的内容（背景、贯穿元素）是手写的，`vd build` 不会动。
+
+**重新配音**：在 `抖音/` 里跑 `nv hf-audio`，然后把 `audio_meta.json`、`caption_groups.json`、`assets/voice/` 重新复制到 `抖音-director/`，再 `vd build`，所有时间自动更新。忘了复制时 `vd` 会警告「这里的 … 还是旧的」。
 
 ## 每段画面怎么写
 

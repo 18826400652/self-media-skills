@@ -12,12 +12,15 @@ import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, resolveMusic } from "./lib/music.mjs";
 import { run } from "./lib/run.mjs";
+import { staleCopies } from "./lib/stale.mjs";
 
 const USAGE = "用法：vd build|cues|check <视频工程目录>";
 const GSAP = "/home/power/hyperframes/assets/gsap.min.js";
 
 function load(dir) {
   for (const f of ["DIRECTOR.md", "audio_meta.json"]) if (!existsSync(join(dir, f))) throw new Error(`${dir} 里没有 ${f}`);
+  const stale = staleCopies(dir);
+  if (stale.length) console.warn(`⚠ ../抖音/ 里重新配过音，这里的 ${stale.join("、")} 还是旧的：把 audio_meta.json、caption_groups.json、assets/voice/ 重新复制过来再 vd build`);
   const meta = JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8"));
   const parsed = parseDirector(readFileSync(join(dir, "DIRECTOR.md"), "utf8"));
   const errors = validateDirector(parsed, meta.voices.length);
