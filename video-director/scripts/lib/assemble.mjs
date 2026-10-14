@@ -62,7 +62,7 @@ export function customVars(p, fonts = {}) {
   const alert = readable(p.bg, p.alert, p.ink);
   return `--hf-custom-bg:${p.bg};--hf-custom-text:${p.ink};--hf-custom-muted:${p.muted};--hf-custom-accent:${accent};--hf-custom-alert:${alert};--hf-custom-highlight:${p.accent};` +
     `--hf-custom-font-title:${FONT_VAR[fonts.title ?? "serif"]};--hf-custom-font-body:${FONT_VAR[fonts.body ?? "sans"]};` +
-    `--hf-custom-on-accent:${onColor(accent)};--hf-custom-on-alert:${onColor(alert)}`;
+    `--hf-custom-on-accent:${onColor(accent)};--hf-custom-on-alert:${onColor(alert)};--hf-custom-on-highlight:${onColor(p.accent)}`;
 }
 
 /** 有组件段落时在 <head> 引入 dykit 的样式和工具脚本 */

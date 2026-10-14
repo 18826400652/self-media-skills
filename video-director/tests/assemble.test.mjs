@@ -80,7 +80,7 @@ test("customVars：配色和字体变成 --hf-custom-* 变量；荧光笔用 acc
   // 纸面上荧光黄当文字看不清（< 3:1），组件强调色改用 alert 红；荧光笔底色仍是黄
   assert.match(v, /--hf-custom-bg:#F1ECE2;--hf-custom-text:#1C1A17;--hf-custom-muted:#6E675C;--hf-custom-accent:#D2372A;--hf-custom-alert:#D2372A;--hf-custom-highlight:#FFD84D/);
   assert.match(v, /--hf-custom-font-title:var\(--vd-serif\);--hf-custom-font-body:var\(--vd-sans\)/);
-  assert.match(v, /--hf-custom-on-accent:#FFFFFF;--hf-custom-on-alert:#FFFFFF/);
+  assert.match(v, /--hf-custom-on-accent:#FFFFFF;--hf-custom-on-alert:#FFFFFF;--hf-custom-on-highlight:#1C1A17/);
   // 深色底：荧光黄够亮，直接当强调色，上面的字用墨色
   const dark = customVars({ ...PAL, bg: "#101114", ink: "#F4F1EA", alert: "#FF5A5F" }, {});
   assert.match(dark, /--hf-custom-accent:#FFD84D;.*--hf-custom-on-accent:#1C1A17/);
