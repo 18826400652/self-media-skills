@@ -1,0 +1,57 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { parseDirector, validateDirector } from "../scripts/lib/director.mjs";
+
+const VD = {
+  kicker: "AI 概念一分钟 · 第 1 期",
+  palette: { bg: "#F1ECE2", ink: "#1C1A17", muted: "#6E675C", accent: "#FFD84D", alert: "#D2372A" },
+  segments: [{ id: "seg-01-hook", lines: [1, 2] }, { id: "seg-02-why", lines: [3, 3] }],
+  sfx: [{ name: "pop", at: "@编一套", volume: 0.6 }],
+  music: null,
+  ending: { next: "下一期", question: "你被编过什么？", cta: "评论区说说 ↓", hold: 2 },
+  sample: { segments: ["seg-01-hook"], end: "@根本没这条", tail: 0.9 },
+};
+const SECTIONS = ["## 1. 视觉方案", "## 2. 分段", "## 3. 导演规则自检", "## 4. 音乐", "## 5. 账号固定元素", "## 6. 新增内容", "## 7. 样片范围"];
+const doc = (vd = VD, extra = "说到 @编一套 时盖章；第二次说到 @资料#2，再到「@根本没这条」。") =>
+  ["# 导演脚本", ...SECTIONS.flatMap((s) => [s, extra]), "```json vd", JSON.stringify(vd, null, 2), "```"].join("\n\n");
+
+test("parseDirector：读机器块、@词（含 #序号、全角引号边界），按出现顺序去重", () => {
+  const p = parseDirector(doc());
+  assert.deepEqual(p.errors, []);
+  assert.equal(p.vd.kicker, "AI 概念一分钟 · 第 1 期");
+  assert.deepEqual(p.tokens.map((t) => [t.text, t.nth]), [["编一套", 1], ["资料", 2], ["根本没这条", 1]]);
+});
+
+test("parseDirector：没有机器块、多个机器块、JSON 坏了都报错", () => {
+  assert.match(parseDirector("# x").errors.join(), /缺少 ```json vd 机器块/);
+  assert.match(parseDirector(doc() + "\n```json vd\n{}\n```").errors.join(), /只能有一个/);
+  assert.match(parseDirector("```json vd\n{bad\n```").errors.join(), /JSON 格式错误/);
+});
+
+test("parseDirector：缺章节、自检表留着（待填）都报错", () => {
+  const md = doc().replace("## 4. 音乐", "## 4. 配乐");
+  assert.match(parseDirector(md).errors.join(), /缺少章节「## 4. 音乐」/);
+  assert.match(parseDirector(doc(VD, "（待填）")).errors.join(), /还有（待填）/);
+});
+
+test("parseDirector：配色不是 #RRGGBB、sfx 的 at 不是 @词 都报错", () => {
+  const bad = { ...VD, palette: { ...VD.palette, ink: "black" }, sfx: [{ name: "pop", at: "2.8", volume: 1 }] };
+  const e = parseDirector(doc(bad)).errors.join("\n");
+  assert.match(e, /palette.ink 必须是 #RRGGBB/);
+  assert.match(e, /sfx\[0\].at 必须写成 @词/);
+});
+
+test("validateDirector：分段必须从第 1 句连续覆盖到最后一句", () => {
+  const p = parseDirector(doc());
+  assert.deepEqual(validateDirector(p, 3), []);
+  assert.match(validateDirector(p, 4).join(), /第 4 句没有分到任何段/);
+  const gap = parseDirector(doc({ ...VD, segments: [{ id: "a", lines: [1, 1] }, { id: "b", lines: [3, 3] }] }));
+  assert.match(validateDirector(gap, 3).join(), /第 2 句没有分到任何段/);
+  const dup = parseDirector(doc({ ...VD, segments: [{ id: "a", lines: [1, 2] }, { id: "a", lines: [3, 3] }] }));
+  assert.match(validateDirector(dup, 3).join(), /段 id 重复：a/);
+});
+
+test("validateDirector：sample.segments 必须是已有的段", () => {
+  const p = parseDirector(doc({ ...VD, sample: { segments: ["seg-09"], end: "@编一套", tail: 1 } }));
+  assert.match(validateDirector(p, 3).join(), /sample.segments 里的 seg-09 不是已定义的段/);
+});
