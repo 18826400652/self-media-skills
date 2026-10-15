@@ -43,7 +43,8 @@ case "$cmd" in
     exec node "$SKILL_DIR/scripts/render.mjs" "$@"
     ;;
   help | -h | --help)
-    sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+    # 打印文件头的注释（第 2 行起，到第一行非注释为止），加了命令不用再改行号
+    awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "$0"
     ;;
   *)
     exec "$HF" "$cmd" "$@"
