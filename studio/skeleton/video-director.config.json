@@ -1,6 +1,4 @@
 {
-  "fontsDir": "06-品牌资产/hyperframes/fonts",
-  "gsap": "06-品牌资产/hyperframes/gsap.min.js",
   "brandDir": "06-品牌资产/hyperframes",
   "sfxDir": "06-品牌资产/音效",
   "hfVersion": "0.8.143"

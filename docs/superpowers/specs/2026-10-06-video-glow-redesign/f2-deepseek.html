@@ -1,0 +1,74 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.head { position: absolute; top: 210px; left: 96px; right: 170px; }
+.head .title { margin-top: 22px; font-size: 88px; }
+.pits { position: absolute; top: 500px; left: 96px; display: flex; gap: 16px; }
+.pit { display: flex; align-items: center; gap: 10px; font-size: 30px; font-weight: 700; padding: 12px 22px; border-radius: 99px; border: 1.5px solid var(--glass-line); color: var(--fg-muted); background: rgb(255 255 255 / .04); }
+.pit .n { font-family: var(--mono); font-size: 24px; }
+.pit.on { color: #fff; border-color: rgb(255 90 95 / .6); background: rgb(255 90 95 / .16); box-shadow: 0 0 30px rgb(255 90 95 / .25); }
+.pit.on .n { color: var(--danger); }
+
+.stage { position: absolute; top: 620px; left: 70px; width: 860px; height: 770px; perspective: 2200px; }
+.ds { position: absolute; inset: 0; transform: rotateX(8deg) rotateY(-10deg) scale(.94); transform-origin: 50% 0; padding: 0; overflow: hidden; filter: blur(1.6px) brightness(.62); }
+.ds .bar { height: 84px; display: flex; align-items: center; gap: 14px; padding: 0 30px; border-bottom: 1.5px solid var(--glass-line); font-size: 28px; font-weight: 700; }
+.ds .logo { width: 44px; height: 44px; border-radius: 50%; background: #4d6bfe; }
+.ds .body { padding: 28px 34px; font-size: 27px; line-height: 1.6; color: rgb(244 241 234 / .85); }
+.ds h4 { font-size: 32px; margin: 8px 0 14px; }
+.ds table { width: 100%; border-collapse: collapse; font-size: 25px; }
+.ds td, .ds th { text-align: left; padding: 14px 8px; border-bottom: 1px solid rgb(255 255 255 / .1); }
+
+/* 放大镜：把关键那一行拉出来 */
+.lens { position: absolute; left: 30px; right: 10px; top: 300px; padding: 30px 34px 34px; border-radius: 32px;
+  background: linear-gradient(180deg, #23252b, #1a1b20); border: 2px solid rgb(255 216 77 / .55);
+  box-shadow: 0 0 0 10px rgb(255 216 77 / .06), 0 0 80px rgb(255 216 77 / .18), 0 50px 120px rgb(0 0 0 / .7); }
+.lens .src { display: flex; align-items: center; gap: 12px; font-size: 27px; color: var(--fg-muted); letter-spacing: .06em; }
+.lens .src .logo { width: 30px; height: 30px; border-radius: 50%; background: #4d6bfe; }
+.lens .src b { color: var(--hl); font-weight: 700; margin-left: auto; font-family: var(--mono); }
+.lens .cols { display: grid; grid-template-columns: 1fr 170px; gap: 0 20px; margin-top: 20px; font-size: 24px; color: var(--fg-muted); }
+.lens .line { display: grid; grid-template-columns: 1fr 170px; gap: 20px; align-items: center; margin-top: 12px; font-size: 46px; font-weight: 700; line-height: 1.35; }
+.lens .who { position: relative; text-align: center; color: var(--danger); font-size: 58px; font-weight: 900; }
+.lens .who::after { content: ""; position: absolute; inset: -14px -10px; border: 5px solid var(--danger); border-radius: 50%; transform: rotate(-8deg); box-shadow: 0 0 22px rgb(255 90 95 / .6); }
+.note { position: absolute; right: -6px; top: -78px; transform: rotate(4deg); background: var(--danger); color: #fff; font-size: 30px; font-weight: 900; padding: 10px 22px; border-radius: 14px; box-shadow: 0 16px 40px rgb(255 90 95 / .35); }
+.note::after { content: ""; position: absolute; left: 60%; bottom: -14px; border: 14px solid transparent; border-top-color: var(--danger); border-bottom: 0; }
+</style></head><body>
+<div class="atmo"></div><div class="vignette"></div>
+<div class="hud"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="bar"><span><b>普通人的AI课</b> · 04 会议纪要</span><span class="dots"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span></div></div>
+
+<div class="head">
+  <div class="kicker">实测翻车</div>
+  <div class="title">4 个坑，它踩了 <span class="y">3 个</span></div>
+</div>
+<div class="pits">
+  <span class="pit on"><span class="n">01</span>抄错人名</span>
+  <span class="pit"><span class="n">02</span>替人派活</span>
+  <span class="pit"><span class="n">03</span>没定写成定了</span>
+</div>
+
+<div class="stage">
+  <div class="ds glass">
+    <div class="bar"><i class="logo"></i>双十一筹备会会议纪要</div>
+    <div class="body">
+      <h4>二、待办事项</h4>
+      <table>
+        <tr><th>事项</th><th>负责人</th><th>截止时间</th></tr>
+        <tr><td>活动页出图</td><td>阿杰</td><td>周四下午（最晚）</td></tr>
+        <tr><td>活动页上线</td><td>小林</td><td>周五</td></tr>
+        <tr><td>向供应商确认猪肉能否保证量</td><td>王杰</td><td>尽快</td></tr>
+        <tr><td>与人事沟通客服加2人</td><td>刘总</td><td>未明确</td></tr>
+        <tr><td>提货点海报重新制作</td><td>阿杰</td><td>未明确</td></tr>
+        <tr><td>预算按3000元执行</td><td>刘总</td><td>第一天后</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="lens">
+    <div class="note">其实是「王姐」</div>
+    <div class="src"><i class="logo"></i>DeepSeek 原话 · 待办表第 3 行<b>实测 R1</b></div>
+    <div class="cols"><span>事项</span><span style="text-align:center">负责人</span></div>
+    <div class="line"><span>向供应商确认猪肉<br>能否保证量</span><span class="who">王杰</span></div>
+  </div>
+</div>
+
+<div class="caption">四个坑它<span class="k">踩了三个</span><br>先是照抄了认错的人名</div>
+<div class="guides"><i class="r"></i><i class="b"></i></div>
+</body></html>

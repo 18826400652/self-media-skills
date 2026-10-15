@@ -1,0 +1,55 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.head { position: absolute; top: 210px; left: 96px; right: 170px; }
+.head .title { margin-top: 22px; }
+.phone { position: absolute; top: 560px; left: 80px; width: 840px; height: 800px; padding: 0; overflow: hidden; }
+.phone .top { height: 96px; display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 32px; font-weight: 700; border-bottom: 1.5px solid var(--glass-line); color: var(--fg); }
+.phone .top small { color: var(--fg-muted); font-weight: 500; }
+.msgs { padding: 36px 34px; display: flex; flex-direction: column; gap: 34px; }
+.row { display: flex; gap: 18px; align-items: flex-start; }
+.row.me { flex-direction: row-reverse; }
+.av { flex: none; width: 76px; height: 76px; border-radius: 20px; display: grid; place-items: center; font-size: 34px; font-weight: 900; color: #101114; }
+.av.liu { background: linear-gradient(135deg, #f4f1ea, #b9b5ab); }
+.av.jie { background: linear-gradient(135deg, #8fb8ff, #5f86d9); }
+.av.me { background: linear-gradient(135deg, #ffe27a, #f5b92e); }
+.who { font-size: 24px; color: var(--fg-muted); margin-bottom: 8px; }
+.bub { font-size: 34px; line-height: 1.45; padding: 18px 26px; border-radius: 8px 28px 28px 28px; background: rgb(255 255 255 / .09); border: 1.5px solid rgb(255 255 255 / .08); max-width: 560px; }
+.at { color: var(--hl); font-weight: 700; }
+.doc { width: 640px; border-radius: 28px 8px 28px 28px; background: linear-gradient(180deg, rgb(255 216 77 / .14), rgb(255 216 77 / .05)); border: 1.5px solid rgb(255 216 77 / .35); padding: 22px 26px; box-shadow: 0 0 60px rgb(255 216 77 / .12); }
+.doc .dh { display: flex; align-items: center; gap: 12px; font-size: 30px; font-weight: 900; }
+.doc .dh .icon { color: var(--hl); font-size: 36px; }
+.doc .dh small { margin-left: auto; font-size: 22px; font-weight: 700; color: var(--hl); border: 1.5px solid rgb(255 216 77 / .5); padding: 2px 12px; border-radius: 99px; }
+.doc table { width: 100%; margin-top: 16px; border-collapse: collapse; font-size: 31px; }
+.doc td { padding: 11px 6px; border-top: 1px solid rgb(244 241 234 / .1); color: rgb(244 241 234 / .75); }
+.doc th { text-align: left; font-size: 25px; color: var(--fg-muted); font-weight: 500; padding: 0 6px 8px; }
+.doc tr.bad td { color: var(--fg); font-weight: 700; }
+.doc tr.bad td.p { color: var(--danger); position: relative; }
+.ring { position: absolute; left: -12px; top: 0; width: 112px; height: 62px; border: 4px solid var(--danger); border-radius: 50%; transform: rotate(-6deg); box-shadow: 0 0 18px rgb(255 90 95 / .6); }
+.bub.angry { border-color: rgb(255 90 95 / .5); background: rgb(255 90 95 / .12); }
+</style></head><body>
+<div class="atmo"></div><div class="vignette"></div>
+<div class="hud"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="bar"><span><b>普通人的AI课</b> · 04 会议纪要</span><span class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></span></div></div>
+
+<div class="head">
+  <div class="kicker">真实场景</div>
+  <div class="title">AI 写的纪要<br><span class="y">替人派了活</span></div>
+</div>
+
+<div class="phone glass">
+  <div class="top">双十一筹备群 <small>(5)</small></div>
+  <div class="msgs">
+    <div class="row"><div class="av liu">刘</div><div><div class="who">刘总</div><div class="bub"><span class="at">@你</span> 十分钟后把会议纪要发群里</div></div></div>
+    <div class="row me"><div class="av me">我</div><div class="doc">
+      <div class="dh"><svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>双十一筹备会纪要<small>AI 整理</small></div>
+      <table><tr><th>事项</th><th>负责人</th><th>截止</th></tr>
+        <tr><td>活动页上线</td><td>小林</td><td>周五</td></tr>
+        <tr class="bad"><td>提货点海报重做</td><td class="p"><i class="ring"></i>阿杰</td><td>未明确</td></tr>
+      </table></div></div>
+    <div class="row"><div class="av jie">杰</div><div><div class="who">阿杰</div><div class="bub angry">？？海报我啥时候认领的</div></div></div>
+  </div>
+</div>
+
+<div class="caption">会上没人认领的活<br>AI 直接<span class="k">派给了同事</span></div>
+<div class="guides"><i class="r"></i><i class="b"></i></div>
+</body></html>

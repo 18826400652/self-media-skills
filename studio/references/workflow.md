@@ -576,7 +576,7 @@ kv status 04-作品/<系列>/NN-<简称>
 | `nv snapshot`、`nv preview`、`nv doctor`、`nv lint` | 其他子命令原样透传给 hyperframes | 随时 |
 
 - **核心原则：先配音，再做动画。** 画面时间从配音时间轴取，不手写秒数
-- 视觉：glow 风格（`hfKit.look: "glow"`）：深色底、荧光黄是唯一强调色、四角 HUD 框、玻璃卡片。品牌文件在项目的品牌目录（`studio.json` 的 `brand`，默认 `06-品牌资产/hyperframes/`）（frame.md、caption-skin、字体、本地 GSAP）
+- 视觉：glow 风格（`hfKit.look: "glow"`）：深色底、荧光黄是唯一强调色、四角 HUD 框、玻璃卡片。品牌文件在项目的品牌目录（`studio.json` 的 `brand`，默认 `06-品牌资产/hyperframes/`：frame.md、caption-skin、账号固定元素）；GSAP 由 nv 自带
 - 分镜配方 `references/douyin-recipe.md`：
   - 成品教程（实用类默认，约 14 帧）
   - 翻车讲方法（聊天版，17–18 帧，模板在 `SCRIPT模板-翻车.md`）
@@ -600,7 +600,7 @@ kv status 04-作品/<系列>/NN-<简称>
 - 组件候选：DIRECTOR.md 第 8 节记录「换文字就能复用」的画面，④ 时交给用户决定是否提交到组件库
 - 重新配音：在 `抖音/` 里 `nv hf-audio`，再把 `audio_meta.json`、`caption_groups.json`、`assets/voice/` 复制到 `抖音-director/`，`vd build`
 - 导演规则：`references/director-rules.md`（视觉方案、节奏、版面、HyperFrames 的坑、组件）
-- 配置 `video-director.config.json`：`fontsDir`、`gsap`、`brandDir`、`sfxDir`、`hfVersion`
+- 配置 `video-director.config.json`：`brandDir`、`sfxDir`、`hfVersion`；选填 `fontsDir`、`gsap`（默认用 vd 自带的 fontsource 字体包和 GSAP，`npm ci` 装好）
 
 ### 4.6 wechat-article（`wa`）：公众号
 

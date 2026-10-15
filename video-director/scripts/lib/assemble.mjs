@@ -1,6 +1,7 @@
 // 写 cues.js、复制品牌子画面和字体、替换 index.html 的 vd 标记块
 import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { writeFonts } from "./fonts.mjs";
 
 const esc = (s) => String(s).replaceAll("&", "&amp;").replaceAll("'", "&#39;").replaceAll("<", "&lt;");
 const vars = (o) => `data-variable-values='${esc(JSON.stringify(o))}'`;
@@ -103,10 +104,13 @@ export function audioHosts({ duration, music }) {
 
 export function assemble(dir, built, config, { only = null, duration, music = null }) {
   const idx = join(dir, "index.html");
-  if (!existsSync(idx)) throw new Error(`没有 ${idx}：先从 skills/video-director/templates/index.html 复制`);
+  if (!existsSync(idx)) throw new Error(`没有 ${idx}：先从 video-director 的 templates/index.html 复制`);
   writeFileSync(join(dir, "cues.js"), cuesJs(built));
   for (const f of ["brand-kicker", "brand-captions", "brand-ending"]) cpSync(join(config.brandDir, `${f}.html`), join(dir, "compositions/frames", `${f}.html`));
-  if (!existsSync(join(dir, "assets/fonts/fonts.css"))) cpSync(config.fontsDir, join(dir, "assets/fonts"), { recursive: true });
+  if (!existsSync(join(dir, "assets/fonts/fonts.css"))) {
+    if (config.fontsDir) cpSync(config.fontsDir, join(dir, "assets/fonts"), { recursive: true });
+    else writeFonts(join(dir, "assets/fonts"));
+  }
   const groups = JSON.parse(readFileSync(join(dir, "caption_groups.json"), "utf8")).groups.filter((g) => g.start < duration);
   let html = readFileSync(idx, "utf8");
   const used = built.segments.filter((s) => !only || only.includes(s.id));

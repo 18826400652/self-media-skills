@@ -1,0 +1,46 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+.head { position: absolute; top: 210px; left: 96px; right: 170px; }
+.head .title { margin-top: 22px; font-size: 84px; }
+.prompt { position: absolute; top: 500px; left: 80px; width: 840px; padding: 40px 44px 44px; }
+.prompt .lab { display: flex; align-items: center; gap: 12px; font-size: 26px; color: var(--fg-muted); letter-spacing: .08em; }
+.prompt .lab .icon { font-size: 32px; color: var(--hl); }
+.prompt .txt { margin-top: 26px; font-size: 66px; font-weight: 900; line-height: 1.5; }
+.prompt .cursor { display: inline-block; width: 6px; height: 64px; background: var(--hl); vertical-align: -10px; margin-left: 8px; box-shadow: 0 0 12px var(--hl); }
+.prompt .plus { position: absolute; top: -26px; right: 36px; background: var(--hl); color: #16130a; font-size: 28px; font-weight: 900; padding: 8px 20px; border-radius: 99px; box-shadow: 0 0 30px rgb(255 216 77 / .5); }
+
+.cmp { position: absolute; top: 960px; left: 80px; width: 840px; display: flex; flex-direction: column; gap: 22px; }
+.case { display: grid; grid-template-columns: 200px 1fr; align-items: center; gap: 24px; padding: 26px 32px; border-radius: 28px; }
+.case .tag { font-size: 30px; font-weight: 700; line-height: 1.4; color: var(--fg-muted); }
+.case .tag b { display: block; font-family: var(--mono); font-size: 25px; letter-spacing: .1em; color: var(--fg-hint); font-weight: 700; }
+.case .val { font-size: 52px; font-weight: 900; }
+.case .val small { display: block; font-size: 29px; font-weight: 500; color: var(--fg-muted); margin-bottom: 6px; }
+.case.before .val s { color: var(--danger); text-decoration-thickness: 5px; text-decoration-color: rgb(255 90 95 / .85); }
+.case.after { border-color: rgb(255 216 77 / .45); box-shadow: 0 0 60px rgb(255 216 77 / .12), inset 0 1px 0 rgb(255 255 255 / .1); }
+.case.after .tag b { color: var(--hl); }
+.arrow { align-self: center; color: var(--hl); font-size: 48px; margin: -6px 0; filter: drop-shadow(0 0 10px rgb(255 216 77 / .6)); }
+</style></head><body>
+<div class="atmo"></div><div class="vignette"></div>
+<div class="hud"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+  <div class="bar"><span><b>普通人的AI课</b> · 04 会议纪要</span><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span></div></div>
+
+<div class="head">
+  <div class="kicker">解法</div>
+  <div class="title">提问里<span class="y">加一句</span></div>
+</div>
+
+<div class="prompt glass">
+  <span class="plus">+ 一句</span>
+  <div class="lab"><svg class="icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>给 DeepSeek 的提问</div>
+  <div class="txt">没说清的，不要猜<br><span class="marker">写「未明确」</span><span class="cursor"></span></div>
+</div>
+
+<div class="cmp">
+  <div class="case before glass"><div class="tag"><b>实测 R1</b>不加这句</div><div class="val"><small>提货点海报 · 负责人</small><s>阿杰</s></div></div>
+  <svg class="icon arrow" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  <div class="case after glass"><div class="tag"><b>实测 R6</b>加了这句</div><div class="val"><small>提货点海报 · 负责人</small><span class="y">未明确</span></div></div>
+</div>
+
+<div class="caption">没说清的不要猜<br>写<span class="k">未明确</span></div>
+<div class="guides"><i class="r"></i><i class="b"></i></div>
+</body></html>

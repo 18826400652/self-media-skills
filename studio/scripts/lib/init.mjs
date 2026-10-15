@@ -1,7 +1,7 @@
 // st init：建一个新的作品项目（目录骨架 + 各 skill 的默认配置 + 起步品牌样式）。已有的文件不覆盖。
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { extname, join, relative, resolve } from "node:path";
-import { DEFAULTS, MARKER, STUDIO_DIR, TOOLKIT_DIR, toolkitVersion } from "./project.mjs";
+import { DEFAULTS, MARKER, STUDIO_DIR, toolkitVersion } from "./project.mjs";
 import { substitute } from "./new.mjs";
 
 const SKELETON = join(STUDIO_DIR, "skeleton");
@@ -47,15 +47,10 @@ export function initProject({ dir, account = "", audience = "" }, log = console.
   const studio = { ...DEFAULTS, account, audience, toolkit: `>=${toolkitVersion()}` };
   writeFileSync(join(root, MARKER), JSON.stringify(studio, null, 2) + "\n");
 
-  // 动画库用 narrated-video 自带的那份（帧里引用本地文件，不走 CDN）
-  const gsap = join(TOOLKIT_DIR, "narrated-video/node_modules/gsap/dist/gsap.min.js");
-  const gsapDest = join(root, "06-品牌资产/hyperframes/gsap.min.js");
-  if (existsSync(gsap) && !existsSync(gsapDest)) copyFileSync(gsap, gsapDest);
-
   log(`✓ 已建作品项目：${root}（新建 ${created} 个文件${skipped ? `，跳过 ${skipped} 个已有的` : ""}）`);
   log(`接下来：
   1. 填 00-规划/账号定位.md、00-规划/语气指南.md，在 00-规划/系列/系列.json 登记系列：{"系列名": {"label": "显示名", "unit": "期"}}
-  2. 品牌：改 06-品牌资产/theme.css、hyperframes/frame.md 的颜色；字体放进 06-品牌资产/hyperframes/fonts/（fonts.css + 字体文件）；参考音色放 06-品牌资产/参考音色.wav
+  2. 品牌：改 06-品牌资产/theme.css、hyperframes/frame.md 的颜色；参考音色放 06-品牌资产/参考音色.wav（字体和 GSAP 由 video-director、narrated-video 自带，不用准备）
   3. cd ${root} && st doctor，按提示补齐
   4. st new <系列> <简称> 开第一期`);
   return root;
