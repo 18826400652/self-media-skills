@@ -27,8 +27,8 @@
 | P-16 | 空模板的母稿 `sc check` 报「✓ 母稿结构完整」，kv 第 4 步直接判通过 | 第 3 组 | 已修 | `fix(P-16)` | sc.test.mjs 3 例（用真实母稿模板）RED→GREEN；sc 13/13；真实项目 01-不想看 / 02-不露脸 kv status 和修前一致，flow-check 两期母稿仍 ✓ |
 | P-17 | 选题关要填「评论区在要什么」，但没有工具支持 | 第 2 批 | 已修（文档） | `docs(P-17)` | Ruling：不做抓评论功能（小红书帖子页要登录、抓评论超出 bench 范围）；workflow 第 2 步、选题关模板、sc SKILL.md 写明挑 2–3 条打开帖子看评论，小红书没登录就停下请用户登录，没看写「未看」不编 |
 | P-18 | 在作品项目外跑 `bd` 会悄悄连到日常浏览器 | 第 2 批 | 已修 | `fix(P-18)` | test_bd_connect.py 1 例 RED→GREEN；browser-draft pytest 8/8；实跑：/tmp 下 bd tabs 先打印「不在作品项目里…改连 9222 端口…」。Ruling：不拒绝连接（非项目场景本来就支持），只说清楚 |
-| P-19 | DeepSeek「复制完整回答」失败时 `nv rec` 不提示 | 第 6 组 | 已修（实跑待手机） | `fix(P-19)` | test_rec_flow.py 3 例 RED→GREEN；phone-draft pytest 108/108；nv rec 走 stdio inherit，⚠ 原样透出。真机复现要等 DeepSeek 复制恰好失败，和 P-20 一起找机会实跑 |
-| P-20 | 豆包录屏走不通 | 第 6 组 | 已修（实跑待手机） | `fix(P-20)` | test_apps.py 4 例 RED→GREEN（含一个我自己写错的 ui_texts 三元组 bug，先补测试再修）；phone-draft pytest 112/112；真机录一轮豆包待用户连手机 |
+| P-19 | DeepSeek「复制完整回答」失败时 `nv rec` 不提示 | 第 6 组 | 已修 | `fix(P-19)` | test_rec_flow.py 3 例 RED→GREEN；phone-draft 112/112。真机实跑（2026-10-15，MEIZU 20）：DeepSeek 一轮，复制成功，txt 有「## 复制的完整回答」、json copied:true。复制失败的 ⚠ 分支这次没触发（要等复制恰好失败），由单元测试覆盖 |
+| P-20 | 豆包录屏走不通 | 第 6 组 | 已修 | `fix(P-20)` | test_apps.py 4 例；phone-draft 112/112。真机实跑：豆包一轮走通到发送、没被「AI 创作 / AI 播客」挡住（这次没弹升级窗，update_dialog 分支没触发）。但录到的内容不能用，另记 P-43 |
 | P-21 | 文档没写 WSL 下怎么用 USB 调试 | 第 2 批 | 已修 | `docs(P-21)` | phone-draft/SKILL.md「前提」加 WSL 一条：只写检查中实际遇到的（WSL adb 看不到 USB、adb.exe failed to start daemon、usbipd 要管理员、USB 网络共享时转进 WSL 会断网） |
 | P-22 | 第 6 步「自检」会被第 10 步才写的公众号模板挡住 | 第 4 组 | 已修 | `fix(P-22)` | practical-facts.test.mjs 3 例 RED→GREEN + 1 例补充（写了但残留占位，直接通过：覆盖前一例碰巧通过的分支）；kv 85/85；真实项目 3 期 kv status 不变 |
 | P-23 | STORYBOARD 模板第 1、12 帧的 lead 默认位置会压到字幕带 | 第 2 批 | 已修 | `fix(P-23)` | 新增 studio/tests/templates.test.mjs 1 例 RED→GREEN；studio 36/36。新默认值（shot height 600、lead top 1020）就是 01 实际用的、今天 01 副本 hf-build --motion 检查通过（exit 0）的配置 |
@@ -53,6 +53,7 @@
 | P-36b | 组件库（18826400652/hyperframes）28 个组件时间写死：改成按宿主时长撑满、项目可按 vars 给的 @词 时间出现 | 后续（另一个仓库） | 待修 | | |
 
 | P-42 | 配音缓存键里是参考音色的绝对路径（config.mjs 展开），项目挪位置或复制后缓存全部失效、要重新付费配音（修 P-34 时发现） | 待定（改键会让现有缓存失效，需用户决定） | 待修 | | |
+| P-43 | 豆包提问太长时回答在屏幕外，nv rec 发送后 9 秒就判「回答完」，录屏和 txt 都只有提问（P-20 实跑发现） | 待定 | 待修 | | |
 
 ## 第 1 批收尾（2026-10-15）
 
