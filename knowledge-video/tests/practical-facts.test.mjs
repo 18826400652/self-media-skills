@@ -260,3 +260,38 @@ test("第 9 步用 qaProblem 判定：checked 不全不算做完", () => {
   assert.equal(f.steps.render.ok, false);
   assert.match(f.steps.render.why, /safe-area/);
 });
+
+test("自检只看内容阶段：公众号文章残留占位 → 第 6 步通过，公众号那一步不通过并写出文件", () => {
+  const dir = episode({ "实测/录屏-1.mp4": "x" });
+  const items = [{ level: "✗", msg: "公众号/文章.md:23 残留占位符：{{关键词}}", file: "公众号/文章.md" }];
+  const f = collect(dir, run(), { runSc: () => ({ items }) });
+  assert.equal(f.steps.selfcheck.ok, true);
+  assert.equal(f.steps.wechat.ok, false);
+  assert.match(f.steps.wechat.why, /公众号\/文章\.md/);
+});
+
+test("自检：母稿残留占位 → 第 6 步不通过，原因写出文件", () => {
+  const dir = episode({ "实测/录屏-1.mp4": "x" });
+  const items = [{ level: "✗", msg: "母稿.md:3 残留占位符", file: "母稿.md" }];
+  const f = collect(dir, run(), { runSc: () => ({ items }) });
+  assert.equal(f.steps.selfcheck.ok, false);
+  assert.match(f.steps.selfcheck.why, /母稿\.md/);
+});
+
+test("抖音 SCRIPT.md 的 ✗ 归到第 7 步，不挡第 6 步", () => {
+  const dir = episode({ "实测/录屏-1.mp4": "x", "抖音/SCRIPT.md": "## a (Frame 1)\n\n    写好了\n" });
+  const items = [{ level: "✗", msg: "抖音第 1 句情感「x」无效", file: "抖音/SCRIPT.md" }];
+  const f = collect(dir, run(), { runSc: () => ({ items }) });
+  assert.equal(f.steps.selfcheck.ok, true);
+  assert.equal(f.steps.script.ok, false);
+  assert.match(f.steps.script.why, /情感/);
+});
+
+test("公众号文章写了但还残留占位 → 公众号那一步报 sc 的问题，算内容没写好（kv done 会拒绝）", () => {
+  const dir = episode({ "实测/录屏-1.mp4": "x", "公众号/文章.md": "# 标题\n\n正文，后台回复「{{关键词}}」领\n" });
+  const items = [{ level: "✗", msg: "公众号/文章.md:3 残留占位符", file: "公众号/文章.md" }];
+  const f = collect(dir, run(), { runSc: () => ({ items }) });
+  assert.equal(f.steps.wechat.ok, false);
+  assert.equal(f.steps.wechat.content, false);
+  assert.match(f.steps.wechat.why, /残留占位符/);
+});

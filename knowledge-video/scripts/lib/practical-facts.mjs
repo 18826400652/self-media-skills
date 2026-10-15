@@ -82,8 +82,25 @@ function scSteps(dir, runSc) {
     out[key] = mine.length ? no(mine.map((i) => i.msg).join("；")) : ok();
   }
   if (out.test.ok && !latest(dir, "实测", /\.mp4$/)) out.test = no("实测/ 里没有录屏 mp4（nv rec）");
-  out.selfcheck = fails.length ? no(`sc check 还有 ${fails.length} 项 ✗`) : ok();
+  // 第 6 步只管内容阶段（第 1–5 步的文件和全局项）；平台文件的 ✗ 到各自那一步再拦
+  const own = fails.filter((i) => !platformStep(i.file));
+  out.selfcheck = own.length ? no(`sc check 还有 ${own.length} 项 ✗：${own.map((i) => i.msg).join("；")}`) : ok();
+  out.platform = {};
+  for (const i of fails) {
+    const k = platformStep(i.file);
+    if (k) out.platform[k] = [...(out.platform[k] ?? []), i.msg];
+  }
   return out;
+}
+
+/** 平台文件归到哪一步：抖音脚本 → 第 7 步，公众号 / 小红书 / 抖音发布文案和封面 → 各自存草稿那一步 */
+export function platformStep(file) {
+  if (!file) return null;
+  if (file === "抖音/SCRIPT.md" || file === "抖音/VOICE.md") return "script";
+  if (file.startsWith("公众号/")) return "wechat";
+  if (file.startsWith("小红书/")) return "xiaohongshu";
+  if (file.startsWith("抖音/")) return "douyin";
+  return null;
 }
 
 // knowledge-video/references/qa.md 规定的检查项：checked 必须全部写上
@@ -208,17 +225,18 @@ function gateFacts(dir, run, video) {
 export function collectPracticalFacts(dir, run, { runSc, runVoiceCheck, runVdCues, experienceDir }) {
   const video = videoMode(run);
   const v = videoSteps(dir, run, runVoiceCheck);
-  return {
-    video,
-    steps: {
-      ...scSteps(dir, runSc),
-      ...(video === "director" ? { script: v.script, ...directorSteps(dir, runVdCues) } : v),
-      ...draftSteps(dir, run),
-      record: recordStep(dir),
-      retro: retroStep(dir, experienceDir),
-    },
-    gates: gateFacts(dir, run, video),
+  const { platform, ...sc } = scSteps(dir, runSc);
+  const steps = {
+    ...sc,
+    ...(video === "director" ? { script: v.script, ...directorSteps(dir, runVdCues) } : v),
+    ...draftSteps(dir, run),
+    record: recordStep(dir),
+    retro: retroStep(dir, experienceDir),
   };
+  for (const [k, msgs] of Object.entries(platform ?? {})) {
+    if (steps[k]?.ok || steps[k]?.content === true) steps[k] = no(`sc check：${msgs.join("；")}`, k === "script" ? {} : { content: false });
+  }
+  return { video, steps, gates: gateFacts(dir, run, video) };
 }
 
 function runCmd(cmd, args) {
