@@ -17,7 +17,7 @@
 | P-06 | `nv help` 少了最后两行 | 后续 | 待修 | | |
 | P-07 | 一条流程里用了两个版本的 hyperframes | 第 7 组 | 待修 | | |
 | P-08 | 抖音封面字数上限三处写法不一 | 后续 | 待修 | | |
-| P-09 | `st doctor` 不检查配置里残留的占位文字 | 第 5 组 | 待修 | | |
+| P-09 | `st doctor` 不检查配置里残留的占位文字 | 第 5 组 | 已修 | `fix(P-09)` | doctor.test.mjs 1 例 RED→GREEN + 1 例反向（夹具补 audience）；project.test 旧用例按新规则放宽允许的 ✗；studio 31/31；真实项目、flow-check 的 st doctor 不报 |
 | P-10 | 参考音色怎么准备没有文档 | 后续 | 待修 | | |
 | P-11 | 默认音效目录是空的，doctor 不提醒 | 第 5 组 | 已修 | `fix(P-11)` | doctor.test.mjs 2 例 RED→GREEN（+1 例反向）；studio 29/29；真实项目、flow-check 的 st doctor 不报（Review Focus 3） |
 | P-12 | `st new --只建抖音` 成功时提示「已创建：<作品>」 | 后续 | 待修 | | |

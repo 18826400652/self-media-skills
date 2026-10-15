@@ -107,6 +107,18 @@ function checkBrand(p, out) {
   }
 }
 
+/** 会进成品（配音人设、发草稿核对的账号名）的字段：还是占位就报 ✗；其余占位报 ⚠ */
+const PLACEHOLDER_FAIL = { "narrated-video.config.json": ["tts.style"], "wechat-article.config.json": ["account"] };
+
+/** 配置里还是 skeleton 的括号说明「（…）」的字符串字段：[[路径, 值]] */
+export function placeholders(cfg, prefix = "") {
+  return Object.entries(cfg ?? {}).flatMap(([k, v]) => {
+    const path = prefix ? `${prefix}.${k}` : k;
+    if (v && typeof v === "object" && !Array.isArray(v)) return placeholders(v, path);
+    return typeof v === "string" && /^（.*）$/.test(v.trim()) ? [[path, v]] : [];
+  });
+}
+
 function checkConfigs(p, out) {
   for (const [file, paths] of Object.entries(CONFIG_PATHS)) {
     const f = join(p.root, file);
@@ -114,6 +126,11 @@ function checkConfigs(p, out) {
     let cfg;
     try { cfg = JSON.parse(readFileSync(f, "utf8")); } catch (e) { out.fail(`${file} 不是合法 JSON：${e.message}`); continue; }
     const missing = paths.filter((k) => get(cfg, k) && !existsSync(resolve(p.root, get(cfg, k)))).map((k) => `${k}=${get(cfg, k)}`);
+    for (const [k, v] of placeholders(cfg)) {
+      const msg = `${file} 的 ${k} 还是模板占位：${v}`;
+      if ((PLACEHOLDER_FAIL[file] ?? []).includes(k)) out.fail(msg);
+      else out.warn(msg);
+    }
     const sfx = file === "video-director.config.json" && cfg.sfxDir && resolve(p.root, cfg.sfxDir);
     if (missing.length) out.fail(`${file} 里的路径不存在：${missing.join("；")}`);
     else if (sfx && !hasAudio(sfx)) out.fail(`${file} 的 sfxDir 音效目录是空的（${cfg.sfxDir}）：DIRECTOR.md 写的音效会找不到。放几个音效进去，或指向 media-use 的音效库 ${mediaUseSfx("~")}`);

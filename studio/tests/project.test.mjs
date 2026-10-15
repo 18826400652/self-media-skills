@@ -63,7 +63,7 @@ test("st init：建出骨架，账号填进去，gitignore 改名；再跑一次
   assert.throws(() => initProject({ dir }, quiet), /已经是作品项目/);
 });
 
-test("st doctor：新建的项目里，项目、模板、品牌、配置几节没有 ✗（只有参考音色要自备）", () => {
+test("st doctor：新建的项目里，项目、模板、品牌、配置几节没有别的 ✗（只有参考音色、配音人设、公众号名称要自己填）", () => {
   const dir = join(tmp("st-doc-"), "proj");
   initProject({ dir, account: "小号", audience: "新手" }, quiet);
   const out = capture();
@@ -73,8 +73,8 @@ test("st doctor：新建的项目里，项目、模板、品牌、配置几节�
   assert.match(head, /✓ 模板：全部用工具包默认的/);
   assert.match(head, /✓ 品牌 frame\.md/);
   const fails = head.split("\n").filter((l) => l.includes("✗"));
-  // 起步骨架不带参考音色，只允许这一处报 ✗
-  for (const l of fails) assert.match(l, /tts\.reference/, l);
+  // 起步骨架不带参考音色、配音人设和公众号名称还是占位，只允许这三处报 ✗
+  for (const l of fails) assert.match(l, /tts\.reference|tts\.style 还是模板占位|account 还是模板占位/, l);
 });
 
 test("st doctor：没有 .env 给 ⚠ 提示复制 .env.example；有了只报存在，不显示内容", () => {
