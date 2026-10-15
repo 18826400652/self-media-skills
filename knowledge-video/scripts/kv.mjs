@@ -16,7 +16,7 @@ import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
 import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
 import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, gatesFor, practicalStatus } from "./lib/practical.mjs";
-import { videoMode } from "./lib/video.mjs";
+import { DIRECTOR_DIR, FINAL_RE, videoMode } from "./lib/video.mjs";
 import { collectPracticalFacts, defaultRunners, fingerprint, templateHashes } from "./lib/practical-facts.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
@@ -105,7 +105,8 @@ function writeBrief(dir) {
   return 0;
 }
 
-const GATE_LABEL = { script: "① 研究简报 + 脚本", storyboard: "② 分镜总览图", final: "③ 成片" };
+const GATE_LABEL = { script: "① 研究简报 + 脚本", storyboard: "② 分镜总览图", director: "②a 导演脚本", sample: "②b 风格样片", final: "③ 成片" };
+const CONCEPT_GATES = { template: ["script", "storyboard", "final"], director: ["script", "director", "sample", "final"] };
 const TYPE_LABEL = { concept: "概念科普", practical: "实用技巧" };
 
 function hasFileIn(dir, sub, re) {
@@ -122,6 +123,7 @@ function fileFilled(path, filled) {
 export function collectFacts(dir) {
   const run = readRun(dir);
   const type = episodeType(run);
+  const video = videoMode(run);
   const gate = (k) => run?.gates?.[k]?.passed === true;
   const qaPath = join(dir, FILES.qa);
   let qa = null;
@@ -132,17 +134,30 @@ export function collectFacts(dir) {
       qa = { passed: false };
     }
   }
+  const vdQaPath = join(dir, DIRECTOR_DIR, "qa-douyin.json");
+  let vdQa = null;
+  if (existsSync(vdQaPath)) {
+    try {
+      vdQa = { passed: JSON.parse(readFileSync(vdQaPath, "utf8")).passed === true };
+    } catch {
+      vdQa = { passed: false };
+    }
+  }
   return {
     type,
+    video,
     hasBrief: existsSync(join(dir, FILES.brief)),
     hasEvidence: fileFilled(join(dir, type === "practical" ? "实测记录.md" : FILES.research), (t) => isEvidenceFilled(type, t)),
     hasScript: fileFilled(join(dir, FILES.script), isScriptFilled),
     checkOk: !runCheck(dir).issues.some((i) => i.level === "error"),
     hasStoryboard: existsSync(join(dir, "抖音/STORYBOARD.md")),
     hasSheet: existsSync(join(dir, "抖音/snapshots/sheet.jpg")),
-    hasRender: hasFileIn(dir, "抖音/renders", /\.mp4$/),
+    hasDirector: existsSync(join(dir, DIRECTOR_DIR, "DIRECTOR.md")),
+    hasSample: existsSync(join(dir, DIRECTOR_DIR, "renders/sample.mp4")),
+    hasRender: video === "director" ? hasFileIn(dir, `${DIRECTOR_DIR}/renders`, FINAL_RE) : hasFileIn(dir, "抖音/renders", /\.mp4$/),
+    vdQa,
     qa,
-    gates: { script: gate("script"), storyboard: gate("storyboard"), final: gate("final") },
+    gates: Object.fromEntries(CONCEPT_GATES[video].map((k) => [k, gate(k)])),
   };
 }
 
@@ -255,7 +270,7 @@ function printStatus(dir) {
   if (episodeType(run) === "practical") return printPracticalStatus(dir, run);
   const f = collectFacts(dir);
   const s = detectStatus(f);
-  console.log(`类型：${TYPE_LABEL[f.type]}`);
+  console.log(`类型：${TYPE_LABEL[f.type]}（视频做法 ${f.video}）`);
   console.log(`阶段：${s.stage}`);
   console.log(`下一步：${s.next}`);
   if (s.waitingFor) console.log(`等用户确认：${GATE_LABEL[s.waitingFor]}`);

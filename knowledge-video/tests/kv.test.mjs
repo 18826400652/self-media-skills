@@ -98,3 +98,12 @@ test("kv status：new-episode 生成的空模板不算做完（实用技巧仍�
   assert.match(concept.stdout, /阶段：script/);
   assert.match(concept.stdout, /下一步：按类型档案的结构配方写/);
 });
+
+test("kv status 概念科普 director：没有 DIRECTOR.md 时下一步写导演脚本，确认节点列 ②a ②b", () => {
+  const r = kv("status", episode({ "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, "run.json": { type: "concept", video: "director", gates: { script: { passed: true } } } }));
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /阶段：director/);
+  assert.match(r.stdout, /②a 导演脚本 ·/);
+  assert.match(r.stdout, /②b 风格样片 ·/);
+  assert.doesNotMatch(r.stdout, /分镜总览图/);
+});
