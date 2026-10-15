@@ -8,7 +8,7 @@
 // --snap：再按每帧结尾截图，拼成 snapshots/sheet.jpg，用来看图检查；并量每帧内容铺开多少，偏空的帧给出警告。
 // --motion：每帧截入场、中段、落定三张（动画过程），检查元素是否按时出现、过程中有没有穿帮。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
-import { CAPTION_ARGS, FACELESS_SCRIPTS, SYNC_ARGS } from "./lib/captions-step.mjs";
+import { CAPTION_ARGS, FACELESS_SCRIPTS, SYNC_ARGS, keepMtimeIfUnchanged } from "./lib/captions-step.mjs";
 import { execFileSync, spawnSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
@@ -208,14 +208,19 @@ export function sparseFrames(results) {
 }
 
 /** 截图按序号排（frame-07-at-…），不按文件名字母顺序 */
-function snapshotFiles(dir) {
+/** 截图放哪：每帧结尾一张（③ 看的总览图）和 --motion 的过程图分开存，kv 只看 sheet.jpg */
+export function snapshotPaths(motion) {
+  return motion ? { dir: "snapshots/motion", sheet: "snapshots/motion-sheet.jpg" } : { dir: "snapshots", sheet: "snapshots/sheet.jpg" };
+}
+
+function snapshotFiles(dir, sub = "snapshots") {
   const idx = (f) => Number(f.match(/^frame-(\d+)/)[1]);
-  return readdirSync(join(dir, "snapshots")).filter((f) => /^frame-\d+.*\.png$/.test(f)).sort((a, b) => idx(a) - idx(b)).map((f) => join("snapshots", f));
+  return readdirSync(join(dir, sub)).filter((f) => /^frame-\d+.*\.png$/.test(f)).sort((a, b) => idx(a) - idx(b)).map((f) => join(sub, f));
 }
 
 function checkStillness(dir) {
   if (!existsSync(PYTHON)) return console.log("  ⚠ 跳过落定后动静检查：没有 .venv（见 references/setup.md）");
-  const files = snapshotFiles(dir);
+  const files = snapshotFiles(dir, snapshotPaths(true).dir);
   const pairs = files.filter((_, i) => i % 4 >= 2); // 每帧四张里的后两张：落定前、落定
   let out;
   try {
@@ -268,14 +273,16 @@ export function localizeProject(dir, gsapVersion) {
 function snapshotSheet(dir, motion) {
   const times = motion ? frameMotionTimes(dir) : frameEndTimes(dir);
   if (!times.length) throw new Error("index.html 里没找到帧，无法截图");
-  rmSync(join(dir, "snapshots"), { recursive: true, force: true });
-  run(`截图（${times.length} 帧）`, HF, ["snapshot", ".", "--at", times.join(","), "--no-end"], dir);
+  const out = snapshotPaths(motion);
+  // 每帧结尾那套重拍时整个 snapshots/ 连过程图一起清掉；--motion 只清自己的目录，不动 ③ 看的 sheet.jpg
+  rmSync(join(dir, out.dir), { recursive: true, force: true });
+  run(`截图（${times.length} 帧）`, HF, ["snapshot", ".", "--at", times.join(","), "--no-end", "-o", out.dir], dir);
   const cols = motion ? 8 : Math.min(7, times.length); // 动画过程：每行两帧，每帧「入场 / 中段 / 落定前 / 落定」
-  execFileSync("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", "snapshots/frame-*.png",
-    "-vf", `scale=300:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=6:color=0x444444`, "-frames:v", "1", "snapshots/sheet.jpg"], { cwd: dir });
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", `${out.dir}/frame-*.png`,
+    "-vf", `scale=300:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=6:color=0x444444`, "-frames:v", "1", out.sheet], { cwd: dir });
   console.log(motion
-    ? "  ✓ snapshots/sheet.jpg（每帧四张：入场 / 中段 / 落定前 / 落定，看元素是否按时出现、过程中有没有穿帮）"
-    : "  ✓ snapshots/sheet.jpg（每帧结尾一张，看图检查断行、遮挡、安全区）");
+    ? `  ✓ ${out.sheet}（每帧四张：入场 / 中段 / 落定前 / 落定，看元素是否按时出现、过程中有没有穿帮）`
+    : `  ✓ ${out.sheet}（每帧结尾一张，看图检查断行、遮挡、安全区）`);
   if (motion) checkStillness(dir);
   else checkOccupancy(dir);
 }
@@ -292,9 +299,9 @@ function main() {
   const self = (name) => join(SKILL_DIR, "scripts", `${name}.mjs`);
 
   node("组件库 + 逐字时间", self("hf-kit"), [dir], dir);
-  node("同步帧时长", join(FE, "audio.mjs"), SYNC_ARGS, dir);
+  keepMtimeIfUnchanged(join(dir, "STORYBOARD.md"), () => node("同步帧时长", join(FE, "audio.mjs"), SYNC_ARGS, dir));
   node("帧模板（STORYBOARD 的 build）", self("hf-frames"), [dir], dir);
-  node("音效", self("hf-sfx"), [dir], dir);
+  keepMtimeIfUnchanged(join(dir, "audio_meta.json"), () => node("音效", self("hf-sfx"), [dir], dir));
   console.log("\n▸ 素材");
   stageAssets(dir);
   node("中文字体", self("hf-fonts"), [dir], dir);

@@ -318,7 +318,7 @@ kv status 04-作品/<系列>/NN-<简称>
      ```
   2. 看过程，而不只看结尾那一张：
      ```bash
-     nv hf-build 抖音 --motion   # 每帧截入场 / 中段 / 落定前 / 落定四张，落定后完全静止会警告
+     nv hf-build 抖音 --motion   # 每帧截入场 / 中段 / 落定前 / 落定四张（snapshots/motion-sheet.jpg），落定后完全静止会警告
      ffmpeg -ss <秒> -i 抖音/renders/<成片>.mp4 -frames:v 1 x.png   # 成片抽帧
      ```
   3. 写作品目录下的 `qa.json`，`checked` 必须写全这 7 项：

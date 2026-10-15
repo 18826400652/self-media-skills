@@ -36,7 +36,7 @@
 | P-25 | shot 盖住下方文字时，第 1 帧没被检查出来，第 12 帧被检查出来了 | 第 3 组 | 已修 | `fix(P-25)` | hf.test.mjs 1 例 RED→GREEN；nv 109/109；实跑：01 副本第 1 帧改回 height 720/top 1000 → hf-build ✗；现在的 01 → 通过。Ruling：原因是 hyperframes 单个采样点的遮挡只给 ℹ，改为 hf-build 把 text_occluded 一律当错误（没按计划写 bounds.py 遮挡检查） |
 | P-26 | marker 组件的高亮会盖住前一个字；steps 组件第一步时只显示两步 | 后续 | 待修 | | |
 | P-27 | 帧时长写回 STORYBOARD 的是 `nv hf-build`，不是 `nv hf-audio` | 后续 | 待修 | | |
-| P-28 | 渲染后跑 `--motion` 会让 kv 要求重新渲染 | 第 4 组 | 待修 | | |
+| P-28 | 渲染后跑 `--motion` 会让 kv 要求重新渲染 | 第 4 组 | 已修 | `fix(P-28)` | hf.test.mjs、captions-step.test.mjs 各 1 例 RED→GREEN；nv 111/111；实跑 01：--motion 后 sheet.jpg、STORYBOARD、audio_meta 的修改时间都不变，kv 判定保持「qa.json 有没修的问题」。另外发现 hf-build 每次重写 STORYBOARD（同步帧时长）和 audio_meta（音效），一并改成内容不变就保留原时间。01 被旧代码改过的两个文件时间已手工恢复 |
 | P-29 | kv 不检查 qa.json 的 checked 和 high 级问题 | 第 3 组 | 已修 | `fix(P-29)` | practical-facts.test.mjs 4 例 RED→GREEN（旧夹具 qa.json 补全 checked）；kv 81/81；真实项目 3 期 kv status 不变 |
 | P-30 | 「落定后完全静止」的修改提示不对题 | 后续 | 待修 | | |
 | P-31 | 导演做法要的 caption_groups.json 在导演路径上不会生成 | 第 1 组 | 已修 | `fix(P-31)` | captions-step.test.mjs 3 例 RED→GREEN；nv 108/108；实跑 02 删 caption_groups 后 nv hf-audio（缓存）重新生成，帧时长写回 STORYBOARD（顺带改善 P-27） |

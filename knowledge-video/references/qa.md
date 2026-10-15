@@ -1,6 +1,6 @@
 # 视觉 QA
 
-渲染后，先跑 `nv hf-build 抖音 --motion`（每帧四张：入场 / 中段 / 落定前 / 落定，并自动检查落定后还动不动），再逐帧看 `抖音/snapshots/sheet.jpg` 和成片抽帧（`ffmpeg -ss <秒> -i <成片> -frames:v 1 x.png`），写 `qa.json`。
+渲染后，先跑 `nv hf-build 抖音 --motion`（每帧四张：入场 / 中段 / 落定前 / 落定，并自动检查落定后还动不动；过程图存在 `抖音/snapshots/motion-sheet.jpg`，不会动 ③ 用的 `sheet.jpg`，也不会让 kv 以为分镜改过），再逐帧看 `抖音/snapshots/motion-sheet.jpg` 和成片抽帧（`ffmpeg -ss <秒> -i <成片> -frames:v 1 x.png`），写 `qa.json`。
 
 只看每帧结尾一张图，会漏掉「过程」上的问题：元素出现得太晚、落定后整帧不动、连续几帧长得一样。官方 Claude Design 指南把「完整看一遍再调节奏」当成 Claude Code 的主要工作：看哪一帧拖、哪一帧太静，再微调时长和动作。
 

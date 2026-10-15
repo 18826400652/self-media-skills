@@ -45,3 +45,15 @@ test("buildCaptions 找不到 faceless-explainer 时跳过并说明", () => {
   assert.deepEqual(out, { skipped: "no-faceless" });
   assert.match(msgs.join("\n"), /faceless-explainer/);
 });
+
+test("keepMtimeIfUnchanged：内容没变就恢复原来的修改时间；变了就保留新时间", async () => {
+  const { utimesSync, statSync } = await import("node:fs");
+  const { keepMtimeIfUnchanged } = await import("../scripts/lib/captions-step.mjs");
+  const dir = project();
+  const f = join(dir, "STORYBOARD.md");
+  utimesSync(f, 1000, 1000);
+  keepMtimeIfUnchanged(f, () => writeFileSync(f, readFileSync(f, "utf8")));
+  assert.equal(Math.round(statSync(f).mtimeMs / 1000), 1000);
+  keepMtimeIfUnchanged(f, () => writeFileSync(f, "## Frame 1\n\n- duration: 2.5s\n"));
+  assert.notEqual(Math.round(statSync(f).mtimeMs / 1000), 1000);
+});

@@ -427,3 +427,9 @@ test("occludedText：check 输出里 text_occluded 不管 ℹ 还是 ✗ 都挑�
   assert.match(found[1], /#p12-l/);
   assert.deepEqual(occludedText("  ◇ 0 issues"), []);
 });
+
+test("snapshotPaths：--motion 的过程图单独存，不碰 ③ 用的 sheet.jpg", async () => {
+  const { snapshotPaths } = await import("../scripts/hf-build.mjs");
+  assert.deepEqual(snapshotPaths(false), { dir: "snapshots", sheet: "snapshots/sheet.jpg" });
+  assert.deepEqual(snapshotPaths(true), { dir: "snapshots/motion", sheet: "snapshots/motion-sheet.jpg" });
+});
