@@ -42,7 +42,7 @@
 | P-31 | 导演做法要的 caption_groups.json 在导演路径上不会生成 | 第 1 组 | 已修 | `fix(P-31)` | captions-step.test.mjs 3 例 RED→GREEN；nv 108/108；实跑 02 删 caption_groups 后 nv hf-audio（缓存）重新生成，帧时长写回 STORYBOARD（顺带改善 P-27） |
 | P-32 | 导演脚本模板写死了真实项目的系列名 | 第 7 组 | 已修 | `fix(P-32)` | templates.test 2 例 + studio project.test 1 例 RED→GREEN（旧模板测试按新规则更新预期）；vd 110/110、studio 34/34；02 的 DIRECTOR 仍通过。同类：骨架 brand-kicker.html 默认值也写死了，一并改 |
 | P-33 | DIRECTOR.md 模板说明文字里的「@词」被当成 cue | 第 2 批 | 已修 | `fix(P-33)` | templates.test 1 例 RED→GREEN（说明文字去掉机器块和（待填）行后解析不出 @词）；vd 118/118。除报告里的第 5 行，第 4、17 行也有同样问题，一并放进反引号 |
-| P-34 | 配音缓存不跨作品，director 做法要重新付费配一次 | 第 2 批 | 待修 | | |
+| P-34 | 配音缓存不跨作品，director 做法要重新付费配一次 | 第 2 批 | 已修 | `fix(P-34)` | voice-cache.test.mjs 3 例 RED→GREEN；nv 121/121；实跑（不付费）：flow-check 里临时建 A（带 01 旧缓存）、B（不带缓存）两期，A 跑 hf-audio 把旧缓存收进项目根 .media/voice-cache，B 4 段全部「缓存」命中，总时长 80.01 和 01 一致；临时作品已删，~/flow-check/.media/ 保留（自带 .gitignore *）。Ruling：缓存放项目根、旧缓存硬链接收进来、.media 里自放 .gitignore（老项目只忽略 04-作品/*）。发现 P-42 |
 | P-35 | 配乐取到的曲子比样片还短，重拍对位找不到时只是从头播 | 第 7 组 | 已修 | `fix(P-35)` | music.test 3 例 RED→GREEN（+1 反向）；vd 117/117；实跑（02 副本，带 16 秒旧曲）：重新取曲得 30 秒（时长提示不可靠）→ 循环补到 92 秒，重拍对上 64.26s @四条。Ruling：取曲带时长提示 + 太短重取 + 循环兜底 |
 | P-36 | dykit 组件的动画是固定时长的，不跟 @词，也不撑满整段 | 第 2 组 | 已修（本仓库兜底） | `fix(P-36)` | components/vd 测试 4 例 RED→GREEN；vd 105/105；实跑：02 副本第 2 段改回 dy-checklist，vd build 在组装前 ✗ 拦下。Ruling：本仓库不改组件文件，只在撑不满时报错；真正撑满 + 跟 @词 见 P-36b |
 | P-37 | `vd qa` 不报「整段没内容」 | 第 3 组 | 已修 | `fix(P-37)` | douyin-qa.test.mjs 2 例 RED→GREEN（qa-run 旧夹具补一个内容元素）；vd 108/108；实跑：副本第 5 段末尾清空 → ✗「58–60.5 秒只有背景」；02 原版副本完整构建 0 ✗（无误报） |
@@ -51,6 +51,8 @@
 | P-40 | vd 自动加的账号结尾条会和最后一段画面重复 | 第 2 批 | 待修 | | |
 | P-41 | nv hf-audio 生成字幕时打印「字体找不到会回退」警告（此时还没打包字体，director 做法用不到这份字幕 HTML，属误导） | 第 2 批 | 已修 | `fix(P-41)` | captions-step.test 2 例（过滤 RED→GREEN；失败照样抛错为守护用例）；nv 117/117；实跑 01 副本（挪走 assets/fonts）用真实 faceless captions.mjs：不过滤时出现字体回退警告，hf-audio 用的过滤模式下不出现，字幕照常 49 组。Ruling：只在 hf-audio 过滤，hf-build 时字体已打包、警告是真的，保留 |
 | P-36b | 组件库（18826400652/hyperframes）28 个组件时间写死：改成按宿主时长撑满、项目可按 vars 给的 @词 时间出现 | 后续（另一个仓库） | 待修 | | |
+
+| P-42 | 配音缓存键里是参考音色的绝对路径（config.mjs 展开），项目挪位置或复制后缓存全部失效、要重新付费配音（修 P-34 时发现） | 待定（改键会让现有缓存失效，需用户决定） | 待修 | | |
 
 ## 第 1 批收尾（2026-10-15）
 

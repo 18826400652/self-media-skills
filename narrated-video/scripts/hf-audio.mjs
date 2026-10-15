@@ -28,6 +28,7 @@ import { loadConfig } from "./lib/config.mjs";
 import { writeCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { loadDotEnv, probeDuration, synthesizeClean, synthesizeSegment } from "./lib/speech.mjs";
+import { adoptLegacyCache, voiceCacheDir } from "./lib/voice-cache.mjs";
 import { checkDirection, parseVoiceDirection } from "./lib/voice-direction.mjs";
 import { getProvider } from "../tts/index.mjs";
 
@@ -205,7 +206,8 @@ async function main() {
     return;
   }
 
-  const cacheDir = join(dir, ".media", "voice-cache");
+  const cacheDir = voiceCacheDir(dir, config);
+  adoptLegacyCache(join(dir, ".media", "voice-cache"), cacheDir);
   const voiceDir = join(dir, "assets", "voice");
   mkdirSync(cacheDir, { recursive: true });
   mkdirSync(voiceDir, { recursive: true });

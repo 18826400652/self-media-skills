@@ -366,3 +366,10 @@
 ### P-41 `nv hf-audio` 生成字幕时打印字体回退警告（修 P-31 时发现）
 - 现象：P-31 修好后，`nv hf-audio` 末尾会跑 faceless-explainer 的字幕生成，此时工程里还没有 `assets/fonts`，它警告「frame.md names font "Noto Sans SC" but no matching .woff2 … captions will fall back」；template 做法下一步 `nv hf-build` 会打包字体，director 做法只用 caption_groups.json，不用这份字幕 HTML——警告对两种做法都是误导
 - 严重度：体验
+
+### P-42 配音缓存键里是参考音色的绝对路径（修 P-34 时发现）
+- 位置：`narrated-video/scripts/lib/config.mjs:47` 把 `tts.reference` 展开成绝对路径；`speech.mjs` 的缓存键直接用它
+- 现象：把 01 复制到别的目录后，缓存文件都在，`nv hf-audio` 仍判没命中、要重新生成（实测：同一份 SCRIPT/VOICE/配置，原目录键 bf3fca32，副本键 e2c92413）
+- 影响：项目改目录名、搬家、复制一份试改，都会重新付费配音；同一项目内不受影响
+- 修法要用户定：键改用参考音色的内容哈希（或相对项目根的路径），会让现有缓存全部失效一次，除非同时兼容旧键
+- 严重度：错误（花钱）
