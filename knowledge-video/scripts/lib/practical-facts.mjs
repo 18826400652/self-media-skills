@@ -86,6 +86,18 @@ function scSteps(dir, runSc) {
   return out;
 }
 
+// knowledge-video/references/qa.md 规定的检查项：checked 必须全部写上
+export const QA_CHECKS = ["safe-area", "text-size", "density", "typo", "fact-on-screen", "rhythm", "motion"];
+
+/** qa.json 不合格的原因；合格返回 null */
+export function qaProblem(qa) {
+  const missing = QA_CHECKS.filter((c) => !(qa.checked ?? []).includes(c));
+  if (missing.length) return `qa.json 的 checked 少了：${missing.join("、")}（见 knowledge-video references/qa.md）`;
+  if (qa.passed !== true) return "qa.json 有没修的问题";
+  if ((qa.issues ?? []).some((i) => i.severity === "high")) return "qa.json 写了通过，但还有 high 级问题（high 必须修好才能通过）";
+  return null;
+}
+
 function videoSteps(dir, run, runVoiceCheck) {
   const script = join(dir, "抖音/SCRIPT.md");
   let s = written(dir, "抖音/SCRIPT.md", run.templates) && isScriptFilled(readFileSync(script, "utf8")) ? ok() : no("抖音/SCRIPT.md 还是空模板");
@@ -104,7 +116,7 @@ function videoSteps(dir, run, runVoiceCheck) {
   try { qa = JSON.parse(readFileSync(join(dir, "qa.json"), "utf8")); } catch { qa = null; }
   const render = !mp4 ? no("还没渲染") : mtime(mp4) < mtime(sheet) ? no("分镜改过，要重新 nv render")
     : !qa ? no("还没写 qa.json") : mtime(join(dir, "qa.json")) < mtime(mp4) ? no("渲染后还没重新 QA（重写 qa.json）")
-      : qa.passed !== true ? no("qa.json 有没修的问题") : ok();
+      : qaProblem(qa) ? no(qaProblem(qa)) : ok();
   return { script: s, storyboard: board, render };
 }
 
@@ -156,7 +168,7 @@ function directorSteps(dir, runVdCues) {
     : vdQa.passed !== true ? no("vd qa 还有 ✗")
     : mtime(vdQaPath) < newestHtml(root) ? no("画面改过，要重跑 vd qa")
     : !qa ? no("还没写 qa.json") : mtime(qaPath) < mtime(mp4) ? no("渲染后还没重新 QA（重写 qa.json）")
-      : qa.passed !== true ? no("qa.json 有没修的问题") : ok();
+      : qaProblem(qa) ? no(qaProblem(qa)) : ok();
   return { director, sample, render };
 }
 

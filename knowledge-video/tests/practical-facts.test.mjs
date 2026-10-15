@@ -3,8 +3,10 @@ import { test } from "node:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { episode } from "./helpers.mjs";
-import { collectPracticalFacts, fingerprint, templateHashes } from "../scripts/lib/practical-facts.mjs";
+import { collectPracticalFacts, fingerprint, qaProblem, templateHashes } from "../scripts/lib/practical-facts.mjs";
 
+// qa.md 规定的检查项全部写上的 qa.json
+const ALL_CHECKS = ["safe-area", "text-size", "density", "typo", "fact-on-screen", "rhythm", "motion"];
 const scOk = () => ({ items: [] });
 const voiceOk = () => ({ ok: true, msg: "" });
 const run = (o = {}) => ({ type: "practical", gates: {}, done: {}, templates: {}, ...o });
@@ -48,7 +50,7 @@ test("实测要有录屏；脚本要写过且 VOICE 检查通过", () => {
 });
 
 test("newer：sheet 比 STORYBOARD 旧、mp4 比 sheet 旧都不算做完；qa 要 passed", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true}' });
+  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true,"checked":["safe-area","text-size","density","typo","fact-on-screen","rhythm","motion"]}' });
   touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000); touch(dir, "抖音/renders/a.mp4", 3000);
   let f = collect(dir);
   assert.equal(f.steps.storyboard.ok, true);
@@ -122,7 +124,7 @@ test("发布记录看置顶评论；复盘看经验库里有没有带简称的�
 });
 
 test("渲染后还没重新 QA：qa.json 比成片旧不算做完", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true}' });
+  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true,"checked":["safe-area","text-size","density","typo","fact-on-screen","rhythm","motion"]}' });
   touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000);
   touch(dir, "qa.json", 2500); touch(dir, "抖音/renders/a.mp4", 3000);
   const f = collect(dir);
@@ -139,7 +141,7 @@ test("重新配音（audio_meta 比 sheet 新）：第 8 步不算做完", () =>
 });
 
 test("预览-压缩.mp4 不算成片：第 9 步和 ④ 指纹只看正式渲染", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/01.mp4": "old", "抖音/renders/预览-压缩.mp4": "p", "qa.json": '{"passed":true}' });
+  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/01.mp4": "old", "抖音/renders/预览-压缩.mp4": "p", "qa.json": '{"passed":true,"checked":["safe-area","text-size","density","typo","fact-on-screen","rhythm","motion"]}' });
   touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000);
   touch(dir, "抖音/renders/01.mp4", 1500); touch(dir, "抖音/renders/预览-压缩.mp4", 3000); touch(dir, "qa.json", 3500);
   assert.equal(collect(dir).steps.render.ok, false);
@@ -187,7 +189,7 @@ test("director：DIRECTOR.md 写了但配音还没复制进导演工程 → 说�
 });
 
 test("director：成片比工程里的 HTML 旧 → 要重新渲染；只改 DIRECTOR.md（如补组件候选）不用重渲染", () => {
-  const dir = episode({ [`${D}/DIRECTOR.md`]: "x", [`${D}/index.html`]: "<html>", [`${D}/compositions/frames/s1.html`]: "<div>", [`${D}/renders/01.mp4`]: "v", [`${D}/qa-douyin.json`]: { passed: true }, "qa.json": { passed: true } });
+  const dir = episode({ [`${D}/DIRECTOR.md`]: "x", [`${D}/index.html`]: "<html>", [`${D}/compositions/frames/s1.html`]: "<div>", [`${D}/renders/01.mp4`]: "v", [`${D}/qa-douyin.json`]: { passed: true }, "qa.json": { passed: true, checked: ALL_CHECKS } });
   for (const [f, t] of [[`${D}/index.html`, 1000], [`${D}/compositions/frames/s1.html`, 1000], [`${D}/renders/01.mp4`, 2000], [`${D}/qa-douyin.json`, 1500], ["qa.json", 3000], [`${D}/DIRECTOR.md`, 4000]]) touch(dir, f, t);
   assert.equal(dCollect(dir).steps.render.ok, true);
   touch(dir, `${D}/compositions/frames/s1.html`, 2500);
@@ -210,7 +212,7 @@ test("director：渲染步骤看正式成片（不算 sample / compare / 预览�
   assert.match(dCollect(dir).steps.render.why, /画面改过，要重跑 vd qa/);
   touch(dir, `${D}/index.html`, 1500);
   assert.match(dCollect(dir).steps.render.why, /还没写 qa\.json/);
-  writeFileSync(join(dir, "qa.json"), JSON.stringify({ passed: true }));
+  writeFileSync(join(dir, "qa.json"), JSON.stringify({ passed: true, checked: ALL_CHECKS }));
   touch(dir, "qa.json", 4000);
   assert.equal(dCollect(dir).steps.render.ok, true);
 });
@@ -235,4 +237,26 @@ test("director 指纹：③a 看 DIRECTOR.md 和配音，③b 看样片，④ �
   const f = dCollect(dir, dRun({ gates: { director: { passed: true, fingerprint: before[0] } } }));
   assert.deepEqual(Object.keys(f.gates), ["topic", "script", "director", "sample", "final"]);
   assert.equal(f.gates.director.stale, true);
+});
+
+
+test("qaProblem：checked 缺 qa.md 七项之一 → 列出缺的", () => {
+  assert.match(qaProblem({ passed: true, checked: ["typo"], issues: [] }), /safe-area.*motion/);
+});
+
+test("qaProblem：写了通过但还有 high 级问题 → 不算通过", () => {
+  assert.match(qaProblem({ passed: true, checked: ALL_CHECKS, issues: [{ severity: "high", problem: "x" }] }), /high/);
+});
+
+test("qaProblem：passed:false → 有没修的问题；七项齐全、只有 medium → 没问题", () => {
+  assert.match(qaProblem({ passed: false, checked: ALL_CHECKS, issues: [] }), /没修/);
+  assert.equal(qaProblem({ passed: true, checked: ALL_CHECKS, issues: [{ severity: "medium" }] }), null);
+});
+
+test("第 9 步用 qaProblem 判定：checked 不全不算做完", () => {
+  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true,"checked":["typo"]}' });
+  touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000); touch(dir, "抖音/renders/a.mp4", 3000); touch(dir, "qa.json", 4000);
+  const f = collect(dir);
+  assert.equal(f.steps.render.ok, false);
+  assert.match(f.steps.render.why, /safe-area/);
 });

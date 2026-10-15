@@ -37,7 +37,7 @@
 | P-26 | marker 组件的高亮会盖住前一个字；steps 组件第一步时只显示两步 | 后续 | 待修 | | |
 | P-27 | 帧时长写回 STORYBOARD 的是 `nv hf-build`，不是 `nv hf-audio` | 后续 | 待修 | | |
 | P-28 | 渲染后跑 `--motion` 会让 kv 要求重新渲染 | 第 4 组 | 待修 | | |
-| P-29 | kv 不检查 qa.json 的 checked 和 high 级问题 | 第 3 组 | 待修 | | |
+| P-29 | kv 不检查 qa.json 的 checked 和 high 级问题 | 第 3 组 | 已修 | `fix(P-29)` | practical-facts.test.mjs 4 例 RED→GREEN（旧夹具 qa.json 补全 checked）；kv 81/81；真实项目 3 期 kv status 不变 |
 | P-30 | 「落定后完全静止」的修改提示不对题 | 后续 | 待修 | | |
 | P-31 | 导演做法要的 caption_groups.json 在导演路径上不会生成 | 第 1 组 | 已修 | `fix(P-31)` | captions-step.test.mjs 3 例 RED→GREEN；nv 108/108；实跑 02 删 caption_groups 后 nv hf-audio（缓存）重新生成，帧时长写回 STORYBOARD（顺带改善 P-27） |
 | P-32 | 导演脚本模板写死了真实项目的系列名 | 第 7 组 | 待修 | | |
