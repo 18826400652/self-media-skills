@@ -1,6 +1,6 @@
 ---
 name: phone-draft
-description: 通过 adb（uiautomator2）操作安卓手机：把做好的内容填进抖音、小红书、公众号助手存成草稿（不点发布）；
+description: 通过 adb（uiautomator2）操作安卓手机：把做好的内容填进抖音、小红书、公众号助手存成草稿（不点发布，各平台命令的 --via phone 备用方案）；
   在 DeepSeek、豆包 App 里自动提问并录屏做实测（pd rec，输出和 nv rec 同格式的 mp4 / json / txt）。
   提供 pd 命令和一组公共函数（打开 App、按文字 / 描述点击、等待、输入中文、富文本粘贴、推相册、截图），
   各平台的发草稿步骤写成脚本放在各自的 skill 里（如 wechat-article 的 phone_wechat.py）。
@@ -18,13 +18,13 @@ pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout
                                # 在 AI App 里提问并录屏，输出 .mp4 / .json / .txt（和 nv rec 同格式）
 ```
 
-一般不直接用 `pd run`，而是用各平台命令，它们生成载荷后调用它（`--via browser` 改走 browser-draft 的浏览器方案）：
+各平台命令默认走浏览器（browser-draft）；加 `--via phone` 时生成载荷后调用 `pd run`：
 
 | 平台 | 命令 | 手机步骤脚本 |
 |---|---|---|
-| 公众号 | `wa draft 文章.md` | `wechat-article/scripts/phone_wechat.py`（公众号助手） |
-| 抖音 | `nv draft 成片.mp4 --copy 发布文案.md` | `narrated-video/scripts/phone_douyin.py` |
-| 小红书（视频） | `nv draft 成片.mp4 --copy 小红书/文案.md --to xiaohongshu` | `narrated-video/scripts/phone_xiaohongshu.py` |
+| 公众号 | `wa draft 文章.md --via phone` | `wechat-article/scripts/phone_wechat.py`（公众号助手） |
+| 抖音 | `nv draft 成片.mp4 --copy 发布文案.md --via phone` | `narrated-video/scripts/phone_douyin.py` |
+| 小红书（视频） | `nv draft 成片.mp4 --copy 小红书/文案.md --to xiaohongshu --via phone` | `narrated-video/scripts/phone_xiaohongshu.py` |
 
 小红书图文笔记（卡片图片，项目不走图文时用不到）只有浏览器方案：`ic draft 文案.md`。
 

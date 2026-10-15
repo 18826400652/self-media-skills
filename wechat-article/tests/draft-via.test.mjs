@@ -27,25 +27,25 @@ function setup() {
 const calls = (dir) => (existsSync(join(dir, "calls.log")) ? readFileSync(join(dir, "calls.log"), "utf8") : "");
 const run = (args, env, extra = {}) => spawnSync("node", [SCRIPT, ...args], { env, encoding: "utf8", ...extra });
 
-test("默认走手机：调用 pd run phone_wechat.py", () => {
+test("默认走浏览器：调用 bd run draft_wechat.py", () => {
   const { dir, env } = setup();
   const r = run(["draft", join(dir, "文章.md")], env);
-  assert.equal(r.status, 0, r.stderr);
-  assert.match(calls(dir), /^pd run .*phone_wechat\.py /);
-});
-
-test("--via browser 调用 bd run draft_wechat.py", () => {
-  const { dir, env } = setup();
-  const r = run([...["draft", join(dir, "文章.md")], "--via", "browser"], env);
   assert.equal(r.status, 0, r.stderr);
   assert.match(calls(dir), /^bd run .*draft_wechat\.py /);
 });
 
-test("手机不可用时报错、提示 --via browser，不回落到浏览器", () => {
+test("--via phone 调用 pd run phone_wechat.py", () => {
   const { dir, env } = setup();
-  const r = run(["draft", join(dir, "文章.md")], { ...env, FAKE_PD_EXIT: "3" });
+  const r = run([...["draft", join(dir, "文章.md")], "--via", "phone"], env);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(calls(dir), /^pd run .*phone_wechat\.py /);
+});
+
+test("手机不可用时报错，不回落到浏览器", () => {
+  const { dir, env } = setup();
+  const r = run(["draft", join(dir, "文章.md"), "--via", "phone"], { ...env, FAKE_PD_EXIT: "3" });
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /--via browser/);
+  assert.match(r.stderr, /手机不可用/);
   assert.doesNotMatch(calls(dir), /^bd /m);
 });
 

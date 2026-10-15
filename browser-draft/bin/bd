@@ -5,9 +5,35 @@
 set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 
-# 连接用户正在用的浏览器：优先 BU_CDP_WS；否则找最近启动的 Edge / Chrome 的 DevToolsActivePort
+# 从当前目录往上找项目配置 browser-draft.config.json，读出 cdpPort
+config_port() {
+  local d="$PWD"
+  while [[ "$d" != "/" ]]; do
+    if [[ -f "$d/browser-draft.config.json" ]]; then
+      node -e 'const c=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")); if (c.cdpPort) console.log(c.cdpPort)' "$d/browser-draft.config.json"
+      return
+    fi
+    d="$(dirname "$d")"
+  done
+}
+
+# 连接浏览器：优先 BU_CDP_WS；其次 BD_CDP_PORT / 项目配置 cdpPort（自动化专用浏览器用 --remote-debugging-port 启动，不弹允许）；
+# 最后找最近启动的 Edge / Chrome 的 DevToolsActivePort
 resolve_ws() {
   [[ -n "${BU_CDP_WS:-}" ]] && return
+  local port="${BD_CDP_PORT:-$(config_port)}"
+  if [[ -n "$port" ]]; then
+    local ws
+    ws="$(curl -s --noproxy '*' -m 5 "http://127.0.0.1:$port/json/version" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{console.log(JSON.parse(d).webSocketDebuggerUrl||"")}catch{}})' || true)"
+    if [[ -z "$ws" ]]; then
+      echo "✗ 连不上 $port 端口的浏览器：先打开带远程调试的浏览器（如桌面上的「Edge 自动化」），并登录要发草稿的平台" >&2
+      exit 1
+    fi
+    export BU_CDP_WS="$ws"
+    # WSL 里连的是 Windows 上的浏览器：上传文件时要把路径转成 Windows 能读的形式
+    grep -qi microsoft /proc/version 2>/dev/null && export BD_WINDOWS_BROWSER=1
+    return 0
+  fi
   local candidates=(
     "${BD_PORT_FILE:-}"
     /mnt/c/Users/*/AppData/Local/Microsoft/Edge/"User Data"/DevToolsActivePort
@@ -32,6 +58,7 @@ resolve_ws() {
   return 0
 }
 
+export BU_NAME="${BU_NAME:-browser-draft}"   # 单独的 daemon，不和同时在用这个浏览器的其他会话（nv rec、sc bench）抢标签页
 command -v browser-harness >/dev/null || { echo "✗ 需要 browser-harness（https://github.com/browser-use/browser-harness）" >&2; exit 1; }
 
 case "${1:-}" in

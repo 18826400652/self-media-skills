@@ -5,7 +5,7 @@ description: 在用户已登录的浏览器（Edge / Chrome）里，把做好的
 
 # browser-draft：用浏览器自动存草稿
 
-> 各平台命令默认改走手机（phone-draft 的 `pd`），本 skill 作为 `--via browser` 的后备；小红书图文笔记（`ic draft`）只有浏览器方案。发布文案解析在 `lib/copy_format.py`，phone-draft 也用它。
+> 各平台命令（`wa draft`、`nv draft`、`ic draft`）**默认走本 skill**；手机方案（phone-draft 的 `pd`）用 `--via phone` 作备用。发布文案解析在 `lib/copy_format.py`，phone-draft 也用它。
 
 ```bash
 bd tabs                          # 检查能否连上浏览器，列出标签页
@@ -16,9 +16,10 @@ bd run <步骤.py> [载荷.json]      # 执行一个平台的发草稿步骤
 
 | 平台 | 命令 | 步骤脚本 |
 |---|---|---|
-| 公众号 | `wa draft 文章.md --via browser` | `wechat-article/scripts/draft_wechat.py` |
-| 小红书 | `ic draft 文案.md` | `image-cards/scripts/draft_xiaohongshu.py` |
-| 抖音 | `nv draft 成片.mp4 --copy 发布文案.md --via browser` | `narrated-video/scripts/draft_douyin.py` |
+| 公众号 | `wa draft 文章.md` | `wechat-article/scripts/draft_wechat.py` |
+| 抖音（视频） | `nv draft 成片.mp4 --copy 发布文案.md` | `narrated-video/scripts/draft_douyin.py` |
+| 小红书（视频） | `nv draft 成片.mp4 --copy 文案.md --to xiaohongshu` | `narrated-video/scripts/draft_xiaohongshu.py` |
+| 小红书（图文） | `ic draft 文案.md` | `image-cards/scripts/draft_xiaohongshu.py` |
 
 ## 规则
 
@@ -32,7 +33,9 @@ bd run <步骤.py> [载荷.json]      # 执行一个平台的发草稿步骤
 
 - 已安装 [browser-harness](https://github.com/browser-use/browser-harness)（`browser-harness` 在 PATH 上）。
 - 浏览器开启远程调试：Edge 打开 `edge://inspect/#remote-debugging`，Chrome 打开 `chrome://inspect/#remote-debugging`，勾选允许；第一次连接时浏览器会弹「Allow remote debugging?」，点允许。
-- `bd` 自动找最近启动的浏览器（WSL 下也会找 Windows 上的 Edge / Chrome），也可以用 `BU_CDP_WS` 指定。
+- `bd` 按这个顺序找浏览器：环境变量 `BU_CDP_WS` → 环境变量 `BD_CDP_PORT` → 项目配置 `browser-draft.config.json`（从当前目录往上找）的 `cdpPort` → 最近启动的 Edge / Chrome 的 `DevToolsActivePort`（WSL 下也会找 Windows 上的）。
+- **推荐用自动化专用浏览器**：单独的用户目录 + `--remote-debugging-port=<端口>` 启动（如 `msedge.exe --remote-debugging-port=9333 --user-data-dir=…`），在里面登录各平台，项目配置写 `{"cdpPort": 9333}`。这种方式连接时不弹「允许」，也不碰日常浏览器；它不写 `DevToolsActivePort`，所以要靠端口找。
+- `bd` 用单独的 browser-harness daemon（`BU_NAME=browser-draft`），不和同时在用这个浏览器的其他会话抢标签页。浏览器窗口要在前台（被遮住或最小化时剪贴板、懒加载会卡住）。
 
 ## 写一个新平台的步骤脚本
 

@@ -2,7 +2,7 @@
 // 用法：
 //   wa preview <文章.md>     生成 预览.html（手机宽度 + 「复制到公众号」按钮），路径打印出来
 //   wa render  <文章.md>     输出公众号 HTML 到标准输出
-//   wa draft   <文章.md> [--via phone|browser]  存进公众号草稿箱：默认用 phone-draft 的 pd 操作手机上的公众号助手，browser 用 browser-draft 的 bd 操作已登录的浏览器
+//   wa draft   <文章.md> [--via browser|phone]  存进公众号草稿箱：默认用 browser-draft 的 bd 操作已登录的浏览器，phone 用 phone-draft 的 pd 操作手机上的公众号助手
 //   wa publish <文章.md>     用接口上传图片并存草稿（需要 AppID/AppSecret、IP 白名单和草稿接口权限，个人号没有）
 // 主题、凭据文件等来自项目配置 wechat-article.config.json（向上查找）。
 import { execFileSync } from "node:child_process";
@@ -18,10 +18,10 @@ const VIA = { phone: "pd", browser: "bd" };
 const VIA_SKILL = { phone: "phone-draft", browser: "browser-draft" };
 const EXIT_NO_DEVICE = 3;
 
-/** 从参数里取出 --via phone|browser（默认 phone），返回 [via, 其余参数] */
+/** 从参数里取出 --via browser|phone（默认 browser），返回 [via, 其余参数] */
 function takeVia(argv) {
   const i = argv.indexOf("--via");
-  if (i < 0) return ["phone", argv];
+  if (i < 0) return ["browser", argv];
   const via = argv[i + 1];
   if (!VIA[via]) throw new Error(`--via 只能是 phone 或 browser，收到：${via}`);
   return [via, [...argv.slice(0, i), ...argv.slice(i + 2)]];
@@ -34,7 +34,7 @@ function runDraft(via, steps, payloadFile) {
     execFileSync(bin, ["run", steps[via], payloadFile], { stdio: "inherit" });
   } catch (err) {
     if (err.code === "ENOENT") throw new Error(`需要 ${bin} 命令（skills/${VIA_SKILL[via]}，软链接到 PATH）`);
-    if (via === "phone" && err.status === EXIT_NO_DEVICE) throw new Error("手机不可用（见上面的提示），也可以加 --via browser 改用浏览器");
+    if (via === "phone" && err.status === EXIT_NO_DEVICE) throw new Error("手机不可用（见上面的提示）；去掉 --via phone 就用浏览器");
     throw new Error("发草稿失败，看上面的输出");
   }
 }
@@ -99,7 +99,7 @@ function inlineLocalImages(html, baseDir) {
   return { html: out, count };
 }
 
-function draft(file, config, via = "phone") {
+function draft(file, config, via = "browser") {
   const { html, count } = inlineLocalImages(render(file, config), dirname(file));
   const coverField = frontmatterField(file, "cover");
   const cover = coverField ? resolve(dirname(file), coverField) : "";
@@ -136,7 +136,7 @@ function main() {
   const [cmd, file] = rest;
   const commands = { preview, draft, publish, render: (f, c) => process.stdout.write(render(f, c)) };
   if (!commands[cmd] || !file) {
-    console.error("用法：wa preview|render|draft|publish <文章.md>（draft 可加 --via phone|browser）");
+    console.error("用法：wa preview|render|draft|publish <文章.md>（draft 可加 --via browser|phone，默认 browser）");
     process.exit(1);
   }
   const path = resolve(file);

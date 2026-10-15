@@ -27,25 +27,25 @@ function setup() {
 const calls = (dir) => (existsSync(join(dir, "calls.log")) ? readFileSync(join(dir, "calls.log"), "utf8") : "");
 const run = (args, env, extra = {}) => spawnSync("node", [SCRIPT, ...args], { env, encoding: "utf8", ...extra });
 
-test("默认走手机：调用 pd run phone_douyin.py", () => {
+test("默认走浏览器：调用 bd run draft_douyin.py", () => {
   const { dir, env } = setup();
   const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md")], env);
-  assert.equal(r.status, 0, r.stderr);
-  assert.match(calls(dir), /^pd run .*phone_douyin\.py /);
-});
-
-test("--via browser 调用 bd run draft_douyin.py", () => {
-  const { dir, env } = setup();
-  const r = run([...[join(dir, "成片.mp4"), "--copy", join(dir, "文案.md")], "--via", "browser"], env);
   assert.equal(r.status, 0, r.stderr);
   assert.match(calls(dir), /^bd run .*draft_douyin\.py /);
 });
 
-test("手机不可用时报错、提示 --via browser，不回落到浏览器", () => {
+test("--via phone 调用 pd run phone_douyin.py", () => {
   const { dir, env } = setup();
-  const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md")], { ...env, FAKE_PD_EXIT: "3" });
+  const r = run([...[join(dir, "成片.mp4"), "--copy", join(dir, "文案.md")], "--via", "phone"], env);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(calls(dir), /^pd run .*phone_douyin\.py /);
+});
+
+test("手机不可用时报错，不回落到浏览器", () => {
+  const { dir, env } = setup();
+  const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--via", "phone"], { ...env, FAKE_PD_EXIT: "3" });
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /--via browser/);
+  assert.match(r.stderr, /手机不可用/);
   assert.doesNotMatch(calls(dir), /^bd /m);
 });
 
@@ -56,19 +56,18 @@ test("--via 的值不对就报错", () => {
   assert.match(r.stderr, /phone 或 browser/);
 });
 
-test("--to xiaohongshu 走手机：调用 pd run phone_xiaohongshu.py", () => {
+test("--to xiaohongshu 默认走浏览器：调用 bd run draft_xiaohongshu.py", () => {
   const { dir, env } = setup();
   const r = run([...[join(dir, "成片.mp4"), "--copy", join(dir, "文案.md")], "--to", "xiaohongshu"], env);
   assert.equal(r.status, 0, r.stderr);
-  assert.match(calls(dir), /^pd run .*phone_xiaohongshu\.py /);
+  assert.match(calls(dir), /^bd run .*narrated-video\/scripts\/draft_xiaohongshu\.py /);
 });
 
-test("--to xiaohongshu 不支持浏览器", () => {
+test("--to xiaohongshu --via phone 调用 pd run phone_xiaohongshu.py", () => {
   const { dir, env } = setup();
-  const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--to", "xiaohongshu", "--via", "browser"], env);
-  assert.equal(r.status, 1);
-  assert.match(r.stderr, /小红书.*手机/);
-  assert.equal(calls(dir), "");
+  const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--to", "xiaohongshu", "--via", "phone"], env);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(calls(dir), /^pd run .*phone_xiaohongshu\.py /);
 });
 
 test("--to 的值不对就报错", () => {
