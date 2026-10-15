@@ -42,7 +42,7 @@ HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免
 ## 新建导演工程
 
 ```bash
-cd 04-作品/<系列>/<期>
+cd <作品目录>
 mkdir -p 抖音-director/{compositions/frames,assets}
 cp 抖音/{SCRIPT.md,audio_meta.json,caption_groups.json,package.json,hyperframes.json,meta.json} 抖音-director/
 cp -r 抖音/assets/voice 抖音-director/assets/

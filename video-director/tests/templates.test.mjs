@@ -16,9 +16,9 @@ test("templates/index.html：四个 vd 标记都在", () => {
   for (const n of ["head", "audio", "segments", "brand"]) assert.ok(html.includes(`<!-- vd:${n} --><!-- /vd:${n} -->`), n);
 });
 
-test("账号固定元素和单段模板只用 var(--vd-*) 字体变量（hyperframes lint 看不到跨文件的 @font-face）", () => {
-  const brand = (f) => readFileSync(new URL(`../../../06-品牌资产/hyperframes/${f}`, import.meta.url), "utf8");
-  const files = { "segment.html": read("segment.html"), ...Object.fromEntries(["brand-kicker.html", "brand-captions.html", "brand-ending.html"].map((f) => [f, brand(f)])) };
+// 项目品牌目录里的 brand-*.html 同样只能用字体变量，由 st doctor 检查（工具包测试不读作品项目）
+test("单段模板只用 var(--vd-*) 字体变量（hyperframes lint 看不到跨文件的 @font-face）", () => {
+  const files = { "segment.html": read("segment.html") };
   for (const [name, html] of Object.entries(files)) {
     const literal = [...html.matchAll(/font-family:\s*([^;"]*"[^"]+"[^;]*);/g)].map((m) => m[1]);
     assert.deepEqual(literal, [], `${name} 写了字体名`);

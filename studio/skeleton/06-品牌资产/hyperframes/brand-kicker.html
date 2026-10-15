@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN" data-composition-variables='[
+  {"id":"text","type":"string","label":"栏目标签","default":"AI 概念一分钟 · 第 1 期"},
+  {"id":"ink","type":"string","label":"墨色","default":"#1C1A17"},
+  {"id":"muted","type":"string","label":"次要文字","default":"#6E675C"}
+]'>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #brand-kicker { position: absolute; inset: 0; pointer-events: none; }
+        #bk-label { position: absolute; left: 64px; top: 228px; display: flex; align-items: center; gap: 14px; font-family: var(--vd-mono); font-size: 26px; letter-spacing: 0.08em; }
+        #bk-rule { display: block; width: 36px; height: 3px; }
+      </style>
+      <div id="brand-kicker" data-composition-id="brand-kicker" data-width="1080" data-height="1920">
+        <div id="bk-label"><i id="bk-rule"></i><span id="bk-text"></span></div>
+      </div>
+      <script>
+        (() => {
+          const v = Object.assign({ text: "", ink: "#1C1A17", muted: "#6E675C" }, window.__hyperframes.getVariables());
+          document.getElementById("bk-text").textContent = v.text;
+          document.getElementById("bk-label").style.color = v.muted;
+          document.getElementById("bk-rule").style.background = v.ink;
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo("#bk-label", { opacity: 0 }, { opacity: 1, duration: 0.3, immediateRender: false }, 0);
+          window.__timelines["brand-kicker"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

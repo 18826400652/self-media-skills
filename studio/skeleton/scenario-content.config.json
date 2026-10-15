@@ -1,0 +1,17 @@
+{
+  "voiceGuide": "00-规划/语气指南.md",
+  "bannedPhrases": [],
+  "requiredSections": [
+    "成品",
+    "场景",
+    "步骤",
+    "坑",
+    "领"
+  ],
+  "platformFiles": {
+    "wechat": "公众号/文章.md",
+    "xiaohongshuCopy": "小红书/文案.md",
+    "douyinCopy": "抖音/发布文案.md",
+    "douyinScript": "抖音/SCRIPT.md"
+  }
+}

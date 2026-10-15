@@ -1,0 +1,9 @@
+{
+  "name": "studio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "自媒体工具包的总入口：作品项目初始化、体检、新建一期、安装各 skill",
+  "bin": { "st": "bin/st" },
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}

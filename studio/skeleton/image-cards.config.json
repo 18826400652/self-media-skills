@@ -1,0 +1,5 @@
+{
+  "preset": "xiaohongshu",
+  "theme": "06-品牌资产/theme.css",
+  "footer": "@{{账号}}"
+}

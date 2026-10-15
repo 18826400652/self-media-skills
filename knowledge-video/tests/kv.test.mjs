@@ -88,7 +88,7 @@ test("kv check / status：claims 写成对象时给中文错误，不报内部�
   assert.match(s.stdout, /先修好 kv check 报的 ✗/);
 });
 
-test("kv status：new-episode 生成的空模板不算做完（实用技巧仍在实测，概念科普仍要写脚本）", () => {
+test("kv status：st new 生成的空模板不算做完（实用技巧仍在实测，概念科普仍要写脚本）", () => {
   const tplScript = "## Line 1 — 钩子 (Frame 1)\n\n**重点词:** \n\n    （一句话抛出冲突）\n";
   // 实用类走完整一期的 14 步（详见 kv-practical.test.mjs）；这里只确认空模板的实测、脚本不算 ✓
   const practical = spawnSync(process.execPath, [KV, "status", episode({ "brief.md": "x", "run.json": { type: "practical" }, "实测记录.md": "- 状态：待实测\n", "抖音/SCRIPT.md": tplScript })], { encoding: "utf8", env: { ...process.env, KV_SC_CMD: "false" } });

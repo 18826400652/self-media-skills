@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# studio 入口：st doctor | new | init | install（见 SKILL.md）
+set -euo pipefail
+SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+exec node "$SKILL_DIR/scripts/st.mjs" "$@"

@@ -25,7 +25,7 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 
 ## 实用类（type: practical）：kv 管完整的一期
 
-新建作品时 `new-episode.sh` 已跑过 `kv init --fresh`。之后每一步开始前 `kv status <作品目录>`，只做它说的那一步：
+新建作品时 `st new`（studio skill）已跑过 `kv init --fresh`（`st new --video director` 会带上视频做法）。之后每一步开始前 `kv status <作品目录>`，只做它说的那一步：
 
 | 命令 | 什么时候用 |
 |---|---|

@@ -1,0 +1,57 @@
+/* 品牌主题「荧光笔学习笔记」：视频（narrated-video）和图文卡片（image-cards）共用。规范说明见 视觉规范.md。
+   变量约定见 skills/narrated-video/templates/base/theme.css。 */
+
+:root {
+  --bg: #101114; /* 墨黑 */
+  --fg: #f4f1ea; /* 纸白 */
+  --fg-muted: #8a8d96;
+  --highlight: #ffd84d; /* 荧光黄 */
+  --accent: #6ea8fe; /* 天蓝 */
+  --surface: #1b1d22;
+  --danger: #ff5a5f; /* 出错、翻车 */
+
+  --font-body: "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  --font-mono: "JetBrains Mono", "Noto Sans Mono CJK SC", ui-monospace, monospace;
+}
+
+/* 背景：淡淡的笔记本横线 */
+.bg-lines {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 95px,
+    rgb(244 241 234 / 0.04) 95px,
+    rgb(244 241 234 / 0.04) 96px
+  );
+}
+
+/* 栏目角标 */
+.column-tag {
+  position: absolute;
+  top: 140px;
+  left: var(--safe-left);
+  padding: 10px 24px;
+  border: 3px solid var(--highlight);
+  color: var(--highlight);
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.column-tag:empty {
+  display: none;
+}
+
+/* 图文卡片（image-cards）：同样的笔记本横线 */
+.card {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 95px,
+    rgb(244 241 234 / 0.04) 95px,
+    rgb(244 241 234 / 0.04) 96px
+  );
+}
