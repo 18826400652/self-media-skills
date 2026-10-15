@@ -56,3 +56,17 @@ test("staleBuild：cues.js 和 DIRECTOR.md 算出来的不一样（改了 @词�
   assert.equal(staleBuild(dir, b), null);
   assert.match(staleBuild(dir, { ...b, cues: { 甲: 1.5 } }), /DIRECTOR\.md 在上次 vd build 之后改过.*先 vd build/);
 });
+
+test("buildProblem：没构建过 / 上次检查没过 / 画面在构建后改过 → 都不让 vd qa 跑", async () => {
+  const { mkdirSync, utimesSync, writeFileSync } = await import("node:fs");
+  const { buildProblem, writeBuildStatus } = await import("../scripts/lib/qa-run.mjs");
+  const dir = project({ "index.html": "<html>", "compositions/frames/s1.html": "<div>" });
+  assert.match(buildProblem(dir), /先 vd build/);
+  writeBuildStatus(dir, false);
+  assert.match(buildProblem(dir), /上次 vd build 的检查没过/);
+  writeBuildStatus(dir, true);
+  assert.equal(buildProblem(dir), null);
+  const later = Date.now() / 1000 + 60;
+  utimesSync(join(dir, "compositions/frames/s1.html"), later, later);
+  assert.match(buildProblem(dir), /s1\.html.*上次 vd build 之后改过/);
+});

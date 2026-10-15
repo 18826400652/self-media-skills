@@ -35,3 +35,6 @@ Thumbs.db
 预览.html
 卡片预览.html
 out/
+
+# vd build 的检查记录（本机状态）
+.vd/

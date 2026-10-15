@@ -16,7 +16,7 @@ import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, resolveMusic } from "./lib/music.mjs";
-import { douyinQa, presentSegments, staleBuild } from "./lib/qa-run.mjs";
+import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
 import { run } from "./lib/run.mjs";
 import { staleCopies } from "./lib/stale.mjs";
 
@@ -95,7 +95,9 @@ const COMMANDS = {
       });
     }
     console.log(`✓ 总装完成：${sample ? `样片 ${only.join("、")}` : "整片"}，${duration}s`);
-    return COMMANDS.check(dir, [], config);
+    const status = COMMANDS.check(dir, [], config);
+    writeBuildStatus(dir, status === 0);
+    return status;
   },
   async qa(dir) {
     // 动态 import：没装 puppeteer-core 时其他子命令照常能用
@@ -105,7 +107,7 @@ const COMMANDS = {
     chromePath(); // 先确认有 Chrome，再读工程、装依赖
     const config = loadConfig(findProjectRoot(dir));
     const { built } = load(dir);
-    const stale = staleBuild(dir, built);
+    const stale = staleBuild(dir, built) ?? buildProblem(dir);
     if (stale) throw new Error(stale);
     const segments = presentSegments(readFileSync(join(dir, "index.html"), "utf8"), built.segments);
     const sample = segments.length < built.segments.length;
