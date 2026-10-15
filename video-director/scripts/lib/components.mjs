@@ -114,3 +114,21 @@ export function installComponent(archiveDir, name, projectDir, seen = new Set())
   });
   return [...deps, ...own];
 }
+
+/** 段比组件建议时长长出这么多秒以上，时间写死的组件就会演完退场、剩下空屏 */
+export const FIT_SLACK = 2;
+
+/** 组件撑不撑得满这一段：组件按宿主时长（HF.duration）排时间的总能撑满；时间写死的只演 minDuration 秒左右 */
+export function fitProblem({ name, html, minDuration, segId, segDuration }) {
+  if (/HF\.duration\(/.test(html)) return null;
+  if (!(segDuration > minDuration + FIT_SLACK)) return null;
+  return `${segId} 用了 ${name}：这个组件的动画时间是写死的，只演约 ${minDuration} 秒就退场，这段有 ${segDuration} 秒，后面会空屏。把这段拆短（只放一两句），或改成手画`;
+}
+
+/** 读组件的 HTML 和组件库目录里的建议时长 */
+export function componentInfo(archiveDir, name, projectDir) {
+  const html = readFileSync(join(projectDir, "compositions", `${name}.html`), "utf8");
+  const catalog = JSON.parse(readFileSync(join(archiveDir, "catalog/catalog.json"), "utf8"));
+  const minDuration = catalog.components.find((c) => c.id === name)?.minDuration ?? 0;
+  return { html, minDuration };
+}

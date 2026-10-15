@@ -85,3 +85,15 @@ test("vd qa：找不到 Chrome 时先报错退出，不读工程、不装依赖"
   assert.match(errs.join("\n"), /找不到 Chrome/);
   assert.equal(existsSync(`${dir}/ep/node_modules`), false);
 });
+
+test("installAll：组件撑不满它的段时报错，列出每一段", () => {
+  const deps = {
+    ensureLock: () => ({ sha: "c".repeat(40), changed: false }),
+    writeLock: () => {},
+    fetchArchive: () => "/repo",
+    installComponent: (_r, name) => [`compositions/${name}.html`],
+    componentInfo: () => ({ html: "tl.to('#x', { opacity: 0 }, 5);", minDuration: 4.3 }),
+  };
+  const segs = [{ id: "seg-02", component: "dy-checklist", duration: 17.8 }, { id: "seg-05", component: "dy-checklist", duration: 5 }];
+  assert.throws(() => installAll(project({}), { segments: segs }, {}, deps), (err) => /seg-02/.test(err.message) && !/seg-05/.test(err.message));
+});
