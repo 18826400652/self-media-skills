@@ -60,3 +60,13 @@
 - 全部测试：studio 34、knowledge-video 85、scenario-content 13、video-director 117、wechat-article 5、image-cards 4、narrated-video 114（node --test，0 失败）；phone-draft 112、browser-draft 7（pytest，0 失败）。修前基线 26/77/10/101/5/4/105/105/7
 - 修复中新发现：P-36b（组件库仓库）、P-41（hf-audio 字体回退警告）
 - 整条分支自查：改动的 .mjs 全部 `node --check` 通过，没有调试输出、没有未使用的导入（自查，未派独立 reviewer）
+
+## 第 2 批收尾（2026-10-15）
+
+- 23 个问题全部提交（`git log 6178d8e..HEAD --grep "(P-"`）。P-26 两个现象分两个提交；P-15、P-17 各一个提交
+- 全部测试：studio 37、knowledge-video 86、scenario-content 15、video-director 118、wechat-article 5、image-cards 4、narrated-video 124（node --test，0 失败）；phone-draft 112、browser-draft 8（pytest，0 失败）
+- 只部分处理、需要用户知道的：P-01 环境慢本身不归工具包，只改了提示，没实跑 st install --deps；P-15 / P-17 按文档处理，没做抓收藏、抓评论的功能，没实跑 sc bench；P-39 只改了检查规则，01/02 口播按用户决定不修；P-27 新的预计时长按代码核对，没重跑 hf-build
+- 实跑留下的东西：`~/flow-check/.media/voice-cache/`（P-34 共用缓存，自带 .gitignore）；scratchpad 的 01 副本被改动过，不影响 flow-check
+- 修复中新发现：P-42（配音缓存键用参考音色的绝对路径，项目挪位置后要重新付费配音），改法要用户定
+- 整条分支自查：改动的 .mjs / .js 都过了 `node --check`，bash 入口过了 `bash -n`；没有调试输出、没有未使用的导入（自查，没有派独立 reviewer）
+- 还没做：P-36b（组件库仓库）、P-42、P-19 / P-20 真机实跑
