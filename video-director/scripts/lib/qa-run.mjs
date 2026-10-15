@@ -1,7 +1,22 @@
 // vd qa 的编排：按落定时刻取数 + 截图，按 0.5 秒网格取签名，交给 douyin-qa 判定
-import { mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { cuesJs } from "./assemble.mjs";
 import { checkCues, checkFrame, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
+
+/** 这次构建装了哪些段：index.html 里有 host-<段id> 的（样片只装几段） */
+export function presentSegments(html, segments) {
+  const found = segments.filter((s) => html.includes(`id="host-${s.id}"`));
+  if (!found.length) throw new Error("index.html 里没有分段：先 vd build");
+  return found;
+}
+
+/** cues.js 是上次 vd build 写的；和现在 DIRECTOR.md 算出来的不一样，说明改了 @词或分段还没重新构建 */
+export function staleBuild(dir, built) {
+  const p = join(dir, "cues.js");
+  if (!existsSync(p)) return "还没有 cues.js：先 vd build";
+  return readFileSync(p, "utf8") === cuesJs(built) ? null : "DIRECTOR.md 在上次 vd build 之后改过（@词时间或分段变了），画面和导演脚本对不上：先 vd build（样片用 --sample）";
+}
 
 export async function douyinQa(built, page, shotDir) {
   const { inspect, grid } = qaTimes(built, page.duration);

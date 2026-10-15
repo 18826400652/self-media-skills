@@ -46,3 +46,13 @@ test("openPage：读时长；按时间读元素框、@词 可见、栏目标签�
     await page.close();
   }
 });
+
+test("openPage：CHROME_PATH 指向不存在的文件 → 中文错误", async () => {
+  const old = process.env.CHROME_PATH;
+  process.env.CHROME_PATH = "/nope/chrome";
+  try {
+    await assert.rejects(openPage({ html: "<html></html>", root: project({}) }), /找不到 Chrome：CHROME_PATH=\/nope\/chrome/);
+  } finally {
+    if (old === undefined) delete process.env.CHROME_PATH; else process.env.CHROME_PATH = old;
+  }
+});

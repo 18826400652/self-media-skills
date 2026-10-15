@@ -91,14 +91,29 @@ function collect() {
   return { elements, cueMarks, kicker, sig: sig.join("|") };
 }
 
+/** 找 Chrome：CHROME_PATH 写错时给中文错误（puppeteer 自己报的是英文） */
+export function chromePath() {
+  const exe = findChrome();
+  if (!existsSync(exe)) throw new Error(`找不到 Chrome：CHROME_PATH=${exe} 这个文件不存在`);
+  return exe;
+}
+
 export async function openPage({ html, root }) {
+  const exe = chromePath(); // 先找 Chrome，找不到就不起本地服务
   const server = await serve(html, root);
-  const browser = await puppeteer.launch({ executablePath: findChrome(), args: ["--no-sandbox", "--autoplay-policy=no-user-gesture-required"] });
+  let browser;
+  try {
+    browser = await puppeteer.launch({ executablePath: exe, args: ["--no-sandbox", "--autoplay-policy=no-user-gesture-required"] });
+  } catch (err) {
+    server.close();
+    throw new Error(`Chrome 启动失败（${exe}）：${err.message}`);
+  }
   const close = async () => { await browser.close(); server.close(); };
   try {
     const page = await browser.newPage();
     await page.setViewport({ width: 1080, height: 1920 });
     await page.goto(`http://127.0.0.1:${server.address().port}/index.html`, { waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready); // 字体没加载完时量出来的文字框是后备字体的大小
     // elementsFromPoint 会跳过 pointer-events:none 的元素，查遮挡前全部打开
     await page.addStyleTag({ content: "*{pointer-events:auto !important}" });
     await page.waitForFunction(() => window.__player && typeof window.__player.renderSeek === "function" && window.__player.getDuration() > 0, { timeout: 30000 })

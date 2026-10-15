@@ -79,3 +79,21 @@ test("summarize：同一元素同类问题合并成一条，写次数和第一�
   assert.equal(s.length, 1);
   assert.match(s[0].msg, /t=1s #a 进了顶部（共 3 处）/);
 });
+
+test("qaTimes：样片段不相邻时，只查构建了的段（中间没构建的段不截图、不进 grid）", () => {
+  const b = { cues: { 甲: 1, 乙: 7, 丙: 11 }, segments: [{ id: "s1", start: 0, duration: 5 }, { id: "s3", start: 10, duration: 5 }], total: 15 };
+  const r = qaTimes(b, 15);
+  assert.deepEqual(r.inspect.map((x) => x.label), ["@甲", "s1 结尾", "@丙", "s3 结尾"]);
+  assert.ok(!r.grid.some((t) => t >= 5 && t < 10), "没构建的 5–10 秒不比画面");
+  assert.ok(r.grid.includes(4.5) && r.grid.includes(10));
+});
+
+test("stillWindows：时间不连续（中间跳过没构建的段）就断开，不算 2 秒不动", () => {
+  const g = [0, 0.5, 1, 10, 10.5, 11].map((t) => ({ t, sig: "a" }));
+  assert.deepEqual(stillWindows(g), []);
+});
+
+test("checkCues：data-vd-cue 写成 constructor 这类词也报不存在", () => {
+  const frames = [{ t: 1, label: "@x", cue: "x", data: { cueMarks: [{ cue: "constructor", sel: "#k", visible: true }] } }];
+  assert.deepEqual(checkCues(frames, { x: 0.2 }).map((i) => i.kind), ["cue-unknown"]);
+});

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# video-director 入口：vd build|cues|check <视频工程目录>
+# video-director 入口：vd build|cues|check|qa <视频工程目录>
 set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 exec node "$SKILL_DIR/scripts/vd.mjs" "$@"

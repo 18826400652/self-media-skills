@@ -14,14 +14,15 @@ export function qaTimes(built, duration) {
   const inspect = [];
   for (const [cue, at] of Object.entries(built.cues)) {
     const seg = segs.find((s) => at >= s.start && at < s.end);
-    const t = r2(Math.min(at + SETTLE, (seg?.end ?? Infinity) - 0.05));
+    if (!seg) continue; // 落在这次没构建的段里（样片）
+    const t = r2(Math.min(at + SETTLE, seg.end - 0.05));
     if (t < duration) inspect.push({ t, label: `@${cue}`, cue });
   }
   for (const s of segs) if (s.end <= duration) inspect.push({ t: r2(s.end - SEG_TAIL), label: `${s.id} 结尾` });
   inspect.sort((a, b) => a.t - b.t);
   const end = Math.min(duration, built.total);
   const grid = [];
-  for (let t = 0; t < end; t = r2(t + GRID)) grid.push(t);
+  for (let t = 0; t < end; t = r2(t + GRID)) if (segs.some((s) => t >= s.start && t < s.end)) grid.push(t);
   return { inspect, grid };
 }
 
@@ -51,7 +52,7 @@ export function checkCues(frames, cues) {
     const key = `${m.sel}|${m.cue}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    if (!(m.cue in cues)) {
+    if (!Object.hasOwn(cues, m.cue)) {
       out.push({ level: "error", kind: "cue-unknown", sel: m.sel, t: 0, msg: `${m.sel} 的 data-vd-cue="${m.cue}" 不是 DIRECTOR.md 里的 @词` });
       continue;
     }
@@ -68,7 +69,8 @@ export function stillWindows(grid) {
   let i = 0;
   while (i < grid.length) {
     let j = i;
-    while (j + 1 < grid.length && grid[j + 1].sig === grid[i].sig) j++;
+    // 时间不连续（中间是没构建的段）就断开
+    while (j + 1 < grid.length && grid[j + 1].sig === grid[i].sig && grid[j + 1].t - grid[j].t <= GRID + 0.01) j++;
     if (grid[j].t - grid[i].t >= STILL) out.push({ from: grid[i].t, to: grid[j].t });
     i = j + 1;
   }

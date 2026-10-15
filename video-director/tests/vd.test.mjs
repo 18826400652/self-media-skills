@@ -69,3 +69,19 @@ test("vd cues --check：DIRECTOR.md 有错返回 1，且不写 cues.js", async (
   try { assert.equal(await main(["cues", `${dir}/ep`, "--check"]), 1); } finally { console.error = orig; }
   assert.equal(existsSync(`${dir}/ep/cues.js`), false);
 });
+
+test("vd qa：找不到 Chrome 时先报错退出，不读工程、不装依赖", async () => {
+  const { existsSync } = await import("node:fs");
+  const dir = project({ "ep/x": "" });
+  const old = process.env.CHROME_PATH;
+  process.env.CHROME_PATH = "/nope/chrome";
+  const errs = [];
+  const orig = console.error;
+  console.error = (m) => errs.push(m);
+  try { assert.equal(await main(["qa", `${dir}/ep`]), 1); } finally {
+    console.error = orig;
+    if (old === undefined) delete process.env.CHROME_PATH; else process.env.CHROME_PATH = old;
+  }
+  assert.match(errs.join("\n"), /找不到 Chrome/);
+  assert.equal(existsSync(`${dir}/ep/node_modules`), false);
+});
