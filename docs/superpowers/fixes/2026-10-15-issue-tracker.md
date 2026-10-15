@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|
 | P-01 | 从零安装时依赖下载极慢（环境问题，非工具包） | 第 2 批 | 已修（工具包侧） | `fix(P-01)` | install.test.mjs 1 例 RED→GREEN（注入假的命令执行）；studio 35/35。没实跑 st install --deps（npm ci 会删掉重装所有 node_modules，网络慢）。代理慢本身是环境问题，不归工具包 |
 | P-02 | `st doctor` 的「依赖」小节全通过时什么都不打印 | 后续 | 已修 | `fix(P-14)` | 随 P-14 一起修：依赖全过时打印「✓ 依赖都装好了」 |
-| P-03 | `kv.mjs` 文件头注释的节点列表过时 | 第 2 批 | 待修 | | |
+| P-03 | `kv.mjs` 文件头注释的节点列表过时 | 第 2 批 | 已修 | `docs(P-03)` | kv.mjs 第 7 行按代码改：实用类 gatesFor(template/director) 实际输出 + 概念科普 CONCEPT_GATES；kv 86/86 |
 | P-04 | director 第 8 步只检查 audio_meta.json 复制了，没检查 caption_groups.json 和 assets/voice/ | 第 2 批 | 已修 | `fix(P-04)` | practical-facts.test 1 例 RED→GREEN（旧夹具补 caption_groups.json）；kv 86/86；flow-check 02、01-RAG 的 kv status 前后一致 |
 | P-05 | sc 内置的 requiredSections 默认值和文档不一致 | 第 2 批 | 已修 | `fix(P-05)` | sc.test 2 例（无配置时填好的 studio 母稿模板通过 RED→GREEN；skill 自带模板和默认一致为守护）；sc 15/15。Ruling：比报告更大——sc 自带 templates/母稿.md、SKILL.md 示例也是旧结构（场景/痛点/实测/解法/可复制），SKILL.md 还让照它写；统一成 studio 和真实项目用的「成品/场景/步骤/坑/领」 |
 | P-06 | `nv help` 少了最后两行 | 第 2 批 | 已修 | `fix(P-06)` | 新增 bin.test.mjs 1 例 RED→GREEN；nv 118/118；nv help 末行是「nv <其他> 透传给 hyperframes」 |
