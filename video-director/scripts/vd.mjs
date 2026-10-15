@@ -89,7 +89,7 @@ const COMMANDS = {
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {
       addMusic(vd.music, {
-        resolveMusic: () => resolveMusic(dir, vd.music.intent),
+        resolveMusic: () => resolveMusic(dir, vd.music.intent, undefined, { duration }),
         alignMusic: (src) => alignMusic(dir, { src, drop: built.cues[vd.music.drop.slice(1)], duration }),
         carve: () => carve(dir, config.hfVersion),
         assemble: (music) => assemble(dir, built, config, { only, duration, music }),

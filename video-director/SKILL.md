@@ -57,7 +57,7 @@ cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-dir
 |---|---|
 | `vd cues <工程> [--check]` | 校验 DIRECTOR.md，把所有 @词 换算成秒数写进 `cues.js`，并打印出来；`--check` 只校验不写文件 |
 | `vd qa <工程>` | 抖音专用检查：在每个 @词 落定时刻（@词 后 0.8 秒）和每段结尾截图，查出画面、安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；每 0.5 秒比一次，连续 2 秒只有背景、没有文字或 `data-vd-key` 元素（✗，纯图形的关键画面要加 `data-vd-key`），2 秒不动（⚠）。被 overflow 裁掉的部分不算。结果 `qa-douyin.json`（样片构建时写 `qa-douyin-sample.json`，只查装了的段），总览 `snapshots/cues-sheet.jpg`。DIRECTOR.md 改了 @词或分段还没 `vd build` 时直接报错 |
-| `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
+| `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲（说法里自动带上视频时长；vd 以前取的 `bgm.wav` 比视频短会重新取，还是短就循环补齐；自己放的 `bgm.mp3` 不替换、太短时循环成 `bgm-loop.wav`）、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
 | `vd check <工程>` | 校验 DIRECTOR.md + 列出组件候选 + `hyperframes check` |
 
 `index.html` 里标记块之外的内容（背景、贯穿元素）是手写的，`vd build` 不会动。

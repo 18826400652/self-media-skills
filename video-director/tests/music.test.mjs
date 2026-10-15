@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { addMusic, alignMusic, parseResolved, pickBeat, resolveMusic } from "../scripts/lib/music.mjs";
 import { project } from "./helpers.mjs";
@@ -60,4 +61,52 @@ test("addMusic：一切正常时返回带 mediaStart 的配乐，最后一次总
   const r = addMusic({ intent: "x", drop: 10, volume: 0.4 }, deps, () => {});
   assert.deepEqual(r, { src: "assets/audio/bgm.wav", mediaStart: 1.5, volume: 0.4 });
   assert.deepEqual(calls.at(-1), r);
+});
+
+/** 假的外部命令：记录调用；media-use 返回 .media 里的曲子；ffmpeg 什么都不做 */
+function fakeRun(calls) {
+  return (cmd, args) => {
+    calls.push([cmd.split("/").pop(), ...args]);
+    if (args[0] === "media-use") return { status: 0, stdout: "resolved bgm_002 → .media/audio/bgm/bgm_002.wav (bgm, 95s)\n", stderr: "" };
+    return { status: 0, stdout: "", stderr: "" };
+  };
+}
+const lens = (map) => (p) => map[p.split("/").pop()] ?? 0;
+
+test("resolveMusic：vd 以前取的 bgm.wav 比视频短 → 重新取，说法里带上视频时长", () => {
+  const dir = project({ "assets/audio/bgm.wav": "old", ".media/audio/bgm/bgm_002.wav": "new" });
+  const calls = [];
+  // 按内容区分新旧两首：复制后 bgm.wav 就是新取的那首
+  const probe = (p) => ({ old: 16, new: 95 })[readFileSync(p, "utf8")] ?? 0;
+  const src = resolveMusic(dir, "lo-fi", fakeRun(calls), { duration: 91, probe, warn: () => {} });
+  assert.equal(src, "assets/audio/bgm.wav");
+  const mu = calls.find((c) => c[1] === "media-use");
+  assert.ok(mu, "应重新取曲");
+  assert.match(mu[mu.indexOf("--intent") + 1], /lo-fi.*around 91 seconds/);
+  assert.ok(!calls.some((c) => c[0] === "ffmpeg"), "够长不用循环");
+});
+
+test("resolveMusic：取到的还是比视频短 → 循环补齐并提醒", () => {
+  const dir = project({ ".media/audio/bgm/bgm_002.wav": "new" });
+  const calls = [], warns = [];
+  const src = resolveMusic(dir, "lo-fi", fakeRun(calls), { duration: 91, probe: lens({ "bgm.wav": 54 }), warn: (m) => warns.push(m) });
+  assert.equal(src, "assets/audio/bgm.wav");
+  const ff = calls.find((c) => c[0] === "ffmpeg");
+  assert.ok(ff && ff.includes("-stream_loop") && ff.includes("91"), JSON.stringify(calls));
+  assert.match(warns.join("\n"), /循环/);
+});
+
+test("resolveMusic：用户自己放的 bgm.mp3 太短 → 不替换、不取曲，循环成 bgm-loop.wav", () => {
+  const dir = project({ "assets/audio/bgm.mp3": "mine" });
+  const calls = [];
+  const src = resolveMusic(dir, "lo-fi", fakeRun(calls), { duration: 91, probe: lens({ "bgm.mp3": 30 }), warn: () => {} });
+  assert.equal(src, "assets/audio/bgm-loop.wav");
+  assert.ok(!calls.some((c) => c[1] === "media-use"));
+  assert.ok(calls.some((c) => c[0] === "ffmpeg"));
+});
+
+test("resolveMusic：已有配乐够长 → 照旧用，不调用任何命令", () => {
+  const dir = project({ "assets/audio/bgm.wav": "x" });
+  const never = () => { throw new Error("不应调用"); };
+  assert.equal(resolveMusic(dir, "lo-fi", never, { duration: 91, probe: () => 120 }), "assets/audio/bgm.wav");
 });
