@@ -222,8 +222,9 @@
 
   // glow 荧光笔的笔触比关键词宽：svg 盒子外扩 6%（宽 112%），路径 x 从 3 到 97，笔宽 32 的圆头再各伸出 16，
   // 合计每边多出关键词宽的 GLOW_PAD（约 21%），外面还有一圈发光；整条笔触斜 GLOW_TILT 度，角上再多出约一个字高 × sin
-  var GLOW_BOX = { left: -6, width: 112 }, GLOW_PATH_X = [3, 97], GLOW_STROKE = 32, GLOW_BLUR = 14, GLOW_TILT = -1.2;
-  var GLOW_PAD = (-GLOW_BOX.left + (GLOW_BOX.width * (GLOW_STROKE / 2 - GLOW_PATH_X[0])) / 100) / 100;
+  // 笔触盒子比关键词左右各宽 GLOW_OVER 个字（固定按字号，不按关键词长短：按比例伸时三个字的词会盖住前一个字的大半）；
+  // 路径端点离盒子边一个笔帽半径，圆头正好到盒子边
+  var GLOW_OVER = 0.15, GLOW_STROKE = 32, GLOW_PATH_X = [GLOW_STROKE / 2, 100 - GLOW_STROKE / 2], GLOW_BLUR = 14, GLOW_TILT = -1.2;
 
   // 关键词贴着行首或行尾时，笔触会伸出这一行：在那一侧留内边距，按「字 + 内边距」缩字号
   function glowFit(host, text, key, size) {
@@ -231,7 +232,7 @@
     if (!w || i < 0) return { size: s, padL: 0, padR: 0 };
     var n = Array.from(text).length, k = Array.from(key).length;
     var before = Array.from(text.slice(0, i)).length, after = n - before - k;
-    var over = function (chars, sz) { return Math.max(0, Math.ceil((GLOW_PAD * k + Math.abs(Math.sin((GLOW_TILT * Math.PI) / 180)) - chars) * sz + GLOW_BLUR)); };
+    var over = function (chars, sz) { return Math.max(0, Math.ceil((GLOW_OVER + Math.abs(Math.sin((GLOW_TILT * Math.PI) / 180)) - chars) * sz + GLOW_BLUR)); };
     while (s > 1 && (n + 0.3) * s + over(before, s) + over(after, s) > w) s--;
     return { size: s, padL: over(before, s), padR: over(after, s) };
   }
@@ -315,7 +316,7 @@
     svg.style.cssText = under
       ? "left:-2%;width:104%;top:88%;height:18%"
       : glow
-        ? "left:" + GLOW_BOX.left + "%;width:" + GLOW_BOX.width + "%;top:8%;height:96%;transform:rotate(" + GLOW_TILT + "deg)"
+        ? "left:-" + Math.round(GLOW_OVER * fit.size) + "px;width:calc(100% + " + 2 * Math.round(GLOW_OVER * fit.size) + "px);top:8%;height:96%;transform:rotate(" + GLOW_TILT + "deg)"
         : "left:-4%;width:108%;top:50%;height:45%";
     var path = svgEl("path", {
       d: under ? "M 2 20 C 24 14, 52 26, 98 16" : glow ? "M " + GLOW_PATH_X[0] + " 21 C 30 17, 62 24, " + GLOW_PATH_X[1] + " 18" : "M 2 22 C 26 17, 58 26, 98 19",
