@@ -6,7 +6,7 @@
 //   init    [--fresh] [--video director|template]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」；--video 视频做法
 //   gate    <节点> [--edit] "用户原话"   记录用户确认（实用类：topic script storyboard final）
 //   done    <wechat|xiaohongshu|douyin>   存草稿成功后记一笔
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { renderBrief } from "./lib/brief.mjs";
@@ -17,7 +17,7 @@ import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
 import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
 import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, gatesFor, practicalStatus } from "./lib/practical.mjs";
 import { DIRECTOR_DIR, FINAL_RE, videoMode } from "./lib/video.mjs";
-import { collectPracticalFacts, defaultRunners, fingerprint, templateHashes } from "./lib/practical-facts.mjs";
+import { collectPracticalFacts, defaultRunners, fingerprint, newestHtml, templateHashes } from "./lib/practical-facts.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
 const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh] [--video director|template]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
@@ -137,8 +137,10 @@ export function collectFacts(dir) {
   const vdQaPath = join(dir, DIRECTOR_DIR, "qa-douyin.json");
   let vdQa = null;
   if (existsSync(vdQaPath)) {
+    // 比工程里最新的 HTML 旧的结果（比如样片时跑的）不算：整片要重跑
+    const fresh = statSync(vdQaPath).mtimeMs >= newestHtml(join(dir, DIRECTOR_DIR));
     try {
-      vdQa = { passed: JSON.parse(readFileSync(vdQaPath, "utf8")).passed === true };
+      vdQa = { passed: fresh && JSON.parse(readFileSync(vdQaPath, "utf8")).passed === true };
     } catch {
       vdQa = { passed: false };
     }

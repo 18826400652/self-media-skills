@@ -109,7 +109,7 @@ function videoSteps(dir, run, runVoiceCheck) {
 }
 
 /** 工程里最新的 HTML（index.html + compositions/ 下所有 .html）的修改时间 */
-function newestHtml(root) {
+export function newestHtml(root) {
   let t = mtime(join(root, "index.html"));
   const walk = (d) => {
     if (!existsSync(d)) return;

@@ -107,3 +107,20 @@ test("kv status 概念科普 director：没有 DIRECTOR.md 时下一步写导演
   assert.match(r.stdout, /②b 风格样片 ·/);
   assert.doesNotMatch(r.stdout, /分镜总览图/);
 });
+
+test("kv status 概念科普 director：qa-douyin.json 比工程里的 HTML 旧（样片时跑的）不算通过", async () => {
+  const { utimesSync } = await import("node:fs");
+  const D = "抖音-director";
+  const dir = episode({
+    "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT,
+    "run.json": { type: "concept", video: "director", gates: { script: { passed: true }, director: { passed: true }, sample: { passed: true } } },
+    [`${D}/DIRECTOR.md`]: "x", [`${D}/renders/sample.mp4`]: "s", [`${D}/renders/01.mp4`]: "f",
+    [`${D}/index.html`]: "<html>", [`${D}/qa-douyin.json`]: { passed: true },
+  });
+  utimesSync(join(dir, D, "qa-douyin.json"), 1000, 1000);
+  utimesSync(join(dir, D, "index.html"), 2000, 2000);
+  const r = kv("status", dir);
+  assert.match(r.stdout, /下一步：.*vd qa/);
+  utimesSync(join(dir, D, "qa-douyin.json"), 3000, 3000);
+  assert.match(kv("status", dir).stdout, /下一步：.*qa\.json/);
+});

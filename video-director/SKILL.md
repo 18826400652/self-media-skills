@@ -27,7 +27,7 @@ HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免
 
 ## 流程（一期的抖音部分）
 
-**在 kv 里**：作品 `run.json` 写 `"video": "director"` 后，`kv status` 按下面的步骤指引（实用类的 ③a / ③b / ④，概念科普的 ②a / ②b / ③），用户确认后 `kv gate <作品> director|sample|final "原话"`。样片固定输出到 `renders/sample.mp4`，对比视频 `renders/compare.mp4`——这两个名字 kv 不当正式成片。
+**在 kv 里**：作品 `run.json` 写 `"video": "director"` 后，`kv status` 按下面的步骤指引（实用类的 ③a / ③b / ④，概念科普的 ②a / ②b / ③），用户确认后：实用类 `kv gate <作品> director|sample|final "原话"`；概念科普按 knowledge-video 的「确认节点怎么记」手改 `run.json` 的 `gates.director` / `gates.sample` / `gates.final`。样片固定输出到 `renders/sample.mp4`，对比视频 `renders/compare.mp4`——这两个名字 kv 不当正式成片。
 
 | 步骤 | 做什么 | 停下来 |
 |---|---|---|
