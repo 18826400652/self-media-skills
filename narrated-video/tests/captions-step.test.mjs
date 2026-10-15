@@ -57,3 +57,22 @@ test("keepMtimeIfUnchanged：内容没变就恢复原来的修改时间；变了
   keepMtimeIfUnchanged(f, () => writeFileSync(f, "## Frame 1\n\n- duration: 2.5s\n"));
   assert.notEqual(Math.round(statSync(f).mtimeMs / 1000), 1000);
 });
+
+test("buildCaptions quietFontFallback：只滤掉字幕生成的字体回退警告（hf-audio 时字体还没打包），其他输出照常", () => {
+  const fe = mkdtempSync(join(tmpdir(), "nv-fe-"));
+  writeFileSync(join(fe, "audio.mjs"), "");
+  writeFileSync(join(fe, "captions.mjs"), [
+    'console.warn("  ⚠ captions: frame.md names font \\"Noto Sans SC\\" but no matching .woff2/.woff/.ttf/.otf was found in assets/fonts — captions will fall back (text may render in the wrong font).");',
+    'console.warn("另一条真的警告");',
+  ].join("\n"));
+  const warned = [];
+  assert.deepEqual(buildCaptions(project(), { fe, log: () => {}, quietFontFallback: true, warn: (m) => warned.push(m) }), { built: true });
+  assert.deepEqual(warned, ["另一条真的警告"]);
+});
+
+test("buildCaptions quietFontFallback：字幕脚本失败时照样报错", () => {
+  const fe = mkdtempSync(join(tmpdir(), "nv-fe-"));
+  writeFileSync(join(fe, "audio.mjs"), "");
+  writeFileSync(join(fe, "captions.mjs"), 'console.error("坏了"); process.exit(2);');
+  assert.throws(() => buildCaptions(project(), { fe, log: () => {}, quietFontFallback: true, warn: () => {} }), /captions\.mjs/);
+});
