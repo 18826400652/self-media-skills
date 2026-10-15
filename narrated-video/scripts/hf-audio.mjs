@@ -23,6 +23,7 @@
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { buildCaptions } from "./lib/captions-step.mjs";
 import { loadConfig } from "./lib/config.mjs";
 import { writeCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
@@ -255,6 +256,7 @@ async function main() {
   writeFileSync(join(dir, "audio_meta.json"), `${JSON.stringify(frameKeyed, null, 2)}\n`);
   console.log(`✓ 配音完成：${voices.length} 帧，共 ${total} 秒 → audio_meta.json`);
   if (existsSync(join(dir, "compositions"))) console.log(`✓ 逐字时间 → compositions/kit/cues.js（${writeCues(dir)} 帧）`);
+  if (buildCaptions(dir).built) console.log("✓ 帧时长写回 STORYBOARD、字幕分组 → caption_groups.json");
 }
 
 if (isMain(import.meta.url)) {

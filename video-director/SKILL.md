@@ -51,6 +51,8 @@ cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-dir
 
 `package.json` 里的 `hyperframes@X.Y.Z` 改成 `video-director.config.json` 的 `hfVersion`。
 
+`caption_groups.json` 由 `nv hf-audio` 配音时生成（同时把每帧时长写回 `抖音/STORYBOARD.md`），不用先跑 `nv hf-build`。
+
 ## 命令
 
 | 命令 | 作用 |

@@ -275,7 +275,7 @@ kv status 04-作品/<系列>/NN-<简称>
      ```bash
      nv hf-audio 抖音 --pause 0.3
      ```
-     qwenaudio（千问 qwen-audio-3.1-tts-next）+ 参考音色（配置 `tts.reference`） + 配置里的 `tts.style` 人设，按 VOICE.md **整段生成**，再用 fun-asr 识别拿到时间、按字对齐回原文，最后切回每帧。生成 `audio_meta.json`，每帧时长自动写回 STORYBOARD。换一种演法：改 `tts.seed`；换回豆包：`tts.provider` 改成 `seedaudio`
+     qwenaudio（千问 qwen-audio-3.1-tts-next）+ 参考音色（配置 `tts.reference`） + 配置里的 `tts.style` 人设，按 VOICE.md **整段生成**，再用 fun-asr 识别拿到时间、按字对齐回原文，最后切回每帧。生成 `audio_meta.json` 和字幕分组 `caption_groups.json`，每帧时长自动写回 STORYBOARD。换一种演法：改 `tts.seed`；换回豆包：`tts.provider` 改成 `seedaudio`
   2. 写 `抖音/STORYBOARD.md`：每帧一行 `- build: {…}`（帧模板 JSON），时间写 `"@词"`（说到这个词时），不手写秒数。可以组合的部分：
      - `rec`：录屏（`mediaStart`、`rate` 倍速、`dim`、`chip` 标签）
      - `timer`：计时
@@ -347,7 +347,7 @@ kv status 04-作品/<系列>/NN-<简称>
 
 - **skill**：narrated-video（配音）→ video-director（导演脚本）
 - **做什么**：
-  1. 配音（同 template）：`nv hf-audio 抖音 --pause 0.3`
+  1. 配音（同 template）：`nv hf-audio 抖音 --pause 0.3`（同时生成下面要复制的 `caption_groups.json`）
   2. 新建导演工程：
      ```bash
      cd 04-作品/<系列>/NN-<简称>

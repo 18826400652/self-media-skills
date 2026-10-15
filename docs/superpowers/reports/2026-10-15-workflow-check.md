@@ -362,3 +362,7 @@
 ### P-40 vd 自动加的账号结尾条会和最后一段画面重复
 - 现象：DIRECTOR.md 机器块 `ending.next` 让 vd 在结尾加「下一期：…」黄条；第 7 段按口播画了「下一期」大字，两者同时出现、叠在一起。模板和规则都没提醒「最后一段别再画下期预告」
 - 严重度：文档
+
+### P-41 `nv hf-audio` 生成字幕时打印字体回退警告（修 P-31 时发现）
+- 现象：P-31 修好后，`nv hf-audio` 末尾会跑 faceless-explainer 的字幕生成，此时工程里还没有 `assets/fonts`，它警告「frame.md names font "Noto Sans SC" but no matching .woff2 … captions will fall back」；template 做法下一步 `nv hf-build` 会打包字体，director 做法只用 caption_groups.json，不用这份字幕 HTML——警告对两种做法都是误导
+- 严重度：体验

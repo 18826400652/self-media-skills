@@ -8,16 +8,16 @@
 // --snap：再按每帧结尾截图，拼成 snapshots/sheet.jpg，用来看图检查；并量每帧内容铺开多少，偏空的帧给出警告。
 // --motion：每帧截入场、中段、落定三张（动画过程），检查元素是否按时出现、过程中有没有穿帮。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
+import { CAPTION_ARGS, FACELESS_SCRIPTS, SYNC_ARGS } from "./lib/captions-step.mjs";
 import { execFileSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 import { SKILL_DIR } from "./lib/config.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { parseStoryboardFrames } from "./lib/frame-build.mjs";
 import { localizeGsap } from "./lib/localize.mjs";
 
-const FE = join(process.env.FACELESS_DIR || join(homedir(), ".claude", "skills", "faceless-explainer"), "scripts");
+const FE = FACELESS_SCRIPTS;
 const HF = join(SKILL_DIR, "node_modules", ".bin", "hyperframes");
 const ASSET_SOURCES = ["capture/assets", "public"];
 const SNAP_BEFORE_END = 0.3; // 截每帧结尾前 0.3 秒：动画已落定
@@ -276,13 +276,13 @@ function main() {
   const self = (name) => join(SKILL_DIR, "scripts", `${name}.mjs`);
 
   node("组件库 + 逐字时间", self("hf-kit"), [dir], dir);
-  node("同步帧时长", join(FE, "audio.mjs"), ["sync-durations", "--audio-meta", "./audio_meta.json", ...sb], dir);
+  node("同步帧时长", join(FE, "audio.mjs"), SYNC_ARGS, dir);
   node("帧模板（STORYBOARD 的 build）", self("hf-frames"), [dir], dir);
   node("音效", self("hf-sfx"), [dir], dir);
   console.log("\n▸ 素材");
   stageAssets(dir);
   node("中文字体", self("hf-fonts"), [dir], dir);
-  node("字幕", join(FE, "captions.mjs"), ["build", ...sb, "--audio-meta", "./audio_meta.json", "--hyperframes", ".", "--out", "./caption_groups.json"], dir);
+  node("字幕", join(FE, "captions.mjs"), CAPTION_ARGS, dir);
   node("组装 index.html", join(FE, "assemble-index.mjs"), [...sb, "--hyperframes", "."], dir);
   node("转场", join(FE, "transitions.mjs"), ["inject", ...sb, "--hyperframes", "."], dir);
   node("转场校验", join(FE, "transitions.mjs"), ["verify", ...sb, "--index", "./index.html"], dir);
