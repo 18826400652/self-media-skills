@@ -50,7 +50,7 @@ export function initProject({ dir, account = "", audience = "" }, log = console.
   log(`✓ 已建作品项目：${root}（新建 ${created} 个文件${skipped ? `，跳过 ${skipped} 个已有的` : ""}）`);
   log(`接下来：
   1. 填 00-规划/账号定位.md、00-规划/语气指南.md，在 00-规划/系列/系列.json 登记系列：{"系列名": {"label": "显示名", "unit": "期"}}
-  2. 品牌：改 06-品牌资产/theme.css、hyperframes/frame.md 的颜色；参考音色放 06-品牌资产/参考音色.wav（字体和 GSAP 由 video-director、narrated-video 自带，不用准备）
+  2. 品牌：改 06-品牌资产/theme.css、hyperframes/frame.md 的颜色；参考音色放 06-品牌资产/参考音色.wav；要配音时把 .env.example 复制成 .env 填密钥（字体和 GSAP 由 video-director、narrated-video 自带，不用准备）
   3. cd ${root} && st doctor，按提示补齐
   4. st new <系列> <简称> 开第一期`);
   return root;

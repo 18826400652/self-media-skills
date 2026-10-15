@@ -113,6 +113,9 @@ function checkConfigs(p, out) {
     if (missing.length) out.fail(`${file} 里的路径不存在：${missing.join("；")}`);
     else out.ok(file);
   }
+  // 只看在不在，不读内容（里面是密钥）
+  if (existsSync(join(p.root, ".env"))) out.ok(".env");
+  else out.warn("没有 .env：配音（nv voice / hf-audio）要用 DASHSCOPE_API_KEY 等密钥，复制 .env.example 为 .env 再填");
   const bd = join(p.root, "browser-draft.config.json");
   if (existsSync(bd)) {
     try {

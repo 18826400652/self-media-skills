@@ -54,6 +54,9 @@ test("st init：建出骨架，账号填进去，gitignore 改名；再跑一次
   assert.match(readFileSync(join(dir, "00-规划/账号定位.md"), "utf8"), /账号名：小号/);
   assert.equal(JSON.parse(readFileSync(join(dir, "image-cards.config.json"), "utf8")).footer, "@小号");
   assert.equal(readFileSync(join(dir, "00-规划/语气指南.md"), "utf8"), "我自己的");
+  assert.match(readFileSync(join(dir, "README.md"), "utf8"), /小号/);
+  assert.match(readFileSync(join(dir, ".env.example"), "utf8"), /^DASHSCOPE_API_KEY=$/m);
+  assert.ok(!existsSync(join(dir, ".env")), "不替用户建 .env");
   assert.throws(() => initProject({ dir }, quiet), /已经是作品项目/);
 });
 
@@ -69,6 +72,19 @@ test("st doctor：新建的项目里，项目、模板、品牌、配置几节�
   const fails = head.split("\n").filter((l) => l.includes("✗"));
   // 起步骨架不带参考音色，只允许这一处报 ✗
   for (const l of fails) assert.match(l, /tts\.reference/, l);
+});
+
+test("st doctor：没有 .env 给 ⚠ 提示复制 .env.example；有了只报存在，不显示内容", () => {
+  const dir = join(tmp("st-doc-"), "proj");
+  initProject({ dir }, quiet);
+  let out = capture();
+  doctor({ cwd: dir, log: out.log });
+  assert.match(out.text(), /⚠ 没有 \.env.*\.env\.example/);
+  writeFileSync(join(dir, ".env"), "DASHSCOPE_API_KEY=sk-secret\n");
+  out = capture();
+  doctor({ cwd: dir, log: out.log });
+  assert.match(out.text(), /✓ \.env/);
+  assert.doesNotMatch(out.text(), /sk-secret/);
 });
 
 test("st doctor：项目模板覆盖——改过的认、一样的提醒删、对不上的提醒", () => {
