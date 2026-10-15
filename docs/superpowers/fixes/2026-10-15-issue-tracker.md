@@ -20,7 +20,7 @@
 | P-09 | `st doctor` 不检查配置里残留的占位文字 | 第 5 组 | 已修 | `fix(P-09)` | doctor.test.mjs 1 例 RED→GREEN + 1 例反向（夹具补 audience）；project.test 旧用例按新规则放宽允许的 ✗；studio 31/31；真实项目、flow-check 的 st doctor 不报 |
 | P-10 | 参考音色怎么准备没有文档 | 第 2 批 | 待修 | | |
 | P-11 | 默认音效目录是空的，doctor 不提醒 | 第 5 组 | 已修 | `fix(P-11)` | doctor.test.mjs 2 例 RED→GREEN（+1 例反向）；studio 29/29；真实项目、flow-check 的 st doctor 不报（Review Focus 3） |
-| P-12 | `st new --只建抖音` 成功时提示「已创建：<作品>」 | 第 2 批 | 待修 | | |
+| P-12 | `st new --只建抖音` 成功时提示「已创建：<作品>」 | 第 2 批 | 已修 | `fix(P-12)` | new.test 断言 RED→GREEN；studio 34/34 |
 | P-13 | narrated-video/SKILL.md 说整段配音只在 seedaudio 时生效 | 第 2 批 | 待修 | | |
 | P-14 | `st doctor` 只看依赖目录在不在，装到一半失败也报全过 | 第 5 组 | 已修 | `fix(P-14)` | doctor.test.mjs 2 例 RED→GREEN；studio 33/33；实跑：临时挪走 video-director 的 noto-serif-sc，doctor ✗「缺 Node 依赖」，还原后 ✓ |
 | P-15 | `sc bench` 抓到的结果噪声大，抖音收藏数为空 | 第 2 批 | 待修 | | |

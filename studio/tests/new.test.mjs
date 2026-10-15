@@ -143,6 +143,8 @@ test("--只建抖音：作品已存在时只补抖音工程；已有抖音时报
   assert.equal(r.status, 0, r.stderr);
   assert.ok(existsSync(join(ep, "抖音/SCRIPT.md")));
   assert.ok(!existsSync(join(ep, "场景卡.md")));
+  assert.match(r.stdout, /已补建：04-作品\/普通人的AI课\/01-周报\/抖音\/（作品里的其他文件没动）/);
+  assert.doesNotMatch(r.stdout, /已创建/);
   const again = run(sb, "普通人的AI课", "周报", "--编号", "1", "--只建抖音");
   assert.notEqual(again.status, 0);
   assert.match(again.stderr, /已存在/);
