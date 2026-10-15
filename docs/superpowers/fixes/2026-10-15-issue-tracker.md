@@ -51,3 +51,10 @@
 | P-40 | vd 自动加的账号结尾条会和最后一段画面重复 | 后续 | 待修 | | |
 | P-41 | nv hf-audio 生成字幕时打印「字体找不到会回退」警告（此时还没打包字体，director 做法用不到这份字幕 HTML，属误导） | 后续 | 待修 | | |
 | P-36b | 组件库（18826400652/hyperframes）28 个组件时间写死：改成按宿主时长撑满、项目可按 vars 给的 @词 时间出现 | 后续（另一个仓库） | 待修 | | |
+
+## 第 1 批收尾（2026-10-15）
+
+- 17 个问题全部提交（`git log --grep "fix(P-"`），其中 P-19、P-20 代码已修、真机实跑待用户连手机；顺带修好 P-02，P-27 部分改善（hf-audio 也会写回帧时长）
+- 全部测试：studio 34、knowledge-video 85、scenario-content 13、video-director 117、wechat-article 5、image-cards 4、narrated-video 114（node --test，0 失败）；phone-draft 112、browser-draft 7（pytest，0 失败）。修前基线 26/77/10/101/5/4/105/105/7
+- 修复中新发现：P-36b（组件库仓库）、P-41（hf-audio 字体回退警告）
+- 整条分支自查：改动的 .mjs 全部 `node --check` 通过，没有调试输出、没有未使用的导入（自查，未派独立 reviewer）
