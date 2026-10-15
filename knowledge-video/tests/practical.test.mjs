@@ -58,3 +58,37 @@ test("doneBlocker：只接受三个草稿键；内容没写好或前面没走完
   assert.match(doneBlocker(facts({ steps: { wechat: { ok: false, why: "公众号/文章.md 还是空模板", content: false } } }), "wechat"), /空模板/);
   assert.match(doneBlocker(facts({ gates: { final: unpassed }, steps: { wechat: notOk("还没存草稿") } }), "wechat"), /④ 成片/);
 });
+
+import { gatesFor, stepsFor } from "../scripts/lib/practical.mjs";
+
+const dirFacts = (o = {}) => {
+  const steps = Object.fromEntries(stepsFor("director").map((s) => [s.key, { ok: true, why: "" }]));
+  const gates = Object.fromEntries(gatesFor("director").map((g) => [g, { passed: true, at: "2026-10-15", quote: "通过", stale: false }]));
+  return { video: "director", steps: { ...steps, ...(o.steps ?? {}) }, gates: { ...gates, ...(o.gates ?? {}) } };
+};
+
+test("director 做法：15 步，配音 + 分镜换成 导演脚本 ③a、风格样片 ③b", () => {
+  const s = stepsFor("director");
+  assert.equal(s.length, 15);
+  assert.deepEqual(s.filter((x) => x.gate).map((x) => [x.n, x.gate]), [[2, "topic"], [7, "script"], [8, "director"], [9, "sample"], [10, "final"]]);
+  assert.deepEqual(stepsFor("template").map((x) => x.key), STEPS.map((x) => x.key));
+  assert.deepEqual(gatesFor("director"), ["topic", "script", "director", "sample", "final"]);
+  assert.deepEqual(gatesFor("template"), ["topic", "script", "storyboard", "final"]);
+});
+
+test("director 做法：等 ③a、样片过期、按 director 做法拦 kv gate", () => {
+  const unp = { passed: false, at: null, quote: null, stale: false };
+  const w = practicalStatus(dirFacts({ gates: { director: unp, sample: unp, final: unp } }));
+  assert.equal(w.waitingFor, "director");
+  assert.match(w.next, /③a 导演脚本.*kv gate <作品> director/);
+  const s = practicalStatus(dirFacts({ gates: { sample: { ...unp, passed: true, stale: true } } }));
+  assert.equal(s.waitingFor, "sample");
+  assert.match(s.next, /确认后改过/);
+  assert.match(gateBlocker(dirFacts({ gates: { director: unp, sample: unp } }), "sample"), /③a 导演脚本 还没确认/);
+  assert.match(gateBlocker(dirFacts(), "storyboard"), /没有这个确认节点：storyboard（可选：topic、script、director、sample、final）/);
+  assert.match(doneBlocker(dirFacts({ gates: { final: unp }, steps: { wechat: { ok: false, why: "还没存草稿" } } }), "wechat"), /④ 成片/);
+});
+
+test("没有 video 字段的 facts 按 template 处理（老作品不变）", () => {
+  assert.equal(practicalStatus(facts()).rows.length, 14);
+});

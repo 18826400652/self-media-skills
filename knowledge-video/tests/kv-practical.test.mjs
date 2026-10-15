@@ -113,3 +113,27 @@ test("已通过的节点再提修改意见 → 变回没通过", () => {
   assert.equal(g.passed, false);
   assert.match(kv({}, "status", dir).stdout, /① 选题关 等用户确认/);
 });
+
+const VD_OK = fake("vd-ok", "exit 0");
+
+test("kv init --video director：写进 run.json；参数打错报错", () => {
+  const dir = practical();
+  assert.equal(kv({}, "init", dir, "--video", "director").status, 0);
+  assert.equal(readRun(dir).video, "director");
+  const bad = kv({}, "init", practical(), "--video", "fancy");
+  assert.equal(bad.status, 1);
+  assert.match(bad.stderr, /--video 只能是 director 或 template/);
+});
+
+test("老 run.json 改成 director：status 显示 15 步；kv gate director 前面没做完时拒绝，不报没有这个节点", () => {
+  const dir = practical();
+  writeFileSync(join(dir, "run.json"), JSON.stringify({ type: "practical", video: "director", gates: { topic: { passed: false } }, done: {}, templates: {} }));
+  const s = kv({ KV_VD_CMD: VD_OK }, "status", dir);
+  assert.equal(s.status, 0, s.stderr);
+  assert.match(s.stdout, / 8 配音 \+ 导演脚本/);
+  assert.match(s.stdout, / 9 风格样片/);
+  assert.match(s.stdout, /15 复盘/);
+  const g = kv({ KV_VD_CMD: VD_OK }, "gate", dir, "director", "通过");
+  assert.equal(g.status, 1);
+  assert.match(g.stdout, /还不能记 ③a 导演脚本/);
+});

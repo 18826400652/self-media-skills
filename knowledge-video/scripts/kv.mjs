@@ -3,7 +3,7 @@
 //   check   检查 research.json、SCRIPT.md 的依据、qa.json（存在时）。有 ✗ 退出码 1
 //   brief   research.json → 研究简报.md（给人在确认节点 ① 看）
 //   status  当前阶段、下一步、还没通过的确认节点（实用类：完整一期的 14 步）
-//   init    [--fresh]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」
+//   init    [--fresh] [--video director|template]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」；--video 视频做法
 //   gate    <节点> [--edit] "用户原话"   记录用户确认（实用类：topic script storyboard final）
 //   done    <wechat|xiaohongshu|douyin>   存草稿成功后记一笔
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,11 +15,12 @@ import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
 import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
-import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, practicalStatus } from "./lib/practical.mjs";
+import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, gatesFor, practicalStatus } from "./lib/practical.mjs";
+import { videoMode } from "./lib/video.mjs";
 import { collectPracticalFacts, defaultRunners, fingerprint, templateHashes } from "./lib/practical-facts.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
-const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
+const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh] [--video director|template]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
 
 /** run.json → 对象；没有时 null；坏了报中文错误 */
 export function readRun(dir) {
@@ -166,11 +167,15 @@ function requirePracticalRun(dir) {
 
 function initRun(dir, args) {
   if (readRun(dir)) throw new Error("已经有 run.json 了");
+  const vi = args.indexOf("--video");
+  const video = vi >= 0 ? args[vi + 1] : null;
+  if (vi >= 0 && !["director", "template"].includes(video)) throw new Error(`--video 只能是 director 或 template：${video ?? "（空）"}`);
   const practical = looksPractical(dir);
   const run = JSON.parse(readFileSync(join(TEMPLATES_DIR, practical ? "run-practical.json" : "run.json"), "utf8"));
+  if (video) run.video = video;
   if (practical && args.includes("--fresh")) run.templates = templateHashes(dir, TEMPLATE_FILES);
   writeRun(dir, run);
-  console.log(`✓ run.json（${TYPE_LABEL[episodeType(run)]}）`);
+  console.log(`✓ run.json（${TYPE_LABEL[episodeType(run)]}，视频做法 ${videoMode(run)}）`);
   return 0;
 }
 
@@ -189,8 +194,10 @@ function recordGate(dir, args) {
   const [gate, ...rest] = args;
   const edit = rest.includes("--edit");
   const quote = oneLine(rest.filter((a) => a !== "--edit").join(" "));
-  const g = run.gates?.[gate];
-  if (!g) throw new Error(`没有这个确认节点：${gate ?? "（空）"}（可选：${Object.keys(P_GATE_LABEL).join("、")}）`);
+  const allowed = gatesFor(videoMode(run));
+  if (!allowed.includes(gate)) throw new Error(`没有这个确认节点：${gate ?? "（空）"}（可选：${allowed.join("、")}）`);
+  const g = run.gates?.[gate] ?? { passed: false, at: null, quote: null, fingerprint: null, edits: [] }; // 老 run.json 没有 director、sample
+  run.gates = run.gates ?? {};
   if (!quote) throw new Error('要写用户原话：kv gate <作品> <节点> "用户原话"');
   if (edit) {
     run.gates[gate] = { ...g, passed: false, edits: [...(g.edits ?? []), { at: today(), quote }] };
@@ -204,7 +211,7 @@ function recordGate(dir, args) {
     return 1;
   }
   if (gate === "topic") syncTopicFile(dir, quote);
-  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate) };
+  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate, videoMode(run)) };
   writeRun(dir, run);
   console.log(`✓ ${P_GATE_LABEL[gate]} 通过（${today()}「${quote}」）`);
   return 0;
@@ -235,7 +242,7 @@ function gateText(row, g) {
 
 function printPracticalStatus(dir, run) {
   const s = practicalStatus(practicalFacts(dir, run));
-  console.log("类型：实用技巧");
+  console.log(`类型：实用技巧（视频做法 ${videoMode(run)}）`);
   for (const r of s.rows) {
     console.log(` ${r.done ? "✓" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}`);
   }

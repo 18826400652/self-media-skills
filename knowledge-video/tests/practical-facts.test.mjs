@@ -147,3 +147,70 @@ test("预览-压缩.mp4 不算成片：第 9 步和 ④ 指纹只看正式渲染
   writeFileSync(join(dir, "抖音/renders/预览-压缩.mp4"), "p2");
   assert.equal(fingerprint(dir, "final"), fp);
 });
+
+const vdOk = () => ({ ok: true, msg: "" });
+const D = "抖音-director";
+const dRun = (o = {}) => run({ video: "director", ...o });
+const dCollect = (dir, r = dRun(), o = {}) => collect(dir, r, { runVdCues: vdOk, ...o });
+
+test("director：第 8 步要配音、DIRECTOR.md、vd cues 通过；导演工程里的配音旧了不算", () => {
+  let f = dCollect(episode({}));
+  assert.equal(f.video, "director");
+  assert.match(f.steps.director.why, /还没配音/);
+  f = dCollect(episode({ "抖音/audio_meta.json": "{}" }));
+  assert.match(f.steps.director.why, /还没有 抖音-director\/DIRECTOR\.md/);
+  const dir = episode({ "抖音/audio_meta.json": "{}", [`${D}/DIRECTOR.md`]: "x", [`${D}/audio_meta.json`]: "{}" });
+  assert.match(dCollect(dir, dRun(), { runVdCues: () => ({ ok: false, msg: "第 3 句没有分到任何段" }) }).steps.director.why, /第 3 句/);
+  assert.equal(dCollect(dir).steps.director.ok, true);
+  touch(dir, `${D}/audio_meta.json`, 1000);
+  touch(dir, "抖音/audio_meta.json", 2000);
+  assert.match(dCollect(dir).steps.director.why, /重新配过音/);
+});
+
+test("director：样片要比 DIRECTOR.md 新", () => {
+  const dir = episode({ [`${D}/DIRECTOR.md`]: "x" });
+  assert.match(dCollect(dir).steps.sample.why, /renders\/sample\.mp4/);
+  mkdirSync(join(dir, D, "renders"), { recursive: true });
+  writeFileSync(join(dir, D, "renders/sample.mp4"), "v");
+  touch(dir, `${D}/DIRECTOR.md`, 2000);
+  touch(dir, `${D}/renders/sample.mp4`, 1000);
+  assert.match(dCollect(dir).steps.sample.why, /DIRECTOR\.md 改过/);
+  touch(dir, `${D}/renders/sample.mp4`, 3000);
+  assert.equal(dCollect(dir).steps.sample.ok, true);
+});
+
+test("director：渲染步骤看正式成片（不算 sample / compare / 预览）、vd qa、qa.json", () => {
+  const files = { [`${D}/DIRECTOR.md`]: "x", [`${D}/index.html`]: "<html>", [`${D}/renders/sample.mp4`]: "v", [`${D}/renders/compare.mp4`]: "v", [`${D}/renders/预览-1.mp4`]: "v" };
+  let dir = episode(files);
+  assert.match(dCollect(dir).steps.render.why, /还没渲染/);
+  dir = episode({ ...files, [`${D}/renders/01.mp4`]: "v" });
+  for (const [f, s] of [[`${D}/DIRECTOR.md`, 1000], [`${D}/index.html`, 1000], [`${D}/renders/01.mp4`, 3000]]) touch(dir, f, s);
+  assert.match(dCollect(dir).steps.render.why, /还没跑 vd qa/);
+  writeFileSync(join(dir, D, "qa-douyin.json"), JSON.stringify({ passed: false }));
+  touch(dir, `${D}/qa-douyin.json`, 2000);
+  assert.match(dCollect(dir).steps.render.why, /vd qa 还有 ✗/);
+  writeFileSync(join(dir, D, "qa-douyin.json"), JSON.stringify({ passed: true }));
+  touch(dir, `${D}/qa-douyin.json`, 2000);
+  touch(dir, `${D}/index.html`, 2500);
+  assert.match(dCollect(dir).steps.render.why, /画面改过，要重跑 vd qa/);
+  touch(dir, `${D}/index.html`, 1500);
+  assert.match(dCollect(dir).steps.render.why, /还没写 qa\.json/);
+  writeFileSync(join(dir, "qa.json"), JSON.stringify({ passed: true }));
+  touch(dir, "qa.json", 4000);
+  assert.equal(dCollect(dir).steps.render.ok, true);
+});
+
+test("director 指纹：③a 看 DIRECTOR.md 和配音，③b 看样片，④ 看正式成片", () => {
+  const dir = episode({ "抖音/audio_meta.json": "{}", [`${D}/DIRECTOR.md`]: "x", [`${D}/renders/sample.mp4`]: "s", [`${D}/renders/01.mp4`]: "f" });
+  const before = ["director", "sample", "final"].map((g) => fingerprint(dir, g, "director"));
+  writeFileSync(join(dir, D, "DIRECTOR.md"), "y");
+  writeFileSync(join(dir, D, "renders/sample.mp4"), "s2");
+  writeFileSync(join(dir, D, "renders/compare.mp4"), "c");
+  const after = ["director", "sample", "final"].map((g) => fingerprint(dir, g, "director"));
+  assert.notEqual(after[0], before[0]);
+  assert.notEqual(after[1], before[1]);
+  assert.equal(after[2], before[2], "compare.mp4 不影响 ④");
+  const f = dCollect(dir, dRun({ gates: { director: { passed: true, fingerprint: before[0] } } }));
+  assert.deepEqual(Object.keys(f.gates), ["topic", "script", "director", "sample", "final"]);
+  assert.equal(f.gates.director.stale, true);
+});
