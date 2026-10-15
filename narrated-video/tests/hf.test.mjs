@@ -456,3 +456,19 @@ test("帧模板 glow：计时面板叠在录屏上时用不透明底（玻璃面
   const glowCss = readFileSync(new URL("../hf-kit/kit-glow.js", import.meta.url), "utf8");
   assert.match(glowCss, /\.kit-glass-panel\.kit-on-rec\{background:color-mix\(in srgb,var\(--kit-bg\) 9\d%,transparent\)/);
 });
+
+test("lateItems：steps / checklist / chain 里没写 at 的项接着上一项顺延，帧结束前出不来的报出来", async () => {
+  const { lateItems } = await import("../scripts/lib/frame-build.mjs");
+  const cues = [["开", 2.0], ["启", 2.1], ["过", 1.0]];
+  // 01 第 4 帧：第 1 步挂在 2.0 秒，后两步顺延到 2.6、3.2 秒，帧 3.4 秒——第 3 步出来时帧快结束了
+  const steps = { kit: { name: "steps", opts: { steps: [{ title: "a", at: "@开启" }, { title: "b" }, { title: "c" }] } } };
+  assert.deepEqual(lateItems({ n: 4, duration: 3.4, build: steps }, cues), [{ component: "steps", index: 3, at: 3.2, frameEnd: 3.4 }]);
+  assert.deepEqual(lateItems({ n: 4, duration: 5, build: steps }, cues), []);
+  // 全部默认时间（0.2 起每 0.6 秒）
+  assert.deepEqual(lateItems({ n: 1, duration: 1, build: { kit: { name: "steps", opts: { steps: [{ title: "a" }, { title: "b" }] } } } }, cues), [{ component: "steps", index: 2, at: 0.8, frameEnd: 1 }]);
+  // checklist 从 at + 0.3 开始，间隔 0.4
+  assert.deepEqual(lateItems({ n: 2, duration: 1.5, build: { kit: { name: "checklist", opts: { items: ["a", "b", "c"] } } } }, cues).map((x) => x.index), [3]);
+  // 自己写了 at 的项交给 lateAnimations；找不到的词不往下算
+  assert.deepEqual(lateItems({ n: 4, duration: 3.4, build: { kit: { name: "steps", opts: { steps: [{ title: "a", at: "@没有" }, { title: "b" }] } } } }, cues), []);
+  assert.deepEqual(lateItems({ n: 4, duration: 3, build: { kit: { name: "compare", opts: {} } } }, cues), []);
+});
