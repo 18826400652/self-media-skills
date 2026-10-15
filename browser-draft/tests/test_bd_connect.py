@@ -70,3 +70,14 @@ def test_configured_port_not_listening_fails_clearly(tmp_path):
     r = run_tabs(tmp_path, tmp_path)
     assert r.returncode == 1
     assert "1 端口" in r.stderr
+
+
+def test_outside_project_says_which_browser(tmp_path):
+    """不在作品项目里（往上没有 browser-draft.config.json）退回 DevToolsActivePort 时，说清楚连的是哪个浏览器"""
+    port_file = tmp_path / "DevToolsActivePort"
+    port_file.write_text("9222\n/devtools/browser/xyz\n")
+    r = run_tabs(tmp_path, tmp_path, {"BD_PORT_FILE": str(port_file)})
+    assert r.returncode == 0, r.stderr
+    assert "WS=ws://127.0.0.1:9222/devtools/browser/xyz" in r.stdout
+    assert "没找到 browser-draft.config.json" in r.stderr
+    assert "9222" in r.stderr

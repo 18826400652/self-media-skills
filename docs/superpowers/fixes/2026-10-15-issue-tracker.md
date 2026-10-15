@@ -26,7 +26,7 @@
 | P-15 | `sc bench` 抓到的结果噪声大，抖音收藏数为空 | 第 2 批 | 待修 | | |
 | P-16 | 空模板的母稿 `sc check` 报「✓ 母稿结构完整」，kv 第 4 步直接判通过 | 第 3 组 | 已修 | `fix(P-16)` | sc.test.mjs 3 例（用真实母稿模板）RED→GREEN；sc 13/13；真实项目 01-不想看 / 02-不露脸 kv status 和修前一致，flow-check 两期母稿仍 ✓ |
 | P-17 | 选题关要填「评论区在要什么」，但没有工具支持 | 第 2 批 | 待修 | | |
-| P-18 | 在作品项目外跑 `bd` 会悄悄连到日常浏览器 | 第 2 批 | 待修 | | |
+| P-18 | 在作品项目外跑 `bd` 会悄悄连到日常浏览器 | 第 2 批 | 已修 | `fix(P-18)` | test_bd_connect.py 1 例 RED→GREEN；browser-draft pytest 8/8；实跑：/tmp 下 bd tabs 先打印「不在作品项目里…改连 9222 端口…」。Ruling：不拒绝连接（非项目场景本来就支持），只说清楚 |
 | P-19 | DeepSeek「复制完整回答」失败时 `nv rec` 不提示 | 第 6 组 | 已修（实跑待手机） | `fix(P-19)` | test_rec_flow.py 3 例 RED→GREEN；phone-draft pytest 108/108；nv rec 走 stdio inherit，⚠ 原样透出。真机复现要等 DeepSeek 复制恰好失败，和 P-20 一起找机会实跑 |
 | P-20 | 豆包录屏走不通 | 第 6 组 | 已修（实跑待手机） | `fix(P-20)` | test_apps.py 4 例 RED→GREEN（含一个我自己写错的 ui_texts 三元组 bug，先补测试再修）；phone-draft pytest 112/112；真机录一轮豆包待用户连手机 |
 | P-21 | 文档没写 WSL 下怎么用 USB 调试 | 第 2 批 | 待修 | | |
