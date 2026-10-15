@@ -16,7 +16,7 @@
 | P-05 | sc 内置的 requiredSections 默认值和文档不一致 | 第 2 批 | 已修 | `fix(P-05)` | sc.test 2 例（无配置时填好的 studio 母稿模板通过 RED→GREEN；skill 自带模板和默认一致为守护）；sc 15/15。Ruling：比报告更大——sc 自带 templates/母稿.md、SKILL.md 示例也是旧结构（场景/痛点/实测/解法/可复制），SKILL.md 还让照它写；统一成 studio 和真实项目用的「成品/场景/步骤/坑/领」 |
 | P-06 | `nv help` 少了最后两行 | 第 2 批 | 已修 | `fix(P-06)` | 新增 bin.test.mjs 1 例 RED→GREEN；nv 118/118；nv help 末行是「nv <其他> 透传给 hyperframes」 |
 | P-07 | 一条流程里用了两个版本的 hyperframes | 第 7 组 | 已修 | `fix(P-07)` | config.test 3 例 + render.test 3 例 RED→GREEN；nv 114/114、vd 113/113、kv 85/85、studio 34/34；实跑（副本）：01 hf-build --snap + nv render、02 vd build --sample + nv render --sample 都在 0.8.143 下成功；断网 vd build --no-music 能跑。顺带：导演工程不用再手改 package.json 版本（缺口 1 少一步） |
-| P-08 | 抖音封面字数上限三处写法不一 | 第 2 批 | 待修 | | |
+| P-08 | 抖音封面字数上限三处写法不一 | 第 2 批 | 已修 | `docs(P-08)` | Ruling：抖音封面大字统一 ≤ 12 字（多数处已是 12）；改 workflow.md 第 12 步、4.3 表格、抖音封面模板；grep 抖音封面各处都是 12，小红书 3:4 封面的 ≤ 15 不动；代码里没有这个上限 |
 | P-09 | `st doctor` 不检查配置里残留的占位文字 | 第 5 组 | 已修 | `fix(P-09)` | doctor.test.mjs 1 例 RED→GREEN + 1 例反向（夹具补 audience）；project.test 旧用例按新规则放宽允许的 ✗；studio 31/31；真实项目、flow-check 的 st doctor 不报 |
 | P-10 | 参考音色怎么准备没有文档 | 第 2 批 | 待修 | | |
 | P-11 | 默认音效目录是空的，doctor 不提醒 | 第 5 组 | 已修 | `fix(P-11)` | doctor.test.mjs 2 例 RED→GREEN（+1 例反向）；studio 29/29；真实项目、flow-check 的 st doctor 不报（Review Focus 3） |
