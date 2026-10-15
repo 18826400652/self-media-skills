@@ -115,3 +115,33 @@ test("抖音发布文案标题超过 30 字给出 ⚠", async () => {
   const items = runChecks(dir, config);
   assert.ok(items.some((i) => i.file === "抖音/发布文案.md" && i.level === "⚠" && /抖音标题/.test(i.msg)));
 });
+
+// st new 之后的母稿：{{…}} 已替换，小节下面还是模板的括号说明
+const DRAFT_TEMPLATE = (await import("node:fs")).readFileSync(new URL("../../studio/templates/母稿模板.md", import.meta.url), "utf8").replace(/\{\{[^}]+\}\}/g, "X");
+const SECTIONS = { requiredSections: ["成品", "场景", "步骤", "坑", "领"] };
+const draftItems = async (md) => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const dir = ep({ "母稿.md": md });
+  return runChecks(dir, { ...loadConfig(dir), ...SECTIONS }).filter((i) => i.file === "母稿.md");
+};
+
+test("母稿还是模板（小节下只有括号说明）→ ✗ 列出没写内容的小节", async () => {
+  const items = await draftItems(DRAFT_TEMPLATE);
+  const bad = items.find((i) => i.level === "✗");
+  assert.ok(bad, "空模板应报 ✗");
+  for (const k of SECTIONS.requiredSections) assert.match(bad.msg, new RegExp(k));
+});
+
+test("母稿每个必需小节都有正文 → 结构完整", async () => {
+  const md = DRAFT_TEMPLATE.replace(/^（[^\n]*）$/gm, "这里是正文。");
+  const items = await draftItems(md);
+  assert.ok(!items.some((i) => i.level === "✗"), JSON.stringify(items));
+});
+
+test("母稿只有一个小节没写 → 只列这一个", async () => {
+  const md = DRAFT_TEMPLATE.replace(/^（[^\n]*）$/gm, "这里是正文。").replace(/## 我踩的坑\n\n这里是正文。/, "## 我踩的坑\n\n（实测里真实遇到的问题）");
+  const bad = (await draftItems(md)).find((i) => i.level === "✗");
+  assert.ok(bad);
+  assert.match(bad.msg, /坑/);
+  assert.doesNotMatch(bad.msg, /成品/);
+});
