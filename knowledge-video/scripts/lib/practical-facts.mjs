@@ -132,6 +132,7 @@ function directorSteps(dir, runVdCues) {
   const voice = join(dir, "抖音/audio_meta.json");
   let director = !existsSync(voice) ? no("还没配音（nv hf-audio 抖音）")
     : !existsSync(md) ? no(`还没有 ${DIRECTOR_DIR}/DIRECTOR.md`)
+    : !existsSync(join(root, "audio_meta.json")) ? no(`还没把配音复制到 ${DIRECTOR_DIR}/（audio_meta.json、caption_groups.json、assets/voice/）`)
     : mtime(join(root, "audio_meta.json")) < mtime(voice) ? no(`抖音/ 重新配过音，把 audio_meta.json、caption_groups.json、assets/voice/ 复制到 ${DIRECTOR_DIR}/`)
     : ok();
   if (director.ok) {
@@ -140,7 +141,10 @@ function directorSteps(dir, runVdCues) {
   }
   const sampleMp4 = join(root, "renders/sample.mp4");
   // 样片不跟 DIRECTOR.md 比时间：导演脚本改了 ③a 会失效，重新确认时再决定要不要重出样片
-  const sample = existsSync(sampleMp4) ? ok() : no(`还没有 ${DIRECTOR_DIR}/renders/sample.mp4`);
+  const sampleQa = readJsonOrNull(join(root, "qa-douyin-sample.json"));
+  const sample = !existsSync(sampleMp4) ? no(`还没有 ${DIRECTOR_DIR}/renders/sample.mp4`)
+    : !sampleQa ? no("样片还没跑 vd qa（vd build --sample 之后 vd qa）")
+    : sampleQa.passed !== true ? no("样片 vd qa 还有 ✗") : ok();
   const mp4 = latest(dir, `${DIRECTOR_DIR}/renders`, FINAL_RE);
   const vdQaPath = join(root, "qa-douyin.json");
   const vdQa = readJsonOrNull(vdQaPath);

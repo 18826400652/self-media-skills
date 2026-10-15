@@ -145,6 +145,15 @@ export function collectFacts(dir) {
       vdQa = { passed: false };
     }
   }
+  let sampleQa = null;
+  const sampleQaPath = join(dir, DIRECTOR_DIR, "qa-douyin-sample.json");
+  if (existsSync(sampleQaPath)) {
+    try {
+      sampleQa = { passed: JSON.parse(readFileSync(sampleQaPath, "utf8")).passed === true };
+    } catch {
+      sampleQa = { passed: false };
+    }
+  }
   return {
     type,
     video,
@@ -156,7 +165,8 @@ export function collectFacts(dir) {
     hasSheet: existsSync(join(dir, "抖音/snapshots/sheet.jpg")),
     hasDirector: existsSync(join(dir, DIRECTOR_DIR, "DIRECTOR.md")),
     hasSample: existsSync(join(dir, DIRECTOR_DIR, "renders/sample.mp4")),
-    hasRender: video === "director" ? hasFileIn(dir, `${DIRECTOR_DIR}/renders`, FINAL_RE) : hasFileIn(dir, "抖音/renders", /\.mp4$/),
+    hasRender: video === "director" ? hasFileIn(dir, `${DIRECTOR_DIR}/renders`, FINAL_RE) : hasFileIn(dir, "抖音/renders", FINAL_RE),
+    sampleQa,
     vdQa,
     qa,
     gates: Object.fromEntries(CONCEPT_GATES[video].map((k) => [k, gate(k)])),

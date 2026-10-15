@@ -39,7 +39,7 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 
 **视频做法**（`run.json` 的 `video`，没写按 `template`）：
 - `template`：上面 14 步，第 8 步 `nv hf-build` 分镜 ③
-- `director`：第 8 步换成两步，共 15 步——8 配音 + 导演脚本（`抖音-director/DIRECTOR.md`，`vd cues --check` 通过）**③a**；9 风格样片（`抖音-director/renders/sample.mp4`）**③b**；10 渲染 + QA 要 `vd qa` 无 ✗、`qa.json` 通过 **④**。改了 DIRECTOR.md（只补第 8 节组件候选不算）或配音 ③a 失效，换了样片 ③b 失效；工程里的 HTML 比成片新要重新渲染。`kv status` 调用 `vd cues --check`，命令名可用 `KV_VD_CMD` 换掉
+- `director`：第 8 步换成两步，共 15 步——8 配音 + 导演脚本（`抖音-director/DIRECTOR.md`，`vd cues --check` 通过）**③a**；9 风格样片（`抖音-director/renders/sample.mp4`，样片的 `vd qa` 无 ✗，结果在 `qa-douyin-sample.json`）**③b**；10 渲染 + QA 要 `vd qa` 无 ✗、`qa.json` 通过 **④**。改了 DIRECTOR.md（只补第 8 节组件候选不算）或配音 ③a 失效，换了样片 ③b 失效；工程里的 HTML 比成片新要重新渲染。`kv status` 调用 `vd cues --check`，命令名可用 `KV_VD_CMD` 换掉
 - 中途换做法：手改 `run.json` 的 `video`；已通过的节点按新做法重新算
 
 下面「阶段」表是概念科普的流程。

@@ -35,6 +35,7 @@ export function detectStatus(f) {
     if (!f.hasDirector) return step("director", "nv hf-audio 配音 → 按 video-director 新建 抖音-director/，写 DIRECTOR.md（vd cues 抖音-director --check 通过）");
     if (!f.gates.director) return step("director", "请用户审 抖音-director/DIRECTOR.md（确认节点 ②a）", "director");
     if (!f.hasSample) return step("sample", "写样片的几段 → vd build 抖音-director --sample → vd qa → npx hyperframes render -o renders/sample.mp4");
+    if (!f.sampleQa?.passed) return step("sample", "样片 vd qa 要无 ✗（vd build 抖音-director --sample 之后 vd qa 抖音-director，结果 qa-douyin-sample.json）");
     if (!f.gates.sample) return step("sample", "请用户看 抖音-director/renders/sample.mp4（确认节点 ②b）", "sample");
     if (!f.hasRender) return step("render", "写其余各段 → vd build 抖音-director → vd qa → nv render 抖音-director");
     if (!f.vdQa?.passed) return step("render", "vd qa 抖音-director 要无 ✗（看 snapshots/cues-sheet.jpg）");

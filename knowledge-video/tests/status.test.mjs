@@ -41,12 +41,14 @@ test("空模板不算完成：实测记录要「已实测」，SCRIPT 不能还�
 });
 
 test("director 做法：脚本确认后 → 导演脚本 → 等 ②a → 样片 → 等 ②b → 渲染 → vd qa → qa → ③", () => {
-  const d = (o) => at({ video: "director", hasDirector: true, hasSample: true, vdQa: { passed: true }, ...o, gates: { director: true, sample: true, ...(o.gates ?? {}) } });
+  const d = (o) => at({ video: "director", hasDirector: true, hasSample: true, sampleQa: { passed: true }, vdQa: { passed: true }, ...o, gates: { director: true, sample: true, ...(o.gates ?? {}) } });
   assert.equal(d({ hasDirector: false }).stage, "director");
   assert.match(d({ hasDirector: false }).next, /DIRECTOR\.md/);
   assert.equal(d({ gates: { director: false } }).waitingFor, "director");
   assert.equal(d({ hasSample: false }).stage, "sample");
   assert.match(d({ hasSample: false }).next, /vd build .*--sample/);
+  assert.match(d({ sampleQa: null, gates: { sample: false } }).next, /样片.*vd qa/);
+  assert.equal(d({ sampleQa: null, gates: { sample: false } }).waitingFor, null);
   assert.equal(d({ gates: { sample: false } }).waitingFor, "sample");
   assert.equal(d({ hasRender: false }).stage, "render");
   assert.match(d({ vdQa: null }).next, /vd qa/);

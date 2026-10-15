@@ -115,7 +115,7 @@ test("kv status 概念科普 director：qa-douyin.json 比工程里的 HTML 旧�
     "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT,
     "run.json": { type: "concept", video: "director", gates: { script: { passed: true }, director: { passed: true }, sample: { passed: true } } },
     [`${D}/DIRECTOR.md`]: "x", [`${D}/renders/sample.mp4`]: "s", [`${D}/renders/01.mp4`]: "f",
-    [`${D}/index.html`]: "<html>", [`${D}/qa-douyin.json`]: { passed: true },
+    [`${D}/index.html`]: "<html>", [`${D}/qa-douyin.json`]: { passed: true }, [`${D}/qa-douyin-sample.json`]: { passed: true },
   });
   utimesSync(join(dir, D, "qa-douyin.json"), 1000, 1000);
   utimesSync(join(dir, D, "index.html"), 2000, 2000);
@@ -123,4 +123,16 @@ test("kv status 概念科普 director：qa-douyin.json 比工程里的 HTML 旧�
   assert.match(r.stdout, /下一步：.*vd qa/);
   utimesSync(join(dir, D, "qa-douyin.json"), 3000, 3000);
   assert.match(kv("status", dir).stdout, /下一步：.*qa\.json/);
+});
+
+test("kv status 概念科普 template：抖音/renders 里只有预览、对比视频不算渲染过", () => {
+  const files = { "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/预览-1.mp4": "v", "抖音/renders/compare.mp4": "v", "run.json": { type: "concept", video: "template", gates: { script: { passed: true }, storyboard: { passed: true } } } };
+  assert.match(kv("status", episode(files)).stdout, /阶段：render/);
+});
+
+test("kv status 概念科普 director：样片要有 vd qa 结果（qa-douyin-sample.json）才请用户看", () => {
+  const D = "抖音-director";
+  const files = { "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, [`${D}/DIRECTOR.md`]: "x", [`${D}/renders/sample.mp4`]: "s", "run.json": { type: "concept", video: "director", gates: { script: { passed: true }, director: { passed: true } } } };
+  assert.match(kv("status", episode(files)).stdout, /下一步：.*样片.*vd qa/);
+  assert.match(kv("status", episode({ ...files, [`${D}/qa-douyin-sample.json`]: { passed: true } })).stdout, /等用户确认：②b 风格样片/);
 });

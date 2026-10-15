@@ -167,14 +167,23 @@ test("director：第 8 步要配音、DIRECTOR.md、vd cues 通过；导演工�
   assert.match(dCollect(dir).steps.director.why, /重新配过音/);
 });
 
-test("director：有 renders/sample.mp4 就算出了样片；只改 DIRECTOR.md 不算样片过期（③a 失效会把关）", () => {
+test("director：样片要有 renders/sample.mp4 且样片 vd qa 通过；只改 DIRECTOR.md 不算样片过期（③a 失效会把关）", () => {
   const dir = episode({ [`${D}/DIRECTOR.md`]: "x" });
   assert.match(dCollect(dir).steps.sample.why, /renders\/sample\.mp4/);
   mkdirSync(join(dir, D, "renders"), { recursive: true });
   writeFileSync(join(dir, D, "renders/sample.mp4"), "v");
+  assert.match(dCollect(dir).steps.sample.why, /样片还没跑 vd qa/);
+  writeFileSync(join(dir, D, "qa-douyin-sample.json"), JSON.stringify({ passed: false }));
+  assert.match(dCollect(dir).steps.sample.why, /样片 vd qa 还有 ✗/);
+  writeFileSync(join(dir, D, "qa-douyin-sample.json"), JSON.stringify({ passed: true }));
   touch(dir, `${D}/DIRECTOR.md`, 2000);
   touch(dir, `${D}/renders/sample.mp4`, 1000);
   assert.equal(dCollect(dir).steps.sample.ok, true);
+});
+
+test("director：DIRECTOR.md 写了但配音还没复制进导演工程 → 说「还没复制」，不说重新配过音", () => {
+  const dir = episode({ "抖音/audio_meta.json": "{}", [`${D}/DIRECTOR.md`]: "x" });
+  assert.match(dCollect(dir).steps.director.why, /还没把配音复制到 抖音-director\//);
 });
 
 test("director：成片比工程里的 HTML 旧 → 要重新渲染；只改 DIRECTOR.md（如补组件候选）不用重渲染", () => {
