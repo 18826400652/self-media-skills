@@ -36,3 +36,9 @@ test("kicker 填了真实栏目名就不报", () => {
   const md = read("DIRECTOR.md").replace(/"kicker": "[^"]*"/, '"kicker": "某栏目 · 第 3 期"');
   assert.ok(!parseDirector(md).errors.some((e) => /kicker/.test(e)));
 });
+
+test("templates/DIRECTOR.md：说明文字里没有被当成 @词 的字（全文写完后 vd cues 不再多出「词」）", () => {
+  // 机器块和（待填）行里的 @词 是要换掉的占位，换掉后不会留下；其余说明文字会一直留在写好的 DIRECTOR.md 里
+  const prose = read("DIRECTOR.md").replace(/```json[\s\S]*?```/, "").split("\n").filter((l) => !l.includes("（待填")).join("\n");
+  assert.deepEqual(parseDirector(prose).tokens, []);
+});
