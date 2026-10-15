@@ -28,7 +28,7 @@ kicker: {{角标}}
 - status: animated
 - src: compositions/frames/01-hook.html
 - sfx: impact-bass-1 @（词）
-- build: {"kicker": false, "kit": {"name": "shot", "top": 330, "opts": {"src": "assets/result.png", "size": [1080, 1920], "caption": "（成品是什么）", "height": 720}}, "lead": {"text": "（用时 · 花费）", "top": 1090, "at": "@（词）"}}
+- build: {"kicker": false, "kit": {"name": "shot", "top": 330, "opts": {"src": "assets/result.png", "size": [1080, 1920], "caption": "（成品是什么）", "height": 600}}, "lead": {"text": "（用时 · 花费）", "top": 1020, "at": "@（词）"}}
 
 ## Frame 2 — 你能拿到什么
 
@@ -149,7 +149,7 @@ kicker: {{角标}}
 - status: animated
 - src: compositions/frames/12-back.html
 - sfx: sparkle @（词）
-- build: {"kit": {"name": "shot", "top": 330, "opts": {"src": "assets/result.png", "size": [1080, 1920], "caption": "（成品）", "height": 720}}, "lead": {"text": "就这三步，**你也能做出来**", "top": 1090, "at": "@（词）"}}
+- build: {"kit": {"name": "shot", "top": 330, "opts": {"src": "assets/result.png", "size": [1080, 1920], "caption": "（成品）", "height": 600}}, "lead": {"text": "就这三步，**你也能做出来**", "top": 1020, "at": "@（词）"}}
 
 ## Frame 13 — 领模板
 

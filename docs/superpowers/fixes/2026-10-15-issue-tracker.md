@@ -31,7 +31,7 @@
 | P-20 | 豆包录屏走不通 | 第 6 组 | 已修（实跑待手机） | `fix(P-20)` | test_apps.py 4 例 RED→GREEN（含一个我自己写错的 ui_texts 三元组 bug，先补测试再修）；phone-draft pytest 112/112；真机录一轮豆包待用户连手机 |
 | P-21 | 文档没写 WSL 下怎么用 USB 调试 | 第 2 批 | 待修 | | |
 | P-22 | 第 6 步「自检」会被第 10 步才写的公众号模板挡住 | 第 4 组 | 已修 | `fix(P-22)` | practical-facts.test.mjs 3 例 RED→GREEN + 1 例补充（写了但残留占位，直接通过：覆盖前一例碰巧通过的分支）；kv 85/85；真实项目 3 期 kv status 不变 |
-| P-23 | STORYBOARD 模板第 1、12 帧的 lead 默认位置会压到字幕带 | 第 2 批 | 待修 | | |
+| P-23 | STORYBOARD 模板第 1、12 帧的 lead 默认位置会压到字幕带 | 第 2 批 | 已修 | `fix(P-23)` | 新增 studio/tests/templates.test.mjs 1 例 RED→GREEN；studio 36/36。新默认值（shot height 600、lead top 1020）就是 01 实际用的、今天 01 副本 hf-build --motion 检查通过（exit 0）的配置 |
 | P-24 | 模板第 7 帧「录屏 + 计时」在浅色录屏上对比度不够 | 第 2 批 | 待修 | | |
 | P-25 | shot 盖住下方文字时，第 1 帧没被检查出来，第 12 帧被检查出来了 | 第 3 组 | 已修 | `fix(P-25)` | hf.test.mjs 1 例 RED→GREEN；nv 109/109；实跑：01 副本第 1 帧改回 height 720/top 1000 → hf-build ✗；现在的 01 → 通过。Ruling：原因是 hyperframes 单个采样点的遮挡只给 ℹ，改为 hf-build 把 text_occluded 一律当错误（没按计划写 bounds.py 遮挡检查） |
 | P-26 | marker 组件的高亮会盖住前一个字；steps 组件第一步时只显示两步 | 第 2 批 | 待修 | | |
