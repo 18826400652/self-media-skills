@@ -145,3 +145,18 @@ test("母稿只有一个小节没写 → 只列这一个", async () => {
   assert.match(bad.msg, /坑/);
   assert.doesNotMatch(bad.msg, /成品/);
 });
+
+test("项目配置没写 requiredSections 时，内置默认和母稿模板、骨架配置一致：填好的模板母稿结构完整", async () => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const dir = ep({ "母稿.md": DRAFT_TEMPLATE.replace(/^（[^\n]*）$/gm, "这里是正文。") });
+  const config = loadConfig(dir);
+  const bad = runChecks(dir, config).filter((i) => i.file === "母稿.md" && i.level === "✗");
+  assert.deepEqual(bad, []);
+});
+
+test("skill 自带的 templates/母稿.md 和内置必需小节一致（SKILL.md 让照它写）", async () => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const own = (await import("node:fs")).readFileSync(new URL("../templates/母稿.md", import.meta.url), "utf8");
+  const dir = ep({ "母稿.md": own.replace(/\{\{[^}]+\}\}/g, "X").replace(/^（[^\n]*）$/gm, "这里是正文。") });
+  assert.deepEqual(runChecks(dir, loadConfig(dir)).filter((i) => i.file === "母稿.md" && i.level === "✗"), []);
+});

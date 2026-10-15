@@ -12,7 +12,7 @@ const CONFIG_NAME = "scenario-content.config.json";
 const DEFAULTS = {
   voiceGuide: null,
   bannedPhrases: [],
-  requiredSections: ["场景", "痛点", "实测", "解法", "可复制"],
+  requiredSections: ["成品", "场景", "步骤", "坑", "领"],
   feynmanCheck: "费曼检查.md", // 母稿后的「讲没讲明白」检查；设为 null 关闭
   topicGate: "选题关.md", // 实测前的「有没有人想看」检查；设为 null 关闭
   minBenchmarks: 5, // 选题关里至少几条对标

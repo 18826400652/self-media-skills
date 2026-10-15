@@ -96,7 +96,7 @@ sc check <作品目录>
 {
   "voiceGuide": "规划/语气指南.md",
   "bannedPhrases": ["项目额外禁用的词"],
-  "requiredSections": ["场景", "痛点", "实测", "解法", "可复制"],
+  "requiredSections": ["成品", "场景", "步骤", "坑", "领"],
   "topicGate": "选题关.md",
   "minBenchmarks": 5,
   "benchCdpPort": 9333,
