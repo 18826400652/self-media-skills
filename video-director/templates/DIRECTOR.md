@@ -15,7 +15,7 @@
 ## 2. 分段
 
 按意思分段（不是一句一帧）。每段：包含哪几句、起止时间、画面、每个动作的 `@词`、和下一段怎么连（由哪个元素连起来）。
-功能性的画面（步骤、对比、数字、手机录屏框……）先查 dykit 组件库（hyperframes 仓库的 `catalog/catalog.json`），有就写「用组件 dy-…」，机器块里给这段写 `component` 和 `vars`。
+功能性的画面（步骤、对比、数字、手机录屏框……）先查 dykit 组件库（hyperframes 仓库的 `catalog/catalog.json`），有就写「用组件 dy-…」，机器块里给这段写 `component` 和 `vars`；要跟着口播一拍拍出现，`vars` 里写 `cues`（`|` 隔开的 `@词`，对应 catalog 里这个组件的 `beats`）。
 
 ### 段 1 · （名字）（第 ? 句）
 
@@ -70,7 +70,7 @@
   "fonts": { "title": "serif", "body": "sans" },
   "segments": [
     { "id": "seg-01-hook", "lines": [1, 2] },
-    { "id": "seg-02-steps", "lines": [3, 3], "component": "dy-scene-steps", "vars": { "title": "……", "steps": "第一步::说明|第二步::说明" } }
+    { "id": "seg-02-steps", "lines": [3, 3], "component": "dy-scene-steps", "vars": { "title": "……", "steps": "第一步::说明|第二步::说明", "cues": "@词|@词" } }
   ],
   "sfx": [{ "name": "pop", "at": "@词", "volume": 0.6 }],
   "music": { "intent": "light curious lo-fi explainer, clear steady beat", "drop": "@词", "volume": 0.4 },

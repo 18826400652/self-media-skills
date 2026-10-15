@@ -94,3 +94,9 @@ test("组件候选：单元格里的 \\| 是转义的竖线，不分列", () => 
   const md = doc().replace("## 8. 组件候选\n\n", `## 8. 组件候选\n\n${table}\n\n`);
   assert.deepEqual(parseDirector(md).candidates, [{ scene: "小票", name: "dy-receipt", vars: "rows（a | b）, total", from: "seg-01" }]);
 });
+
+test("parseDirector：组件 vars 的 cues 用「|」隔开几个 @词，每个都是一个锚点（P-36b）", () => {
+  const vd = { ...VD, segments: [{ id: "seg-01-hook", lines: [1, 2] }, { id: "seg-02-why", lines: [3, 3], component: "dy-checklist", vars: { items: "a|b", cues: "@编一套|@资料#2" } }] };
+  const p = parseDirector(doc(vd, "说到 @根本没这条。"));
+  assert.deepEqual(p.tokens.map((t) => [t.text, t.nth]), [["根本没这条", 1], ["编一套", 1], ["资料", 2]]);
+});

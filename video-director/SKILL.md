@@ -75,7 +75,8 @@ cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-dir
 
 dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独维护）。分段里写 `"component": "dy-…"` 和 `"vars": {…}` 就直接用组件，配色自动套用这条视频的 `palette`（dykit 的 custom 主题）。可用组件和变量见仓库的 `catalog/catalog.json`。
 
-- **组件的动画时长**：大部分组件的时间是写死的（catalog 里的 `minDuration` 左右），不跟 @词、演完就退场；只有按宿主时长排时间的组件（源码里有 `HF.duration(`）会撑满整段。时间写死的组件放进比 `minDuration + 2` 秒还长的段，`vd build` 直接报错——把段拆短，或改手画
+- **组件跟着口播走**：组件按段长排时间（`HF.duration`），演完停在最后的样子，到段尾才退场。catalog 里写了 `beats` 的组件有可选变量 `cues`：用 `|` 隔开几个 @词，按顺序对应它的几拍（如清单 `"cues": "@条数|@数字|@补的话"` 是三项各自出现的时间），`vd build` 换算成段内秒数交给组件；不写 `cues` 就按默认节奏铺满整段。每个 @词 要落在这一段里，不然报错。`dy-rec-phone` 的 `cues` 是它自己的 JSON 列表（每项带 `t`），不按这个规则
+- **旧版组件**：`components.lock.json` 锁的还是 2026-10 之前的组件库时，组件时间是写死的；放进比 `minDuration + 2` 秒还长的段，`vd build` 直接报错——`vd build . --update-components` 换成新版
 - 第一次 `vd build` 把最新提交号写进 `components.lock.json`，之后一直用这个版本，重新渲染不会变样；要用新版组件：`vd build . --update-components`
 - 下载的仓库缓存在 `~/.cache/video-director/hyperframes/<提交号>/`，断网时已缓存的版本照常能用
 - 配色怎么套：`palette.accent` 是荧光笔底色；组件里当文字、描边用的强调色取 `accent`、`alert`、`ink` 里第一个在底色上看得清的（对比度 ≥ 3:1）。纸面 + 荧光黄的配色下，组件强调色会是 `alert` 红——如果本片红色代表「错的」，用组件前想清楚会不会混淆

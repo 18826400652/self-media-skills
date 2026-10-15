@@ -70,3 +70,32 @@ test("segmentTimes：组件段落带上 component 和 vars", () => {
   assert.equal(s.component, "dy-scene-steps");
   assert.deepEqual(s.vars, { title: "x" });
 });
+
+test("buildCues：组件段 vars.cues 里的 @词 换成「从这段开头算」的秒数，数字原样保留（P-36b）", () => {
+  const parsed = {
+    vd: { segments: [{ id: "a", lines: [1, 2] }, { id: "b", lines: [3, 17], component: "dy-checklist", vars: { items: "x|y|z", cues: "@不在里面| 3 |@先去翻资料" } }] },
+    tokens: [{ text: "不在里面", nth: 1 }, { text: "先去翻资料", nth: 1 }],
+  };
+  const b = buildCues(parsed, META);
+  const seg = b.segments[1];
+  const [c0, c1, c2] = seg.vars.cues.split("|").map(Number);
+  near(c0, 10.44 - seg.start);
+  assert.equal(c1, 3);
+  near(c2, 13.55 - seg.start);
+  assert.equal(seg.vars.items, "x|y|z");
+  assert.equal(parsed.vd.segments[1].vars.cues, "@不在里面| 3 |@先去翻资料", "不改原来的 DIRECTOR 数据");
+});
+
+test("buildCues：vars.cues 的 @词 不在这一段里时报错，说清是哪一段第几拍", () => {
+  const parsed = {
+    vd: { segments: [{ id: "a", lines: [1, 2], component: "dy-checklist", vars: { cues: "@编一套|@先去翻资料" } }, { id: "b", lines: [3, 17] }] },
+    tokens: [{ text: "编一套", nth: 1 }, { text: "先去翻资料", nth: 1 }],
+  };
+  assert.throws(() => buildCues(parsed, META), /段 a 的 cues 第 2 拍「@先去翻资料」在 [\d.]+ 秒，不在这一段（[\d.]+–[\d.]+ 秒）里/);
+});
+
+test("buildCues：vars.cues 是 JSON 列表（dy-rec-phone 自己的点击、框选格式）时原样保留，不当成 | 分隔的节拍", () => {
+  const own = '[{"type":"box","t":1.5,"x":50,"y":80,"label":"标题 | 正文"}]';
+  const parsed = { vd: { segments: [{ id: "a", lines: [1, 17], component: "dy-rec-phone", vars: { cues: own } }] }, tokens: [] };
+  assert.equal(buildCues(parsed, META).segments[0].vars.cues, own);
+});
