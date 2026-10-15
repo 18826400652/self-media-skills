@@ -24,19 +24,19 @@ test("parseResolved：从 media-use 输出取路径；没有就是 null", () => 
 test("resolveMusic 失败时返回 null（未登录、搜不到、网络失败都不阻塞出片）", () => {
   const dir = project({ "index.html": "" });
   const fail = () => ({ status: 1, stdout: "", stderr: "error: bgm needs the heygen CLI" });
-  assert.equal(resolveMusic(dir, "lo-fi", "0.8.143", fail), null);
+  assert.equal(resolveMusic(dir, "lo-fi", fail), null);
 });
 
 test("resolveMusic：已有 assets/audio/bgm.* 时不再调用曲库", () => {
   const dir = project({ "assets/audio/bgm.mp3": "x" });
   const never = () => { throw new Error("不应调用"); };
-  assert.equal(resolveMusic(dir, "lo-fi", "0.8.143", never), "assets/audio/bgm.mp3");
+  assert.equal(resolveMusic(dir, "lo-fi", never), "assets/audio/bgm.mp3");
 });
 
 test("alignMusic：beats 命令成功但没写出节拍文件时，退回从头播放（返回 0），不抛错", () => {
   const dir = project({ "assets/audio/bgm.wav": "x" });
   const ok = () => ({ status: 0, stdout: "", stderr: "" });
-  assert.equal(alignMusic(dir, { src: "assets/audio/bgm.wav", drop: 10, duration: 20 }, "0.8.143", ok), 0);
+  assert.equal(alignMusic(dir, { src: "assets/audio/bgm.wav", drop: 10, duration: 20 }, ok), 0);
 });
 
 test("addMusic：对位或避让失败时去掉配乐继续出片，并给出警告", () => {

@@ -12,7 +12,7 @@
 #   nv hf-build <HyperFrames 工程> [--snap]  一键组装：音效、素材、字体、字幕、index、转场、检查
 #   nv rec <输出.mp4> --prompt <文件> --app deepseek|doubao   录 AI 对话实测（手机 App；--url 走浏览器）
 #   nv rec-flow <输出.mp4> --steps <步骤.py>  按步骤操作网页并录屏（电脑横屏，软件演示用）
-#   nv render <视频目录> [参数]         渲染到 <视频目录>/renders/，完成后自动做成片检查
+#   nv render <视频目录> [--sample] [参数]  渲染到 <视频目录>/renders/（--sample 出 sample.mp4），完成后自动做成片检查
 #   nv verify <成片.mp4>                成片检查：帧数、时长、声音、尺寸、黑屏
 #   nv draft <成片.mp4> --copy <发布文案.md> [--via phone|browser]  存进抖音草稿（不发布；默认操作手机，需要 phone-draft 的 pd；browser 用 bd）
 #   nv <其他>                           透传给 hyperframes（check/snapshot/preview/doctor/lint…）
@@ -40,15 +40,7 @@ case "$cmd" in
     exec node "$SKILL_DIR/scripts/$cmd.mjs" "$@"
     ;;
   render)
-    dir="$(cd "${1:?用法：nv render <视频目录> [参数]}" && pwd)"
-    shift
-    name="$(basename "$dir")"
-    parent="$(basename "$(dirname "$dir")")"
-    # 视频目录是作品下的平台子目录（如 03-周报/抖音、2026-10-08-xxx/抖音）时，用作品名命名
-    [[ "$parent" =~ ^[0-9]+- ]] && name="$parent"
-    mkdir -p "$dir/renders"
-    "$HF" render "$dir" -o "$dir/renders/$name.mp4" "$@"
-    exec node "$SKILL_DIR/scripts/verify.mjs" "$dir/renders/$name.mp4" --project "$dir"
+    exec node "$SKILL_DIR/scripts/render.mjs" "$@"
     ;;
   help | -h | --help)
     sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'

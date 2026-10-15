@@ -17,6 +17,7 @@ import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, resolveMusic } from "./lib/music.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
+import { hfBin } from "./lib/hyperframes.mjs";
 import { run } from "./lib/run.mjs";
 import { staleCopies } from "./lib/stale.mjs";
 
@@ -88,8 +89,8 @@ const COMMANDS = {
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {
       addMusic(vd.music, {
-        resolveMusic: () => resolveMusic(dir, vd.music.intent, config.hfVersion),
-        alignMusic: (src) => alignMusic(dir, { src, drop: built.cues[vd.music.drop.slice(1)], duration }, config.hfVersion),
+        resolveMusic: () => resolveMusic(dir, vd.music.intent),
+        alignMusic: (src) => alignMusic(dir, { src, drop: built.cues[vd.music.drop.slice(1)], duration }),
         carve: () => carve(dir, config.hfVersion),
         assemble: (music) => assemble(dir, built, config, { only, duration, music }),
       });
@@ -127,7 +128,7 @@ const COMMANDS = {
   check(dir, _rest, config = loadConfig(findProjectRoot(dir))) {
     const { parsed } = load(dir);
     console.log(candidatesText(parsed.candidates));
-    const r = run("npx", ["--yes", `hyperframes@${config.hfVersion}`, "check", "."], { cwd: dir });
+    const r = run(hfBin(), ["check", "."], { cwd: dir });
     process.stdout.write(r.stdout);
     if (r.status !== 0) { console.error(r.stderr); return 1; }
     return 0;

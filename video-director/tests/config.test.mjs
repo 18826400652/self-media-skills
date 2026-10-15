@@ -44,3 +44,19 @@ test("loadConfig：没写 fontsDir、gsap 时用 vd 自带的（字体由 vd 生
   assert.equal(c.gsap, GSAP_FILE);
   assert.ok(existsSync(c.gsap), "GSAP 要随 npm ci 装好");
 });
+
+test("loadConfig：没写 hfVersion 就用 narrated-video 装的 hyperframes 版本", () => {
+  const { hfVersion, ...rest } = CFG;
+  const c = loadConfig(project({ "video-director.config.json": rest }), { nvHfVersion: "0.8.143" });
+  assert.equal(c.hfVersion, "0.8.143");
+});
+
+test("loadConfig：hfVersion 和 narrated-video 装的不一致 → 报错，说清删掉这个字段", () => {
+  const dir = project({ "video-director.config.json": { ...CFG, hfVersion: "0.8.119" } });
+  assert.throws(() => loadConfig(dir, { nvHfVersion: "0.8.143" }), /0\.8\.119.*0\.8\.143/);
+});
+
+test("hfBin：指向 narrated-video 装的 hyperframes", async () => {
+  const { hfBin } = await import("../scripts/lib/hyperframes.mjs");
+  assert.match(hfBin(), /narrated-video\/node_modules\/\.bin\/hyperframes$/);
+});

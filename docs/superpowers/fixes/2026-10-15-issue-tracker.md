@@ -15,7 +15,7 @@
 | P-04 | director 第 8 步只检查 audio_meta.json 复制了，没检查 caption_groups.json 和 assets/voice/ | 后续 | 待修 | | |
 | P-05 | sc 内置的 requiredSections 默认值和文档不一致 | 后续 | 待修 | | |
 | P-06 | `nv help` 少了最后两行 | 后续 | 待修 | | |
-| P-07 | 一条流程里用了两个版本的 hyperframes | 第 7 组 | 待修 | | |
+| P-07 | 一条流程里用了两个版本的 hyperframes | 第 7 组 | 已修 | `fix(P-07)` | config.test 3 例 + render.test 3 例 RED→GREEN；nv 114/114、vd 113/113、kv 85/85、studio 34/34；实跑（副本）：01 hf-build --snap + nv render、02 vd build --sample + nv render --sample 都在 0.8.143 下成功；断网 vd build --no-music 能跑。顺带：导演工程不用再手改 package.json 版本（缺口 1 少一步） |
 | P-08 | 抖音封面字数上限三处写法不一 | 后续 | 待修 | | |
 | P-09 | `st doctor` 不检查配置里残留的占位文字 | 第 5 组 | 已修 | `fix(P-09)` | doctor.test.mjs 1 例 RED→GREEN + 1 例反向（夹具补 audience）；project.test 旧用例按新规则放宽允许的 ✗；studio 31/31；真实项目、flow-check 的 st doctor 不报 |
 | P-10 | 参考音色怎么准备没有文档 | 后续 | 待修 | | |

@@ -355,7 +355,6 @@ kv status 04-作品/<系列>/NN-<简称>
      cp 抖音/{SCRIPT.md,audio_meta.json,caption_groups.json,package.json,hyperframes.json,meta.json} 抖音-director/
      cp -r 抖音/assets/voice 抖音-director/assets/
      cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-director/
-     # package.json 里的 hyperframes@X.Y.Z 改成 video-director.config.json 的 hfVersion
      ```
   3. 写 `抖音-director/DIRECTOR.md`（口播原文和事实一字不改）：
      - 1 视觉方案：一句话概念（视觉世界从内容哪里来）、贯穿元素、配色（每个颜色写含义）、字体（只用 Noto Sans SC / Noto Serif SC / JetBrains Mono）、情绪曲线
@@ -379,7 +378,7 @@ kv status 04-作品/<系列>/NN-<简称>
      ```bash
      vd build 抖音-director --sample      # 只装样片的段，到 sample.end 为止
      vd qa 抖音-director                  # 抖音专用检查，结果 qa-douyin-sample.json，总览 snapshots/cues-sheet.jpg
-     cd 抖音-director && npx hyperframes render -o renders/sample.mp4
+     nv render 抖音-director --sample      # 出 抖音-director/renders/sample.mp4
      ```
      `vd qa` 在每个 @词 落定时刻（@词后 0.8 秒）和每段结尾截图，查：安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；2 秒不动（⚠）
 - **确认 ③b**：样片给用户看。通过后 `kv gate <作品> sample "用户原话"`
@@ -600,7 +599,7 @@ kv status 04-作品/<系列>/NN-<简称>
 - 组件候选：DIRECTOR.md 第 8 节记录「换文字就能复用」的画面，④ 时交给用户决定是否提交到组件库
 - 重新配音：在 `抖音/` 里 `nv hf-audio`，再把 `audio_meta.json`、`caption_groups.json`、`assets/voice/` 复制到 `抖音-director/`，`vd build`
 - 导演规则：`references/director-rules.md`（视觉方案、节奏、版面、HyperFrames 的坑、组件）
-- 配置 `video-director.config.json`：`brandDir`、`sfxDir`、`hfVersion`；选填 `fontsDir`、`gsap`（默认用 vd 自带的 fontsource 字体包和 GSAP，`npm ci` 装好）
+- 配置 `video-director.config.json`：`brandDir`、`sfxDir`（`hfVersion` 不用写，hyperframes 统一用 narrated-video 那一份）；选填 `fontsDir`、`gsap`（默认用 vd 自带的 fontsource 字体包和 GSAP，`npm ci` 装好）
 
 ### 4.6 wechat-article（`wa`）：公众号
 

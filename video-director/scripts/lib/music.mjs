@@ -1,4 +1,5 @@
 // 配乐：HeyGen 曲库取曲 → 节拍对位（重拍落在指定的词上）→ 人声避让
+import { hfBin } from "./hyperframes.mjs";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -17,11 +18,11 @@ export function parseResolved(stdout) {
   return stdout.match(/→\s*(\S+)/)?.[1] ?? null;
 }
 
-export function resolveMusic(dir, intent, hfVersion, runFn = run) {
+export function resolveMusic(dir, intent, runFn = run) {
   const audioDir = join(dir, "assets/audio");
   const own = existsSync(audioDir) ? readdirSync(audioDir).find((f) => /^bgm\.(wav|mp3|m4a)$/.test(f)) : null;
   if (own) return `assets/audio/${own}`;
-  const r = runFn("npx", ["--yes", `hyperframes@${hfVersion}`, "media-use", "resolve", "--type", "bgm", "--intent", intent, "--project", "."], { cwd: dir });
+  const r = runFn(hfBin(), ["media-use", "resolve", "--type", "bgm", "--intent", intent, "--project", "."], { cwd: dir });
   const got = r.status === 0 ? parseResolved(r.stdout) : null;
   if (!got) {
     console.warn(`⚠ 没有取到配乐，本次不加配乐：${(r.stderr || r.stdout).trim().split("\n").at(-1)}`);
@@ -33,8 +34,8 @@ export function resolveMusic(dir, intent, hfVersion, runFn = run) {
   return "assets/audio/bgm.wav";
 }
 
-export function alignMusic(dir, { src, drop, duration }, hfVersion, runFn = run) {
-  const r = runFn("npx", ["--yes", `hyperframes@${hfVersion}`, "beats", ".", "--json"], { cwd: dir });
+export function alignMusic(dir, { src, drop, duration }, runFn = run) {
+  const r = runFn(hfBin(), ["beats", ".", "--json"], { cwd: dir });
   if (r.status !== 0) { console.warn(`⚠ 节拍分析失败，配乐从头播放：${r.stderr.trim()}`); return 0; }
   let beats;
   try {

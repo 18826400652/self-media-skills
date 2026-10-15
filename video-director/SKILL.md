@@ -23,7 +23,7 @@ curl -fsSL https://static.heygen.ai/cli/install.sh | bash   # 配乐用的 heyge
 HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免费额度（API Key 会扣钱包）
 ```
 
-项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）、`hfVersion`（HyperFrames 版本）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
+项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）；`hfVersion` 不用写（hyperframes 统一用 narrated-video 装的那一份，写了且不一致会报错）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
 
 ## 流程（一期的抖音部分）
 
@@ -33,7 +33,7 @@ HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免
 |---|---|---|
 | 0 | 口播稿、配音稿确认后，`nv hf-audio <抖音工程>` 生成配音和逐字时间轴 | — |
 | 1 | 新建导演工程（下面的命令），按 `templates/DIRECTOR.md` 写导演脚本；`vd cues .` 确认每个 @词都找得到 | **③a 请用户审 DIRECTOR.md** |
-| 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build . --sample`；`vd qa .` 无 ✗（看 `snapshots/cues-sheet.jpg`）；`npx hyperframes render -o renders/sample.mp4` 出样片 | **③b 请用户看样片** |
+| 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build . --sample`；`vd qa .` 无 ✗（看 `snapshots/cues-sheet.jpg`）；`nv render . --sample` 出样片（`renders/sample.mp4`） | **③b 请用户看样片** |
 | 3 | 写其余各段，每写一段 `vd build . --no-music` + 截图；全部写完 `vd build .` | — |
 | 4 | 全片 `vd qa .` 无 ✗，按总览图逐条对照 DIRECTOR.md，问题记进 `qa.json`；`nv render <工程>`；和旧版做对比视频（`renders/compare.mp4`）；`vd check` 列出组件候选 | **④ 请用户看成片 + 组件候选** |
 
@@ -48,8 +48,6 @@ cp 抖音/{SCRIPT.md,audio_meta.json,caption_groups.json,package.json,hyperframe
 cp -r 抖音/assets/voice 抖音-director/assets/
 cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-director/
 ```
-
-`package.json` 里的 `hyperframes@X.Y.Z` 改成 `video-director.config.json` 的 `hfVersion`。
 
 `caption_groups.json` 由 `nv hf-audio` 配音时生成（同时把每帧时长写回 `抖音/STORYBOARD.md`），不用先跑 `nv hf-build`。
 
