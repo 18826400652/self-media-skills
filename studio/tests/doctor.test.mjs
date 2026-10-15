@@ -114,3 +114,12 @@ test("checkDeps：都装齐时打印一行 ✓ 汇总", () => {
   assert.ok(!r.fails.some((m) => /skill/.test(m)), r.fails.join("\n"));
   assert.ok(r.oks.some((m) => /依赖都装好了/.test(m)), r.oks.join("\n"));
 });
+
+test("st doctor：参考音色不存在时，指向怎么准备的文档", () => {
+  const home = fakeHome({ withSfx: true });
+  const dir = join(tmp("st-init-"), "proj");
+  initProject({ dir, home }, quiet);
+  const out = capture();
+  doctor({ cwd: dir, log: out.log, home });
+  assert.match(out.text(), /✗ narrated-video\.config\.json 里的路径不存在：tts\.reference=.*references\/setup\.md「参考音色」/);
+});

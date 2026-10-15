@@ -18,7 +18,7 @@
 | P-07 | 一条流程里用了两个版本的 hyperframes | 第 7 组 | 已修 | `fix(P-07)` | config.test 3 例 + render.test 3 例 RED→GREEN；nv 114/114、vd 113/113、kv 85/85、studio 34/34；实跑（副本）：01 hf-build --snap + nv render、02 vd build --sample + nv render --sample 都在 0.8.143 下成功；断网 vd build --no-music 能跑。顺带：导演工程不用再手改 package.json 版本（缺口 1 少一步） |
 | P-08 | 抖音封面字数上限三处写法不一 | 第 2 批 | 已修 | `docs(P-08)` | Ruling：抖音封面大字统一 ≤ 12 字（多数处已是 12）；改 workflow.md 第 12 步、4.3 表格、抖音封面模板；grep 抖音封面各处都是 12，小红书 3:4 封面的 ≤ 15 不动；代码里没有这个上限 |
 | P-09 | `st doctor` 不检查配置里残留的占位文字 | 第 5 组 | 已修 | `fix(P-09)` | doctor.test.mjs 1 例 RED→GREEN + 1 例反向（夹具补 audience）；project.test 旧用例按新规则放宽允许的 ✗；studio 31/31；真实项目、flow-check 的 st doctor 不报 |
-| P-10 | 参考音色怎么准备没有文档 | 第 2 批 | 待修 | | |
+| P-10 | 参考音色怎么准备没有文档 | 第 2 批 | 已修 | `docs(P-10)` | setup.md 新增「参考音色」一节（录什么、≤30 秒 ≤10MB 按 tts 代码、wav/mp3、放哪、换文件要清缓存）；st doctor 报 tts.reference 不存在时指向这一节（doctor.test 1 例 RED→GREEN，studio 37/37） |
 | P-11 | 默认音效目录是空的，doctor 不提醒 | 第 5 组 | 已修 | `fix(P-11)` | doctor.test.mjs 2 例 RED→GREEN（+1 例反向）；studio 29/29；真实项目、flow-check 的 st doctor 不报（Review Focus 3） |
 | P-12 | `st new --只建抖音` 成功时提示「已创建：<作品>」 | 第 2 批 | 已修 | `fix(P-12)` | new.test 断言 RED→GREEN；studio 34/34 |
 | P-13 | narrated-video/SKILL.md 说整段配音只在 seedaudio 时生效 | 第 2 批 | 已修 | `docs(P-13)` | 代码核对：tts/qwenaudio.mjs 和 seedaudio.mjs 都导出 direction=true（01/02 就是 qwenaudio + VOICE.md 整段生成）；改 SKILL.md、4 个抖音模板的 Voice 行、hf-audio/speech/voice-direction/config 的注释和报错；grep 不再有「只有 seedaudio」；nv 124/124、studio 36/36 |

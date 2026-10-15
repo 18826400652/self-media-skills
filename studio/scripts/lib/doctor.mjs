@@ -132,7 +132,8 @@ function checkConfigs(p, out) {
       else out.warn(msg);
     }
     const sfx = file === "video-director.config.json" && cfg.sfxDir && resolve(p.root, cfg.sfxDir);
-    if (missing.length) out.fail(`${file} 里的路径不存在：${missing.join("；")}`);
+    const refHint = missing.some((m) => m.startsWith("tts.reference=")) ? "（参考音色怎么录、多长、什么格式：narrated-video/references/setup.md「参考音色」）" : "";
+    if (missing.length) out.fail(`${file} 里的路径不存在：${missing.join("；")}${refHint}`);
     else if (sfx && !hasAudio(sfx)) out.fail(`${file} 的 sfxDir 音效目录是空的（${cfg.sfxDir}）：DIRECTOR.md 写的音效会找不到。放几个音效进去，或指向 media-use 的音效库 ${mediaUseSfx("~")}`);
     else out.ok(file);
   }
