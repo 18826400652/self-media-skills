@@ -3,10 +3,10 @@
 //   check   检查 research.json、SCRIPT.md 的依据、qa.json（存在时）。有 ✗ 退出码 1
 //   brief   research.json → 研究简报.md（给人在确认节点 ① 看）
 //   status  当前阶段、下一步、还没通过的确认节点（实用类：完整一期的 14 步）
-//   init    [--fresh]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」
+//   init    [--fresh] [--video director|template]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」；--video 视频做法
 //   gate    <节点> [--edit] "用户原话"   记录用户确认（实用类：topic script storyboard final）
 //   done    <wechat|xiaohongshu|douyin>   存草稿成功后记一笔
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { renderBrief } from "./lib/brief.mjs";
@@ -15,11 +15,12 @@ import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
 import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
-import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, practicalStatus } from "./lib/practical.mjs";
-import { collectPracticalFacts, defaultRunners, fingerprint, templateHashes } from "./lib/practical-facts.mjs";
+import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, gatesFor, practicalStatus } from "./lib/practical.mjs";
+import { DIRECTOR_DIR, FINAL_RE, videoMode } from "./lib/video.mjs";
+import { collectPracticalFacts, defaultRunners, fingerprint, newestHtml, templateHashes } from "./lib/practical-facts.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
-const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
+const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh] [--video director|template]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
 
 /** run.json → 对象；没有时 null；坏了报中文错误 */
 export function readRun(dir) {
@@ -104,7 +105,8 @@ function writeBrief(dir) {
   return 0;
 }
 
-const GATE_LABEL = { script: "① 研究简报 + 脚本", storyboard: "② 分镜总览图", final: "③ 成片" };
+const GATE_LABEL = { script: "① 研究简报 + 脚本", storyboard: "② 分镜总览图", director: "②a 导演脚本", sample: "②b 风格样片", final: "③ 成片" };
+const CONCEPT_GATES = { template: ["script", "storyboard", "final"], director: ["script", "director", "sample", "final"] };
 const TYPE_LABEL = { concept: "概念科普", practical: "实用技巧" };
 
 function hasFileIn(dir, sub, re) {
@@ -121,6 +123,7 @@ function fileFilled(path, filled) {
 export function collectFacts(dir) {
   const run = readRun(dir);
   const type = episodeType(run);
+  const video = videoMode(run);
   const gate = (k) => run?.gates?.[k]?.passed === true;
   const qaPath = join(dir, FILES.qa);
   let qa = null;
@@ -131,17 +134,42 @@ export function collectFacts(dir) {
       qa = { passed: false };
     }
   }
+  const vdQaPath = join(dir, DIRECTOR_DIR, "qa-douyin.json");
+  let vdQa = null;
+  if (existsSync(vdQaPath)) {
+    // 比工程里最新的 HTML 旧的结果（比如样片时跑的）不算：整片要重跑
+    const fresh = statSync(vdQaPath).mtimeMs >= newestHtml(join(dir, DIRECTOR_DIR));
+    try {
+      vdQa = { passed: fresh && JSON.parse(readFileSync(vdQaPath, "utf8")).passed === true };
+    } catch {
+      vdQa = { passed: false };
+    }
+  }
+  let sampleQa = null;
+  const sampleQaPath = join(dir, DIRECTOR_DIR, "qa-douyin-sample.json");
+  if (existsSync(sampleQaPath)) {
+    try {
+      sampleQa = { passed: JSON.parse(readFileSync(sampleQaPath, "utf8")).passed === true };
+    } catch {
+      sampleQa = { passed: false };
+    }
+  }
   return {
     type,
+    video,
     hasBrief: existsSync(join(dir, FILES.brief)),
     hasEvidence: fileFilled(join(dir, type === "practical" ? "实测记录.md" : FILES.research), (t) => isEvidenceFilled(type, t)),
     hasScript: fileFilled(join(dir, FILES.script), isScriptFilled),
     checkOk: !runCheck(dir).issues.some((i) => i.level === "error"),
     hasStoryboard: existsSync(join(dir, "抖音/STORYBOARD.md")),
     hasSheet: existsSync(join(dir, "抖音/snapshots/sheet.jpg")),
-    hasRender: hasFileIn(dir, "抖音/renders", /\.mp4$/),
+    hasDirector: existsSync(join(dir, DIRECTOR_DIR, "DIRECTOR.md")),
+    hasSample: existsSync(join(dir, DIRECTOR_DIR, "renders/sample.mp4")),
+    hasRender: video === "director" ? hasFileIn(dir, `${DIRECTOR_DIR}/renders`, FINAL_RE) : hasFileIn(dir, "抖音/renders", FINAL_RE),
+    sampleQa,
+    vdQa,
     qa,
-    gates: { script: gate("script"), storyboard: gate("storyboard"), final: gate("final") },
+    gates: Object.fromEntries(CONCEPT_GATES[video].map((k) => [k, gate(k)])),
   };
 }
 
@@ -166,11 +194,15 @@ function requirePracticalRun(dir) {
 
 function initRun(dir, args) {
   if (readRun(dir)) throw new Error("已经有 run.json 了");
+  const vi = args.indexOf("--video");
+  const video = vi >= 0 ? args[vi + 1] : null;
+  if (vi >= 0 && !["director", "template"].includes(video)) throw new Error(`--video 只能是 director 或 template：${video ?? "（空）"}`);
   const practical = looksPractical(dir);
   const run = JSON.parse(readFileSync(join(TEMPLATES_DIR, practical ? "run-practical.json" : "run.json"), "utf8"));
+  if (video) run.video = video;
   if (practical && args.includes("--fresh")) run.templates = templateHashes(dir, TEMPLATE_FILES);
   writeRun(dir, run);
-  console.log(`✓ run.json（${TYPE_LABEL[episodeType(run)]}）`);
+  console.log(`✓ run.json（${TYPE_LABEL[episodeType(run)]}，视频做法 ${videoMode(run)}）`);
   return 0;
 }
 
@@ -189,8 +221,10 @@ function recordGate(dir, args) {
   const [gate, ...rest] = args;
   const edit = rest.includes("--edit");
   const quote = oneLine(rest.filter((a) => a !== "--edit").join(" "));
-  const g = run.gates?.[gate];
-  if (!g) throw new Error(`没有这个确认节点：${gate ?? "（空）"}（可选：${Object.keys(P_GATE_LABEL).join("、")}）`);
+  const allowed = gatesFor(videoMode(run));
+  if (!allowed.includes(gate)) throw new Error(`没有这个确认节点：${gate ?? "（空）"}（可选：${allowed.join("、")}）`);
+  const g = run.gates?.[gate] ?? { passed: false, at: null, quote: null, fingerprint: null, edits: [] }; // 老 run.json 没有 director、sample
+  run.gates = run.gates ?? {};
   if (!quote) throw new Error('要写用户原话：kv gate <作品> <节点> "用户原话"');
   if (edit) {
     run.gates[gate] = { ...g, passed: false, edits: [...(g.edits ?? []), { at: today(), quote }] };
@@ -204,7 +238,7 @@ function recordGate(dir, args) {
     return 1;
   }
   if (gate === "topic") syncTopicFile(dir, quote);
-  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate) };
+  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate, videoMode(run)) };
   writeRun(dir, run);
   console.log(`✓ ${P_GATE_LABEL[gate]} 通过（${today()}「${quote}」）`);
   return 0;
@@ -235,7 +269,7 @@ function gateText(row, g) {
 
 function printPracticalStatus(dir, run) {
   const s = practicalStatus(practicalFacts(dir, run));
-  console.log("类型：实用技巧");
+  console.log(`类型：实用技巧（视频做法 ${videoMode(run)}）`);
   for (const r of s.rows) {
     console.log(` ${r.done ? "✓" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}`);
   }
@@ -248,7 +282,7 @@ function printStatus(dir) {
   if (episodeType(run) === "practical") return printPracticalStatus(dir, run);
   const f = collectFacts(dir);
   const s = detectStatus(f);
-  console.log(`类型：${TYPE_LABEL[f.type]}`);
+  console.log(`类型：${TYPE_LABEL[f.type]}（视频做法 ${f.video}）`);
   console.log(`阶段：${s.stage}`);
   console.log(`下一步：${s.next}`);
   if (s.waitingFor) console.log(`等用户确认：${GATE_LABEL[s.waitingFor]}`);

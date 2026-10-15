@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-// 用法：vd build|cues|check <视频工程目录>
-//   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）
+// 用法：vd build|cues|check|qa <视频工程目录>
+//   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）；--check 只校验不写文件
 //   build  cues → 音轨 → dykit 组件 → index.html 标记块 → 配乐对位与避让 → hyperframes check
 //          [--sample] [--no-music] [--update-components]（组件库换成 GitHub 上的最新提交）
 //   check  校验 DIRECTOR.md + 列出组件候选 + hyperframes check
+//   qa     抖音专用检查：@词 落定时刻查安全区、字幕带、栏目标签、@词元素可见，2 秒不动；写 qa-douyin.json（样片 qa-douyin-sample.json）和 snapshots/cues-sheet.jpg
 import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -14,11 +15,12 @@ import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
-import { addMusic, alignMusic, carve, resolveMusic } from "./lib/music.mjs";
+import { addMusic, alignMusic, carve, ensureCore, resolveMusic } from "./lib/music.mjs";
+import { douyinQa, presentSegments, staleBuild } from "./lib/qa-run.mjs";
 import { run } from "./lib/run.mjs";
 import { staleCopies } from "./lib/stale.mjs";
 
-const USAGE = "用法：vd build|cues|check <视频工程目录> [--sample] [--no-music] [--update-components]";
+const USAGE = "用法：vd build|cues|check|qa <视频工程目录> [--sample] [--no-music] [--update-components] [--check]";
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
 /** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
@@ -59,8 +61,12 @@ function load(dir) {
 }
 
 const COMMANDS = {
-  cues(dir) {
+  cues(dir, rest = []) {
     const { built } = load(dir);
+    if (rest.includes("--check")) {
+      console.log(`✓ DIRECTOR.md 通过（${Object.keys(built.cues).length} 个词，${built.segments.length} 段）`);
+      return 0;
+    }
     writeFileSync(join(dir, "cues.js"), cuesJs(built));
     for (const [k, v] of Object.entries(built.cues)) console.log(`  @${k} → ${v}s`);
     console.log(`✓ cues.js（${Object.keys(built.cues).length} 个词，${built.segments.length} 段，口播 ${built.total}s）`);
@@ -87,6 +93,31 @@ const COMMANDS = {
     }
     console.log(`✓ 总装完成：${sample ? `样片 ${only.join("、")}` : "整片"}，${duration}s`);
     return COMMANDS.check(dir, [], config);
+  },
+  async qa(dir) {
+    // 动态 import：没装 puppeteer-core 时其他子命令照常能用
+    const { chromePath, openPage } = await import("./lib/inspect-page.mjs").catch((err) => {
+      throw new Error(`vd qa 需要 puppeteer-core：在 video-director 技能目录跑 npm i（${err.message}）`);
+    });
+    chromePath(); // 先确认有 Chrome，再读工程、装依赖
+    const config = loadConfig(findProjectRoot(dir));
+    const { built } = load(dir);
+    const stale = staleBuild(dir, built);
+    if (stale) throw new Error(stale);
+    const segments = presentSegments(readFileSync(join(dir, "index.html"), "utf8"), built.segments);
+    const sample = segments.length < built.segments.length;
+    const out = sample ? "qa-douyin-sample.json" : "qa-douyin.json";
+    ensureCore(dir, config.hfVersion);
+    const { bundleToSingleHtml } = await import(pathToFileURL(join(dir, "node_modules/@hyperframes/core/dist/compiler/index.js")).href);
+    const page = await openPage({ html: await bundleToSingleHtml(dir), root: dir });
+    let r;
+    try { r = await douyinQa({ ...built, segments }, page, join(dir, "snapshots/cues")); } finally { await page.close(); }
+    writeFileSync(join(dir, out), JSON.stringify({ passed: r.passed, issues: r.issues.map(({ level, msg }) => ({ level, msg })), shots: r.shots }, null, 2) + "\n");
+    const sheet = run("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", "snapshots/cues/*.png", "-vf", `scale=270:-1,tile=6x${Math.ceil(r.shots.length / 6)}:padding=6:color=0x444444`, "-frames:v", "1", "snapshots/cues-sheet.jpg"], { cwd: dir });
+    if (sheet.status !== 0) console.warn(`⚠ 总览图没拼成：${sheet.stderr.trim()}`);
+    for (const i of r.issues) console.log(`${i.level === "error" ? "✗" : "⚠"} ${i.msg}`);
+    console.log(`${r.passed ? "✓" : "✗"} 抖音专用检查（${sample ? `样片 ${segments.map((s) => s.id).join("、")}` : "整片"}，结果 ${out}）：${r.shots.length} 个时间点，${r.issues.filter((i) => i.level === "error").length} 个 ✗（截图总览 snapshots/cues-sheet.jpg，按 DIRECTOR.md 逐条看）`);
+    return r.passed ? 0 : 1;
   },
   check(dir, _rest, config = loadConfig(findProjectRoot(dir))) {
     const { parsed } = load(dir);

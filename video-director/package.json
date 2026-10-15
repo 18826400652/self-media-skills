@@ -3,6 +3,13 @@
   "private": true,
   "type": "module",
   "description": "视频导演：口播稿 + 配音 → 导演脚本 → HyperFrames 视频工程",
-  "bin": { "vd": "bin/vd" },
-  "scripts": { "test": "node --test tests/*.test.mjs" }
+  "bin": {
+    "vd": "bin/vd"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "25.12.0"
+  }
 }
