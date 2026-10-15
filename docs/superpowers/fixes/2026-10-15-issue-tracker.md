@@ -38,7 +38,7 @@
 | P-27 | 帧时长写回 STORYBOARD 的是 `nv hf-build`，不是 `nv hf-audio` | 第 2 批 | 待修 | | |
 | P-28 | 渲染后跑 `--motion` 会让 kv 要求重新渲染 | 第 4 组 | 已修 | `fix(P-28)` | hf.test.mjs、captions-step.test.mjs 各 1 例 RED→GREEN；nv 111/111；实跑 01：--motion 后 sheet.jpg、STORYBOARD、audio_meta 的修改时间都不变，kv 判定保持「qa.json 有没修的问题」。另外发现 hf-build 每次重写 STORYBOARD（同步帧时长）和 audio_meta（音效），一并改成内容不变就保留原时间。01 被旧代码改过的两个文件时间已手工恢复 |
 | P-29 | kv 不检查 qa.json 的 checked 和 high 级问题 | 第 3 组 | 已修 | `fix(P-29)` | practical-facts.test.mjs 4 例 RED→GREEN（旧夹具 qa.json 补全 checked）；kv 81/81；真实项目 3 期 kv status 不变 |
-| P-30 | 「落定后完全静止」的修改提示不对题 | 第 2 批 | 待修 | | |
+| P-30 | 「落定后完全静止」的修改提示不对题 | 第 2 批 | 已修 | `fix(P-30)` | hf.test 1 例 RED→GREEN（新增 stillHint 纯函数）；nv 115/115；实跑 01 副本 hf-build --motion：第 1、9、12 帧（截图）提示写 camera push，第 7 帧（录屏）提示换有操作的录屏段，和报告里的 4 帧一致 |
 | P-31 | 导演做法要的 caption_groups.json 在导演路径上不会生成 | 第 1 组 | 已修 | `fix(P-31)` | captions-step.test.mjs 3 例 RED→GREEN；nv 108/108；实跑 02 删 caption_groups 后 nv hf-audio（缓存）重新生成，帧时长写回 STORYBOARD（顺带改善 P-27） |
 | P-32 | 导演脚本模板写死了真实项目的系列名 | 第 7 组 | 已修 | `fix(P-32)` | templates.test 2 例 + studio project.test 1 例 RED→GREEN（旧模板测试按新规则更新预期）；vd 110/110、studio 34/34；02 的 DIRECTOR 仍通过。同类：骨架 brand-kicker.html 默认值也写死了，一并改 |
 | P-33 | DIRECTOR.md 模板说明文字里的「@词」被当成 cue | 第 2 批 | 已修 | `fix(P-33)` | templates.test 1 例 RED→GREEN（说明文字去掉机器块和（待填）行后解析不出 @词）；vd 118/118。除报告里的第 5 行，第 4、17 行也有同样问题，一并放进反引号 |

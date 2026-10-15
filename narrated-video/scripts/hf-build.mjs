@@ -202,6 +202,17 @@ export function stillFrames(results) {
   return results.filter((r) => r.diff < MIN_HOLD_DIFF);
 }
 
+const KEEP_MOVING = "加一个持续的小动作（数字在数、线在画、圈在抖）；光晕呼吸太轻，不算在动";
+
+/** 纯函数：落定后静止的帧怎么改，按这一帧 STORYBOARD 的 build 写法给（截图、录屏帧默认就不缓推） */
+export function stillHint(build) {
+  const b = build ?? {};
+  if (b.camera === false) return `去掉 "camera": false 用默认缓推，或${KEEP_MOVING}`;
+  if (b.rec && b.camera === undefined) return `录屏这一段画面没在动：换一段有操作的录屏（改 mediaStart），或写 "camera": "push" 让整帧缓推`;
+  if (b.kit?.name === "shot" && b.camera === undefined) return `截图帧默认不缓推：写 "camera": "push" 让整帧缓推，或${KEEP_MOVING}`;
+  return KEEP_MOVING;
+}
+
 /** 纯函数：occupancy.py 的结果 → 内容铺得太少的帧 */
 export function sparseFrames(results) {
   return results.filter((r) => r.spanY < MIN_SPAN_Y || r.occupancy < MIN_OCCUPANCY);
@@ -230,7 +241,8 @@ function checkStillness(dir) {
   }
   const still = stillFrames(out.trim().split("\n").map((l) => JSON.parse(l)));
   if (!still.length) return console.log("  ✓ 每帧落定后都还在动（缓推、录屏或持续的小动作）");
-  for (const r of still) console.log(`  ⚠ 第 ${r.frame} 帧落定后完全静止：去掉 "camera": false 用默认缓推，或加一个持续的小动作（数字在数、线在画、圈在抖）；光晕呼吸太轻，不算在动`);
+  const sb = parseStoryboardFrames(readFileSync(join(dir, "STORYBOARD.md"), "utf8")).frames;
+  for (const r of still) console.log(`  ⚠ 第 ${r.frame} 帧落定后完全静止：${stillHint(sb[r.frame - 1]?.build)}`);
 }
 
 function checkOccupancy(dir) {

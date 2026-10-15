@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { parseHfScript, restoreCase, toCaptionWords } from "../scripts/hf-audio.mjs";
-import { boundsTimes, captionZoneSpec, cleanIndex, frameEndTimes, frameMotionTimes, sparseFrames, stillFrames } from "../scripts/hf-build.mjs";
+import { boundsTimes, captionZoneSpec, cleanIndex, frameEndTimes, frameMotionTimes, sparseFrames, stillFrames, stillHint } from "../scripts/hf-build.mjs";
 import { mergeTokens } from "../scripts/hf-kit.mjs";
 import { parseStoryboardSfx } from "../scripts/hf-sfx.mjs";
 import { writeCues } from "../scripts/lib/cues.mjs";
@@ -90,6 +90,20 @@ test("stillFrames：落定前后两张几乎没差别的帧算「落定后静止
     { frame: 3, diff: 0.6 },
   ]);
   assert.deepEqual(r.map((x) => x.frame), [2]);
+});
+
+test("stillHint：按这一帧的写法给修改提示——写了 camera:false 才叫人去掉；截图帧、录屏帧默认不缓推，提示写 camera:\"push\"", () => {
+  assert.match(stillHint({ camera: false, kit: { name: "steps" } }), /去掉 "camera": false/);
+  for (const b of [{ kit: { name: "shot" } }, { rec: { src: "a.mp4" } }]) {
+    const h = stillHint(b);
+    assert.doesNotMatch(h, /去掉 "camera": false/);
+    assert.match(h, /"camera": "push"/);
+  }
+  assert.match(stillHint({ rec: { src: "a.mp4" } }), /录屏/);
+  const plain = stillHint({ kit: { name: "steps" } });
+  assert.doesNotMatch(plain, /camera/);
+  assert.match(plain, /持续的小动作/);
+  assert.match(stillHint(null), /持续的小动作/);
 });
 
 function loadKit(cues) {
