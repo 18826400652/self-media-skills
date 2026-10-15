@@ -91,3 +91,89 @@ def test_app_without_copy_no_warning(monkeypatch, tmp_path, capsys):
     info = _outputs(monkeypatch, tmp_path, None, False)
     assert "copied" not in info
     assert "没拿到完整回答" not in capsys.readouterr().out
+
+
+def test_wait_answer_follows_answer_before_reading_screen(monkeypatch):
+    """等回答时每一轮先让 App 把回答滚进屏幕（follow_answer），再读界面文字和完成标记"""
+    order = []
+    app = types.SimpleNamespace(DONE_DESC="重新生成", follow_answer=lambda: order.append("follow"))
+    done = types.SimpleNamespace(exists=False)
+
+    def labels():
+        order.append("read")
+        assert order.count("read") < 20, "一直没等到完成标记：follow_answer 没被调用"
+        if order.count("follow") >= 2:
+            done.exists = True
+        return ["提问", "这是新出现的一段很长的回答文字"]
+
+    monkeypatch.setattr(rec, "_labels", labels)
+    monkeypatch.setattr(rec, "device", lambda: (lambda **kw: done))
+    monkeypatch.setattr(rec.time, "sleep", lambda s: None)
+    rec._wait_answer(app, FakeRecorder(), ["提问"], "提问", 0.0, 300, "x.mkv")
+    assert order[:2] == ["follow", "read"]
+    assert order.count("follow") >= 4
+
+
+def test_wait_answer_app_without_follow(monkeypatch):
+    app = types.SimpleNamespace(DONE_DESC=None)
+    monkeypatch.setattr(rec, "_labels", lambda: ["提问", "这是新出现的一段很长的回答文字"])
+    monkeypatch.setattr(rec.time, "sleep", lambda s: None)
+    rec._wait_answer(app, FakeRecorder(), ["提问"], "提问", 0.0, 300, "x.mkv")
+
+
+def test_wait_answer_reveals_done_marker_once_text_is_stable(monkeypatch):
+    """文字已经几秒不变、但完成标记在屏幕下沿外：让 App 往上推一点（reveal_done），看到标记才算完"""
+    reveals = []
+    done = types.SimpleNamespace(exists=False)
+
+    def reveal():
+        reveals.append(1)
+        done.exists = True
+
+    app = types.SimpleNamespace(DONE_DESC="重新生成", reveal_done=reveal)
+    reads = []
+
+    def labels():
+        reads.append(1)
+        assert len(reads) < 20, "文字稳定后一直没去找完成标记"
+        return ["提问", "这是新出现的一段很长的回答文字"]
+
+    monkeypatch.setattr(rec, "_labels", labels)
+    monkeypatch.setattr(rec, "device", lambda: (lambda **kw: done))
+    monkeypatch.setattr(rec.time, "sleep", lambda s: None)
+    rec._wait_answer(app, FakeRecorder(), ["提问"], "提问", 0.0, 300, "x.mkv")
+    assert reveals == [1]
+
+
+def test_wait_answer_no_reveal_while_text_still_changing(monkeypatch):
+    reveals, n = [], [0]
+    app = types.SimpleNamespace(DONE_DESC="重新生成", reveal_done=lambda: reveals.append(1))
+    done = types.SimpleNamespace(exists=False)
+
+    def labels():
+        n[0] += 1
+        if n[0] >= 6:
+            done.exists = True
+            return ["提问", "回答写完了，这是最后的完整内容"]
+        return ["提问", "回答还在一个字一个字地出来" + "啊" * n[0]]
+
+    monkeypatch.setattr(rec, "_labels", labels)
+    monkeypatch.setattr(rec, "device", lambda: (lambda **kw: done))
+    monkeypatch.setattr(rec.time, "sleep", lambda s: None)
+    rec._wait_answer(app, FakeRecorder(), ["提问"], "提问", 0.0, 300, "x.mkv")
+    assert reveals == []
+
+
+@pytest.mark.parametrize("present, expected", [
+    ({"resourceId": "x:id/regen"}, True),
+    ({"description": "重新生成"}, True),
+    ({}, False),
+])
+def test_done_marker_by_id_or_description(monkeypatch, present, expected):
+    app = types.SimpleNamespace(DONE_ID="x:id/regen", DONE_DESC="重新生成")
+    monkeypatch.setattr(rec, "device", lambda: (lambda **kw: types.SimpleNamespace(exists=kw == present)))
+    assert rec._done_marker(app) is expected
+
+
+def test_done_marker_none_means_no_marker(monkeypatch):
+    assert rec._done_marker(types.SimpleNamespace(DONE_DESC=None)) is True

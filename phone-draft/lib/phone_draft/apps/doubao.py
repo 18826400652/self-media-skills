@@ -7,7 +7,13 @@ from ..device import device, fail_with_ui, hide_keyboard, open_app, ui_texts
 from ..rec_logic import content_labels
 
 PACKAGE = "com.larus.nova"
-DONE_DESC = None
+# 回答完，回答下面的一排按钮（复制、朗读、收藏、分享、重新生成）才出现。平常的界面里只有 resource-id，
+# 往上翻过之后的另一种渲染里才有描述，两个都认
+DONE_ID = "com.larus.nova:id/msg_action_regenerate"
+DONE_DESC = "重新生成"
+SCROLL_TO_BOTTOM = "转至底部"   # 往上翻过回答时，回答右下角的「到底部」按钮有这个描述
+SPLITTER = "com.larus.nova:id/splitter"   # 输入区上沿的分隔线
+ARROW_GAP = 60         # 像素：刚发送时的 ↓（没有描述）贴在分隔线上方这么近
 EDIT = "android.widget.EditText"
 IMAGE = "android.widget.ImageView"
 TOP_BAR = 300          # 像素：顶栏下边界
@@ -160,3 +166,42 @@ def send():
     if i is None:
         fail_with_ui("找不到豆包的发送键")
     views[i].click()
+
+
+def down_arrow_index(splitter, candidates, width):
+    """刚发送、回答在屏幕外时出现的 ↓：水平居中、紧贴在输入区分隔线上方的图标。返回下标或 None"""
+    if splitter is None:
+        return None
+    for i, b in enumerate(candidates):
+        centered = abs((b["left"] + b["right"]) / 2 - width / 2) <= width * 0.06
+        if centered and 0 <= splitter["top"] - b["bottom"] <= ARROW_GAP:
+            return i
+    return None
+
+
+def _down_arrow():
+    line = device()(resourceId=SPLITTER)
+    if not line.exists:
+        return None
+    sel = device()(className=IMAGE, clickable=True)
+    views = [sel[i] for i in range(sel.count)]
+    i = down_arrow_index(_bounds(line), [_bounds(v) for v in views], device().info["displayWidth"])
+    return None if i is None else views[i]
+
+
+def follow_answer():
+    """等回答时每轮调一次：提问长到占满屏幕时回答在屏幕外，点 ↓ 把它滚进来，录屏录得到回答、也看得见完成标记"""
+    btn = device()(description=SCROLL_TO_BOTTOM)
+    if btn.exists:
+        btn.click()
+        return
+    arrow = _down_arrow()
+    if arrow is not None:
+        arrow.click()
+
+
+def reveal_done():
+    """回答写完、文字不再变时调：完成标记那排按钮常在屏幕下沿外，往上推一小段把它露出来"""
+    d = device()
+    w, h = d.info["displayWidth"], d.info["displayHeight"]
+    d.swipe(w // 2, int(h * 0.65), w // 2, int(h * 0.45), 0.3)

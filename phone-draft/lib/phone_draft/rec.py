@@ -91,14 +91,29 @@ def _check_sent(app, rec, prompt, mkv):
     fail_with_ui(f"点了发送，但提问还在输入框里，没发出去（原始录屏留在 {mkv}）")
 
 
+def _done_marker(app):
+    """回答完的标记在不在屏幕上：DONE_ID（resource-id）或 DONE_DESC（描述）任一出现；两个都没定义的 App 不看标记"""
+    done_id, desc = getattr(app, "DONE_ID", None), app.DONE_DESC
+    if done_id is None and desc is None:
+        return True
+    return bool((done_id and device()(resourceId=done_id).exists) or (desc and device()(description=desc).exists))
+
+
 def _wait_answer(app, rec, baseline, prompt, sent, timeout, mkv):
     history = []
     while True:
         time.sleep(POLL)
+        follow = getattr(app, "follow_answer", None)  # 回答在屏幕外时把它滚进来（豆包）
+        if follow:
+            follow()
         history.append(_labels())
-        marker = app.DONE_DESC is None or device()(description=app.DONE_DESC).exists
+        marker = _done_marker(app)
         if answer_done(history, baseline, prompt, marker):
             return
+        # 文字已经不变了、完成标记却不在屏幕上：多半在屏幕下沿外，让 App 往上推一点（豆包）
+        reveal = getattr(app, "reveal_done", None)
+        if reveal and not marker and answer_done(history, baseline, prompt):
+            reveal()
         if rec.now() - sent > timeout:
             rec.stop()
             fail_with_ui(f"等了 {timeout} 秒回答还没结束（原始录屏留在 {mkv}）")

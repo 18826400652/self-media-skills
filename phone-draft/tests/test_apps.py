@@ -1,3 +1,4 @@
+import types
 import pytest
 
 from phone_draft import apps
@@ -111,3 +112,67 @@ def test_doubao_dismiss_update_dialog_reads_ui_texts_tuples(monkeypatch):
     monkeypatch.setattr(doubao.time, "sleep", lambda s: None)
     doubao.dismiss_update_dialog()
     assert clicked == ["稍后再说"]
+
+
+class _Sel:
+    def __init__(self, exists, clicks):
+        self.exists = exists
+        self._clicks = clicks
+
+    def click(self):
+        self._clicks.append(1)
+
+
+def test_doubao_done_marker_is_regenerate_under_answer():
+    """豆包回答完，回答下面才出现「重新生成」（P-43：之前没有标记，标题变了就当回答完）。
+    平常的界面里这个按钮只有 resource-id，没有描述；描述只在另一种渲染里有"""
+    assert doubao.DONE_ID == "com.larus.nova:id/msg_action_regenerate"
+    assert doubao.DONE_DESC == "重新生成"
+
+
+@pytest.mark.parametrize("shown, clicked", [(True, 1), (False, 0)])
+def test_doubao_follow_answer_taps_scroll_to_bottom(monkeypatch, shown, clicked):
+    """提问长到占满屏幕时回答在屏幕外：看到「转至底部」就点，回答和「重新生成」才在屏幕上"""
+    clicks, asked = [], []
+
+    def phone(**kw):
+        asked.append(kw)
+        return _Sel(shown, clicks)
+
+    monkeypatch.setattr(doubao, "device", lambda: phone)
+    monkeypatch.setattr(doubao, "_down_arrow", lambda: None)
+    doubao.follow_answer()
+    assert asked == [{"description": "转至底部"}]
+    assert len(clicks) == clicked
+
+
+def test_doubao_follow_answer_taps_plain_down_arrow(monkeypatch):
+    """刚发送时的 ↓ 是没有描述的 ImageView：没有「转至底部」时点它"""
+    clicks = []
+    monkeypatch.setattr(doubao, "device", lambda: (lambda **kw: _Sel(False, clicks)))
+    monkeypatch.setattr(doubao, "_down_arrow", lambda: _Sel(True, clicks))
+    doubao.follow_answer()
+    assert len(clicks) == 1
+
+
+def _b(l, t, r, b):
+    return {"left": l, "top": t, "right": r, "bottom": b}
+
+
+def test_doubao_down_arrow_is_centered_just_above_input():
+    """2026-10 实测（1080 宽）：↓ 在 [477,1825][603,1951]，输入区分隔线从 y 1968 开始"""
+    splitter = _b(0, 1968, 1080, 1971)
+    arrow, send, title_icon = _b(477, 1825, 603, 1951), _b(935, 2154, 1003, 2283), _b(500, 60, 580, 140)
+    assert doubao.down_arrow_index(splitter, [send, title_icon, arrow], 1080) == 2
+    assert doubao.down_arrow_index(splitter, [send, title_icon], 1080) is None
+    assert doubao.down_arrow_index(None, [arrow], 1080) is None
+
+
+def test_doubao_reveal_done_swipes_up_a_little(monkeypatch):
+    swipes = []
+    phone = types.SimpleNamespace(info={"displayWidth": 1080, "displayHeight": 2400},
+                                  swipe=lambda *a, **kw: swipes.append(a))
+    monkeypatch.setattr(doubao, "device", lambda: phone)
+    doubao.reveal_done()
+    (x1, y1, x2, y2), = [s[:4] for s in swipes]
+    assert x1 == x2 == 540 and y1 > y2 and y1 - y2 <= 600
