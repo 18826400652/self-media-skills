@@ -93,7 +93,7 @@ export async function synthesizeClean(line, tts, dir, name) {
  */
 export async function synthesizeSegment(segment, lines, tts, dir) {
   const provider = getProvider(tts.provider);
-  if (!provider.direction) throw new Error(`${tts.provider} 不支持导演稿（VOICE.md），只有 seedaudio 支持`);
+  if (!provider.direction) throw new Error(`${tts.provider} 不支持导演稿（VOICE.md），只有 seedaudio、qwenaudio 支持`);
   const text = lines.map((l) => l.text).join("");
   const extra = [tts.style, tts.reference, tts.seed].filter((v) => v !== undefined && v !== "");
   const key = [tts.provider, tts.model, tts.voice, tts.speed, ...extra, segment.prompt, text].join("|");

@@ -26,7 +26,7 @@ narration: yes
 
 ## Customizations
 
-- 配音：narrated-video.config.json 的 TTS（seedaudio + 参考音色），按 VOICE.md 导演稿用 `nv hf-audio . --pause 0.3` 生成，不用 HeyGen / Kokoro
+- 配音：narrated-video.config.json 的 TTS（支持导演稿的 seedaudio / qwenaudio + 参考音色），按 VOICE.md 导演稿用 `nv hf-audio . --pause 0.3` 生成，不用 HeyGen / Kokoro
 - 音效：STORYBOARD 每帧 `- sfx: 名称 @关键词`，用 `nv hf-sfx` 放置
 - 画面：按 narrated-video 的 references/hf-kit.md 选用表选组件
 - 背景音乐：不在视频里加，发布时在抖音曲库选
