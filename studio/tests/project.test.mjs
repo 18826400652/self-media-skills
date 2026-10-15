@@ -49,7 +49,8 @@ test("st init：建出骨架，账号填进去，gitignore 改名；再跑一次
   assert.equal(studio.account, "小号");
   assert.match(studio.toolkit, /^>=\d+\.\d+\.\d+$/);
   assert.ok(existsSync(join(dir, ".gitignore")));
-  assert.ok(existsSync(join(dir, "04-作品")));
+  for (const d of ["00-规划", "01-灵感收集", "02-学习笔记", "03-选题池", "04-作品", "05-模板", "06-品牌资产", "07-复盘"])
+    assert.ok(existsSync(join(dir, d)), `缺目录 ${d}`);
   assert.match(readFileSync(join(dir, "00-规划/账号定位.md"), "utf8"), /账号名：小号/);
   assert.equal(JSON.parse(readFileSync(join(dir, "image-cards.config.json"), "utf8")).footer, "@小号");
   assert.equal(readFileSync(join(dir, "00-规划/语气指南.md"), "utf8"), "我自己的");
