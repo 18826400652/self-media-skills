@@ -19,7 +19,7 @@
 | P-08 | 抖音封面字数上限三处写法不一 | 后续 | 待修 | | |
 | P-09 | `st doctor` 不检查配置里残留的占位文字 | 第 5 组 | 待修 | | |
 | P-10 | 参考音色怎么准备没有文档 | 后续 | 待修 | | |
-| P-11 | 默认音效目录是空的，doctor 不提醒 | 第 5 组 | 待修 | | |
+| P-11 | 默认音效目录是空的，doctor 不提醒 | 第 5 组 | 已修 | `fix(P-11)` | doctor.test.mjs 2 例 RED→GREEN（+1 例反向）；studio 29/29；真实项目、flow-check 的 st doctor 不报（Review Focus 3） |
 | P-12 | `st new --只建抖音` 成功时提示「已创建：<作品>」 | 后续 | 待修 | | |
 | P-13 | narrated-video/SKILL.md 说整段配音只在 seedaudio 时生效 | 后续 | 待修 | | |
 | P-14 | `st doctor` 只看依赖目录在不在，装到一半失败也报全过 | 第 5 组 | 待修 | | |

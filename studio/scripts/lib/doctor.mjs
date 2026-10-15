@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
+import { hasAudio, mediaUseSfx } from "./init.mjs";
 import { DEFAULT_TEMPLATES, loadProject, MARKER, satisfies, TOOLKIT_DIR, toolkitVersion } from "./project.mjs";
 
 /** 各 skill 的项目配置里，哪些字段是要存在的路径（点号表示嵌套） */
@@ -113,7 +114,9 @@ function checkConfigs(p, out) {
     let cfg;
     try { cfg = JSON.parse(readFileSync(f, "utf8")); } catch (e) { out.fail(`${file} 不是合法 JSON：${e.message}`); continue; }
     const missing = paths.filter((k) => get(cfg, k) && !existsSync(resolve(p.root, get(cfg, k)))).map((k) => `${k}=${get(cfg, k)}`);
+    const sfx = file === "video-director.config.json" && cfg.sfxDir && resolve(p.root, cfg.sfxDir);
     if (missing.length) out.fail(`${file} 里的路径不存在：${missing.join("；")}`);
+    else if (sfx && !hasAudio(sfx)) out.fail(`${file} 的 sfxDir 音效目录是空的（${cfg.sfxDir}）：DIRECTOR.md 写的音效会找不到。放几个音效进去，或指向 media-use 的音效库 ${mediaUseSfx("~")}`);
     else out.ok(file);
   }
   // 只看在不在，不读内容（里面是密钥）
