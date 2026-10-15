@@ -42,11 +42,15 @@ const GATE_FILES = {
   },
 };
 
+// DIRECTOR.md 第 8 节「组件候选」是交成片时才补的，改它不算改导演脚本
+const CANDIDATES_RE = /^## 8\. 组件候选[\s\S]*?(?=^## |^```json vd|(?![\s\S]))/m;
+const content = (rel, p) => (rel.endsWith("DIRECTOR.md") ? readFileSync(p, "utf8").replace(CANDIDATES_RE, "") : readFileSync(p));
+
 export function fingerprint(dir, gate, video = "template") {
   const h = createHash("sha256");
   for (const rel of GATE_FILES[video][gate](dir)) {
     const p = join(dir, rel);
-    if (existsSync(p)) h.update(rel).update(readFileSync(p));
+    if (existsSync(p)) h.update(rel).update(content(rel, p));
   }
   return h.digest("hex");
 }
@@ -135,15 +139,15 @@ function directorSteps(dir, runVdCues) {
     if (!v.ok) director = no(v.msg);
   }
   const sampleMp4 = join(root, "renders/sample.mp4");
-  const sample = !existsSync(sampleMp4) ? no(`还没有 ${DIRECTOR_DIR}/renders/sample.mp4`)
-    : mtime(sampleMp4) < mtime(md) ? no("DIRECTOR.md 改过，要重新出样片") : ok();
+  // 样片不跟 DIRECTOR.md 比时间：导演脚本改了 ③a 会失效，重新确认时再决定要不要重出样片
+  const sample = existsSync(sampleMp4) ? ok() : no(`还没有 ${DIRECTOR_DIR}/renders/sample.mp4`);
   const mp4 = latest(dir, `${DIRECTOR_DIR}/renders`, FINAL_RE);
   const vdQaPath = join(root, "qa-douyin.json");
   const vdQa = readJsonOrNull(vdQaPath);
   const qaPath = join(dir, "qa.json");
   const qa = readJsonOrNull(qaPath);
   const render = !mp4 ? no(`还没渲染（nv render ${DIRECTOR_DIR}）`)
-    : mtime(mp4) < mtime(md) ? no("DIRECTOR.md 改过，要重新渲染")
+    : mtime(mp4) < newestHtml(root) ? no("画面改过，要重新渲染")
     : !vdQa ? no("还没跑 vd qa")
     : vdQa.passed !== true ? no("vd qa 还有 ✗")
     : mtime(vdQaPath) < newestHtml(root) ? no("画面改过，要重跑 vd qa")

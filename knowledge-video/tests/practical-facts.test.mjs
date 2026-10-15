@@ -167,16 +167,22 @@ test("director：第 8 步要配音、DIRECTOR.md、vd cues 通过；导演工�
   assert.match(dCollect(dir).steps.director.why, /重新配过音/);
 });
 
-test("director：样片要比 DIRECTOR.md 新", () => {
+test("director：有 renders/sample.mp4 就算出了样片；只改 DIRECTOR.md 不算样片过期（③a 失效会把关）", () => {
   const dir = episode({ [`${D}/DIRECTOR.md`]: "x" });
   assert.match(dCollect(dir).steps.sample.why, /renders\/sample\.mp4/);
   mkdirSync(join(dir, D, "renders"), { recursive: true });
   writeFileSync(join(dir, D, "renders/sample.mp4"), "v");
   touch(dir, `${D}/DIRECTOR.md`, 2000);
   touch(dir, `${D}/renders/sample.mp4`, 1000);
-  assert.match(dCollect(dir).steps.sample.why, /DIRECTOR\.md 改过/);
-  touch(dir, `${D}/renders/sample.mp4`, 3000);
   assert.equal(dCollect(dir).steps.sample.ok, true);
+});
+
+test("director：成片比工程里的 HTML 旧 → 要重新渲染；只改 DIRECTOR.md（如补组件候选）不用重渲染", () => {
+  const dir = episode({ [`${D}/DIRECTOR.md`]: "x", [`${D}/index.html`]: "<html>", [`${D}/compositions/frames/s1.html`]: "<div>", [`${D}/renders/01.mp4`]: "v", [`${D}/qa-douyin.json`]: { passed: true }, "qa.json": { passed: true } });
+  for (const [f, t] of [[`${D}/index.html`, 1000], [`${D}/compositions/frames/s1.html`, 1000], [`${D}/renders/01.mp4`, 2000], [`${D}/qa-douyin.json`, 1500], ["qa.json", 3000], [`${D}/DIRECTOR.md`, 4000]]) touch(dir, f, t);
+  assert.equal(dCollect(dir).steps.render.ok, true);
+  touch(dir, `${D}/compositions/frames/s1.html`, 2500);
+  assert.match(dCollect(dir).steps.render.why, /画面改过，要重新渲染/);
 });
 
 test("director：渲染步骤看正式成片（不算 sample / compare / 预览）、vd qa、qa.json", () => {
@@ -210,6 +216,13 @@ test("director 指纹：③a 看 DIRECTOR.md 和配音，③b 看样片，④ �
   assert.notEqual(after[0], before[0]);
   assert.notEqual(after[1], before[1]);
   assert.equal(after[2], before[2], "compare.mp4 不影响 ④");
+  const md = "# 导演脚本\n## 7. 样片范围\n前两段\n## 8. 组件候选\n| 画面 | 名 |\n";
+  writeFileSync(join(dir, D, "DIRECTOR.md"), md);
+  const fp = fingerprint(dir, "director", "director");
+  writeFileSync(join(dir, D, "DIRECTOR.md"), md + "| 小票 | dy-receipt |\n");
+  assert.equal(fingerprint(dir, "director", "director"), fp, "只补第 8 节组件候选，③a 不失效");
+  writeFileSync(join(dir, D, "DIRECTOR.md"), md.replace("前两段", "前三段"));
+  assert.notEqual(fingerprint(dir, "director", "director"), fp);
   const f = dCollect(dir, dRun({ gates: { director: { passed: true, fingerprint: before[0] } } }));
   assert.deepEqual(Object.keys(f.gates), ["topic", "script", "director", "sample", "final"]);
   assert.equal(f.gates.director.stale, true);
