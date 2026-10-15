@@ -9,8 +9,9 @@
 ```bash
 git clone <这个仓库> ~/self-media-skills
 ~/self-media-skills/studio/bin/st install --deps     # 注册 skill 到 ~/.claude/skills、命令放进 ~/.local/bin、装依赖
+(cd ~/self-media-skills/narrated-video && npx hyperframes skills update faceless-explainer hyperframes-audio)   # HyperFrames 官方的两个 skill：渲染、配乐要用
 st init ~/my-media --account 账号名 --audience "目标观众"   # 建作品项目（已有就跳过）
-cd ~/my-media && st doctor                          # 逐项检查，按提示补齐（字体、参考音色、浏览器登录…）
+cd ~/my-media && st doctor                          # 逐项检查，按提示补齐（参考音色、.env 密钥、浏览器登录…）
 ```
 
 然后在作品项目里打开 Claude Code，说「新建一期 XX」。入口和完整流程见 [studio/SKILL.md](studio/SKILL.md)、[studio/references/workflow.md](studio/references/workflow.md)。

@@ -114,6 +114,11 @@ export function createEpisode(opts, cwd = process.cwd()) {
     writeFileSync(dest, substitute(readFileSync(templatePath(project, tpl), "utf8"), vars));
   };
 
+  // 系列说明（选题硬标准等）还没写：用模板起一份，提醒用户去填
+  const seriesDoc = opts.series === "单篇" ? null : join(dirname(project.abs.registry), `${opts.series}.md`);
+  const newSeriesDoc = seriesDoc && !existsSync(seriesDoc);
+  if (newSeriesDoc) writeFileSync(seriesDoc, substitute(readFileSync(templatePath(project, "系列说明模板.md"), "utf8"), vars));
+
   if (!opts.douyinOnly && type === "concept") fill("发布记录模板.md", "发布记录.md");
   else if (!opts.douyinOnly) {
     for (const [tpl, out] of PRACTICAL_FILES) fill(tpl, out);
@@ -141,6 +146,7 @@ export function createEpisode(opts, cwd = process.cwd()) {
 
   const rel = relative(project.root, ep);
   const lines = [`已创建：${rel}（${plan.badge || "无角标"}）`];
+  if (newSeriesDoc) lines.push(`系列说明还没写，已用模板建好：${relative(project.root, seriesDoc)}（先填选题硬标准，选题关要逐条对照）`);
   if (concept) lines.push("顺序：按 knowledge-video 导演手册：brief.md → research.json → 抖音/SCRIPT.md → kv check → 确认节点 ①（见 knowledge-video 的 SKILL.md）");
   else lines.push(`下一步：kv status ${rel}（每一步开始前都先跑它，只做它说的那一步）`);
   return { ep, lines };

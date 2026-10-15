@@ -27,6 +27,7 @@ skill 里不写死任何作品目录名：目录约定读 `studio.json`，其余
 
 ```bash
 cd <工具包>/studio && bin/st install --deps   # 注册 skill、命令放进 ~/.local/bin、装 Node / Python 依赖
+cd <工具包>/narrated-video && npx hyperframes skills update faceless-explainer hyperframes-audio   # HyperFrames 官方 skill，渲染、配乐要用
 st init ~/my-media --account 账号名 --audience "目标观众"   # 没有作品项目时：建一个
 cd <作品项目> && st doctor                     # 逐项打勾，按提示补齐；--online 再查浏览器
 ```

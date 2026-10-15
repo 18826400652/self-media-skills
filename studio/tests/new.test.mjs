@@ -65,6 +65,22 @@ test("账号、观众、账号定位从 studio.json 填进模板；角标带系�
   }
 });
 
+test("系列说明不存在时用模板建一份并提醒去填；已有的不动", () => {
+  const sb = sandbox();
+  const r = run(sb, "普通人的AI课", "周报");
+  assert.equal(r.status, 0, r.stderr);
+  const doc = join(sb.root, "00-规划/系列/普通人的AI课.md");
+  const text = readFileSync(doc, "utf8");
+  assert.match(text, /普通人的 AI 课/);
+  assert.match(text, /选题硬标准/);
+  assert.doesNotMatch(text, /\{\{(账号|观众|账号定位|系列)\}\}/);
+  assert.match(r.stdout, /系列说明.*00-规划\/系列\/普通人的AI课\.md/);
+  writeFileSync(doc, "我写好的");
+  const r2 = run(sb, "普通人的AI课", "第二期");
+  assert.equal(readFileSync(doc, "utf8"), "我写好的");
+  assert.doesNotMatch(r2.stdout, /系列说明/);
+});
+
 test("编号自动递增；--video director 传给 kv init", () => {
   const sb = sandbox();
   mkdirSync(join(sb.root, "04-作品/普通人的AI课/07-旧的"), { recursive: true });

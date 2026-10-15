@@ -2,7 +2,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { DEFAULT_TEMPLATES, loadProject, MARKER, satisfies, TOOLKIT_DIR, toolkitVersion } from "./project.mjs";
 
 /** 各 skill 的项目配置里，哪些字段是要存在的路径（点号表示嵌套） */
@@ -74,6 +74,9 @@ function checkProject(p, out) {
   else {
     const active = Object.keys(reg).filter((k) => !reg[k].paused);
     out.ok(`系列 ${Object.keys(reg).length} 个，在做的：${active.join("、") || "（无）"}`);
+    const dir = dirname(p.abs.registry);
+    const noDoc = Object.keys(reg).filter((k) => !existsSync(join(dir, `${k}.md`))).map((k) => relative(p.root, join(dir, `${k}.md`)));
+    if (noDoc.length) out.warn(`系列没有说明文件（选题硬标准写在里面，st new 会用模板建一份）：${noDoc.join("、")}`);
   }
 }
 
@@ -171,13 +174,27 @@ function checkDeps(out) {
   if (major < 22) out.fail(`Node ${process.versions.node}，要 22 以上`);
 }
 
+/** 工具包用到、但由 HyperFrames 发布的 skill：[名字, 要有的文件, 用途, 改位置的环境变量] */
+const HF_SKILLS = [
+  ["faceless-explainer", "scripts/assemble-index.mjs", "nv hf-build 拼视频", "FACELESS_DIR"],
+  ["hyperframes-audio", "scripts/carve.mjs", "vd 配乐"],
+];
+
+function checkExternalSkills(out, home) {
+  for (const [name, file, use, envVar] of HF_SKILLS) {
+    const dir = (envVar && process.env[envVar]) || join(home, ".claude/skills", name);
+    if (existsSync(join(dir, file))) out.ok(`外部 skill ${name}`);
+    else out.warn(`缺外部 skill ${name}（${use}）：cd ${join(TOOLKIT_DIR, "narrated-video")} && npx hyperframes skills update ${name}`);
+  }
+}
+
 function checkOnline(p, out) {
   const r = spawnSync("bd", ["tabs"], { cwd: p.root, encoding: "utf8", timeout: 30000 });
   if (r.status === 0) out.ok(`浏览器连得上（bd tabs 列出 ${r.stdout.trim().split("\n").filter(Boolean).length} 个标签页）`);
   else out.fail(`浏览器连不上：${(r.stderr || r.stdout).trim().split("\n").pop()}`);
 }
 
-export function doctor({ cwd = process.cwd(), online = false, log = console.log } = {}) {
+export function doctor({ cwd = process.cwd(), online = false, log = console.log, home = homedir() } = {}) {
   let fails = 0, warns = 0;
   const out = {
     ok: (m) => log(`  ✓ ${m}`),
@@ -195,7 +212,7 @@ export function doctor({ cwd = process.cwd(), online = false, log = console.log 
     section("品牌", () => checkBrand(project, out));
     section("skill 配置", () => checkConfigs(project, out));
   }
-  section("工具包", () => checkToolkit(out));
+  section("工具包", () => { checkToolkit(out, home); checkExternalSkills(out, home); });
   section("依赖", () => checkDeps(out));
   if (online && project) section("联网检查", () => checkOnline(project, out));
   log(`\n${fails ? `✗ ${fails} 项要修` : "✓ 没有要修的"}${warns ? `，⚠ ${warns} 项提醒` : ""}${online ? "" : "（加 --online 再查浏览器能不能连上）"}`);

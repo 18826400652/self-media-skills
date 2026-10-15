@@ -56,6 +56,9 @@ test("st init：建出骨架，账号填进去，gitignore 改名；再跑一次
   assert.equal(readFileSync(join(dir, "00-规划/语气指南.md"), "utf8"), "我自己的");
   assert.match(readFileSync(join(dir, "README.md"), "utf8"), /小号/);
   assert.match(readFileSync(join(dir, ".env.example"), "utf8"), /^DASHSCOPE_API_KEY=$/m);
+  assert.doesNotMatch(readFileSync(join(dir, ".env.example"), "utf8"), /WECHAT_APP/, "个人号没有草稿接口，不列公众号密钥");
+  for (const f of ["00-规划/平台策略/抖音.md", "00-规划/平台策略/公众号.md", "00-规划/平台策略/小红书.md", "06-品牌资产/视觉规范.md"])
+    assert.ok(existsSync(join(dir, f)), `缺 ${f}`);
   assert.ok(!existsSync(join(dir, ".env")), "不替用户建 .env");
   assert.throws(() => initProject({ dir }, quiet), /已经是作品项目/);
 });
@@ -85,6 +88,26 @@ test("st doctor：没有 .env 给 ⚠ 提示复制 .env.example；有了只报�
   doctor({ cwd: dir, log: out.log });
   assert.match(out.text(), /✓ \.env/);
   assert.doesNotMatch(out.text(), /sk-secret/);
+});
+
+test("st doctor：登记了系列却没有系列说明，给 ⚠", () => {
+  const dir = join(tmp("st-doc-"), "proj");
+  initProject({ dir }, quiet);
+  writeFileSync(join(dir, "00-规划/系列/系列.json"), JSON.stringify({ 有说明: { label: "有", unit: "期" }, 没说明: { label: "没", unit: "期" } }));
+  writeFileSync(join(dir, "00-规划/系列/有说明.md"), "x");
+  const out = capture();
+  doctor({ cwd: dir, log: out.log });
+  assert.match(out.text(), /⚠ 系列没有说明文件.*00-规划\/系列\/没说明\.md/);
+  assert.doesNotMatch(out.text(), /有说明\.md/);
+});
+
+test("st doctor：缺 faceless-explainer、hyperframes-audio 这两个外部 skill，给 ⚠ 和安装命令", () => {
+  const dir = join(tmp("st-doc-"), "proj");
+  initProject({ dir }, quiet);
+  const out = capture();
+  doctor({ cwd: dir, log: out.log, home: tmp("st-home-") });
+  assert.match(out.text(), /⚠ 缺外部 skill faceless-explainer.*hyperframes skills update/);
+  assert.match(out.text(), /⚠ 缺外部 skill hyperframes-audio/);
 });
 
 test("st doctor：项目模板覆盖——改过的认、一样的提醒删、对不上的提醒", () => {
