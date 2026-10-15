@@ -170,7 +170,8 @@ export function buildFrame(f) {
   }
   if (b.timer) {
     const t = b.timer;
-    body.push(`<div class="P-panel${hook("kit-glass-panel")}"><div id="P-n"></div>${t.note ? `<div class="P-note">${esc(t.note)}</div>` : ""}</div>`);
+    // 玻璃面板几乎透明，叠在浅色录屏（白色 App 界面）上数字看不清：叠录屏时 kit-on-rec 换成不透明底
+    body.push(`<div class="P-panel${hook(b.rec ? "kit-glass-panel kit-on-rec" : "kit-glass-panel")}"><div id="P-n"></div>${t.note ? `<div class="P-note">${esc(t.note)}</div>` : ""}</div>`);
     css.push(".P-panel { position: absolute; left: 60px; top: 860px; z-index: 5; padding: 24px 36px; background: color-mix(in srgb, var(--kit-bg) 90%, transparent); border-left: 8px solid var(--kit-accent); }");
     css.push(".P-note { font-size: 30px; font-weight: 500; color: var(--kit-muted); margin-top: 48px; }");
     js.push(`Kit.number(tl, "#P-n", ${toJs({ value: t.value, unit: t.unit ?? "秒", countFrom: 0, countDur: t.countDur ?? Math.max(0.5, f.duration - 0.3), at: 0.05, size: t.size ?? 150 })});`);

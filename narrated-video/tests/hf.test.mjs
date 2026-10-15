@@ -264,7 +264,7 @@ test("帧模板 glow：底色层、HUD、进度条、kit-glow.js、样式钩子"
   assert.match(html, /<div class="kit-hud"><i class="c tl"><\/i><i class="c tr"><\/i><i class="c bl"><\/i><i class="c br"><\/i><div class="kit-progress"><i class="on"><\/i><i class="on"><\/i><i><\/i><i><\/i><\/div><\/div>/);
   assert.match(html, /class="p02-kicker kit-kicker">K/);
   assert.match(html, /class="p02-chip kit-chip"/);
-  assert.match(html, /class="p02-panel kit-glass-panel"/);
+  assert.match(html, /class="p02-panel kit-glass-panel kit-on-rec"/); // FLAT_BUILD 有录屏，面板叠在录屏上
   assert.match(html, /class="p02-label kit-label"/);
   assert.match(html, /<script src="compositions\/kit\/kit\.js"><\/script>\s*<script src="compositions\/kit\/kit-glow\.js"><\/script>/);
   assert.ok(html.indexOf('class="kit-hud"') < html.indexOf('id="p02-cam"'), "HUD 在推镜层外面，不跟着推");
@@ -446,4 +446,13 @@ test("snapshotPaths：--motion 的过程图单独存，不碰 ③ 用的 sheet.j
   const { snapshotPaths } = await import("../scripts/hf-build.mjs");
   assert.deepEqual(snapshotPaths(false), { dir: "snapshots", sheet: "snapshots/sheet.jpg" });
   assert.deepEqual(snapshotPaths(true), { dir: "snapshots/motion", sheet: "snapshots/motion-sheet.jpg" });
+});
+
+test("帧模板 glow：计时面板叠在录屏上时用不透明底（玻璃面板几乎透明，浅色录屏上数字看不清）；不叠录屏时照旧是玻璃", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const f = { n: 7, id: "07-rec", kicker: "K", tokens: FLAT_TOKENS, total: 9, duration: 6, look: "glow" };
+  assert.match(buildFrame({ ...f, build: { rec: { src: "assets/rec.mp4" }, timer: { value: 9 } } }), /class="p07-panel kit-glass-panel kit-on-rec"/);
+  assert.match(buildFrame({ ...f, build: { timer: { value: 9 } } }), /class="p07-panel kit-glass-panel"/);
+  const glowCss = readFileSync(new URL("../hf-kit/kit-glow.js", import.meta.url), "utf8");
+  assert.match(glowCss, /\.kit-glass-panel\.kit-on-rec\{background:color-mix\(in srgb,var\(--kit-bg\) 9\d%,transparent\)/);
 });
