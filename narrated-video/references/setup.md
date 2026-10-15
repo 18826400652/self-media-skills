@@ -52,7 +52,7 @@ LD_LIBRARY_PATH=~/.local/lib/chrome-deps ldd ~/.cache/hyperframes/chrome/*/linux
 - **多长、多大**：30 秒以内、10MB 以内（两家接口的上限，tts/seedaudio.mjs、tts/qwenaudio.mjs）；10–20 秒的干净人声就够
 - **格式**：wav 或 mp3（qwenaudio 还认 ogg / opus）；手机录的 m4a 先转：`ffmpeg -i 录音.m4a -ac 1 -ar 24000 参考音色.wav`
 - **放哪**：默认 `06-品牌资产/参考音色.wav`；放别处就改 `narrated-video.config.json` 的 `tts.reference`（相对项目根目录）
-- **换了参考音频**：配音缓存认的是路径不是内容，换文件不换名字时旧缓存还会命中——删掉项目根目录的 `.media/voice-cache/` 再配
+- **换了参考音频**：配音缓存按参考音频的内容算，换了录音（哪怕文件名不变）会重新配；只是挪了位置、内容没变的照样命中
 - 不想用参考音频：seedaudio 可以改填 `tts.voice`（音色 ID，二选一）；qwenaudio 只支持参考音频；都不写就完全按 `tts.style` 的描述生成音色
 
 ## 录屏（nv rec）连接浏览器
