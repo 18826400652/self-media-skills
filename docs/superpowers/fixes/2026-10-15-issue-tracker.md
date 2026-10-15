@@ -1,7 +1,7 @@
 # 问题修复进度
 
 > 来源：`docs/superpowers/reports/2026-10-15-workflow-check.md`（40 个问题，详情看报告）
-> 计划：`docs/superpowers/plans/2026-10-15-fix-batch-1.md`（第 1 批：用户点名的 1–7 组，17 个问题）
+> 计划：`docs/superpowers/plans/2026-10-15-fix-batch-1.md`（第 1 批：用户点名的 1–7 组，17 个问题）；`docs/superpowers/plans/2026-10-15-fix-batch-2.md`（第 2 批：其余 23 个）
 > 分支：`fix/workflow-check`；每个问题修好、测试通过后单独提交一次，提交信息带问题编号
 > 用户决定（2026-10-15）：两种视频做法都保留；P-36 本仓库兜底 + 另去组件库改；hyperframes 统一 0.8.143 单一来源；全部 40 个最终都修
 
@@ -9,47 +9,47 @@
 
 | 编号 | 问题 | 批次 | 状态 | 提交 | 验证 |
 |---|---|---|---|---|---|
-| P-01 | 从零安装时依赖下载极慢（环境问题，非工具包） | 后续 | 待修 | | |
+| P-01 | 从零安装时依赖下载极慢（环境问题，非工具包） | 第 2 批 | 待修 | | |
 | P-02 | `st doctor` 的「依赖」小节全通过时什么都不打印 | 后续 | 已修 | `fix(P-14)` | 随 P-14 一起修：依赖全过时打印「✓ 依赖都装好了」 |
-| P-03 | `kv.mjs` 文件头注释的节点列表过时 | 后续 | 待修 | | |
-| P-04 | director 第 8 步只检查 audio_meta.json 复制了，没检查 caption_groups.json 和 assets/voice/ | 后续 | 待修 | | |
-| P-05 | sc 内置的 requiredSections 默认值和文档不一致 | 后续 | 待修 | | |
-| P-06 | `nv help` 少了最后两行 | 后续 | 待修 | | |
+| P-03 | `kv.mjs` 文件头注释的节点列表过时 | 第 2 批 | 待修 | | |
+| P-04 | director 第 8 步只检查 audio_meta.json 复制了，没检查 caption_groups.json 和 assets/voice/ | 第 2 批 | 待修 | | |
+| P-05 | sc 内置的 requiredSections 默认值和文档不一致 | 第 2 批 | 待修 | | |
+| P-06 | `nv help` 少了最后两行 | 第 2 批 | 待修 | | |
 | P-07 | 一条流程里用了两个版本的 hyperframes | 第 7 组 | 已修 | `fix(P-07)` | config.test 3 例 + render.test 3 例 RED→GREEN；nv 114/114、vd 113/113、kv 85/85、studio 34/34；实跑（副本）：01 hf-build --snap + nv render、02 vd build --sample + nv render --sample 都在 0.8.143 下成功；断网 vd build --no-music 能跑。顺带：导演工程不用再手改 package.json 版本（缺口 1 少一步） |
-| P-08 | 抖音封面字数上限三处写法不一 | 后续 | 待修 | | |
+| P-08 | 抖音封面字数上限三处写法不一 | 第 2 批 | 待修 | | |
 | P-09 | `st doctor` 不检查配置里残留的占位文字 | 第 5 组 | 已修 | `fix(P-09)` | doctor.test.mjs 1 例 RED→GREEN + 1 例反向（夹具补 audience）；project.test 旧用例按新规则放宽允许的 ✗；studio 31/31；真实项目、flow-check 的 st doctor 不报 |
-| P-10 | 参考音色怎么准备没有文档 | 后续 | 待修 | | |
+| P-10 | 参考音色怎么准备没有文档 | 第 2 批 | 待修 | | |
 | P-11 | 默认音效目录是空的，doctor 不提醒 | 第 5 组 | 已修 | `fix(P-11)` | doctor.test.mjs 2 例 RED→GREEN（+1 例反向）；studio 29/29；真实项目、flow-check 的 st doctor 不报（Review Focus 3） |
-| P-12 | `st new --只建抖音` 成功时提示「已创建：<作品>」 | 后续 | 待修 | | |
-| P-13 | narrated-video/SKILL.md 说整段配音只在 seedaudio 时生效 | 后续 | 待修 | | |
+| P-12 | `st new --只建抖音` 成功时提示「已创建：<作品>」 | 第 2 批 | 待修 | | |
+| P-13 | narrated-video/SKILL.md 说整段配音只在 seedaudio 时生效 | 第 2 批 | 待修 | | |
 | P-14 | `st doctor` 只看依赖目录在不在，装到一半失败也报全过 | 第 5 组 | 已修 | `fix(P-14)` | doctor.test.mjs 2 例 RED→GREEN；studio 33/33；实跑：临时挪走 video-director 的 noto-serif-sc，doctor ✗「缺 Node 依赖」，还原后 ✓ |
-| P-15 | `sc bench` 抓到的结果噪声大，抖音收藏数为空 | 后续 | 待修 | | |
+| P-15 | `sc bench` 抓到的结果噪声大，抖音收藏数为空 | 第 2 批 | 待修 | | |
 | P-16 | 空模板的母稿 `sc check` 报「✓ 母稿结构完整」，kv 第 4 步直接判通过 | 第 3 组 | 已修 | `fix(P-16)` | sc.test.mjs 3 例（用真实母稿模板）RED→GREEN；sc 13/13；真实项目 01-不想看 / 02-不露脸 kv status 和修前一致，flow-check 两期母稿仍 ✓ |
-| P-17 | 选题关要填「评论区在要什么」，但没有工具支持 | 后续 | 待修 | | |
-| P-18 | 在作品项目外跑 `bd` 会悄悄连到日常浏览器 | 后续 | 待修 | | |
+| P-17 | 选题关要填「评论区在要什么」，但没有工具支持 | 第 2 批 | 待修 | | |
+| P-18 | 在作品项目外跑 `bd` 会悄悄连到日常浏览器 | 第 2 批 | 待修 | | |
 | P-19 | DeepSeek「复制完整回答」失败时 `nv rec` 不提示 | 第 6 组 | 已修（实跑待手机） | `fix(P-19)` | test_rec_flow.py 3 例 RED→GREEN；phone-draft pytest 108/108；nv rec 走 stdio inherit，⚠ 原样透出。真机复现要等 DeepSeek 复制恰好失败，和 P-20 一起找机会实跑 |
 | P-20 | 豆包录屏走不通 | 第 6 组 | 已修（实跑待手机） | `fix(P-20)` | test_apps.py 4 例 RED→GREEN（含一个我自己写错的 ui_texts 三元组 bug，先补测试再修）；phone-draft pytest 112/112；真机录一轮豆包待用户连手机 |
-| P-21 | 文档没写 WSL 下怎么用 USB 调试 | 后续 | 待修 | | |
+| P-21 | 文档没写 WSL 下怎么用 USB 调试 | 第 2 批 | 待修 | | |
 | P-22 | 第 6 步「自检」会被第 10 步才写的公众号模板挡住 | 第 4 组 | 已修 | `fix(P-22)` | practical-facts.test.mjs 3 例 RED→GREEN + 1 例补充（写了但残留占位，直接通过：覆盖前一例碰巧通过的分支）；kv 85/85；真实项目 3 期 kv status 不变 |
-| P-23 | STORYBOARD 模板第 1、12 帧的 lead 默认位置会压到字幕带 | 后续 | 待修 | | |
-| P-24 | 模板第 7 帧「录屏 + 计时」在浅色录屏上对比度不够 | 后续 | 待修 | | |
+| P-23 | STORYBOARD 模板第 1、12 帧的 lead 默认位置会压到字幕带 | 第 2 批 | 待修 | | |
+| P-24 | 模板第 7 帧「录屏 + 计时」在浅色录屏上对比度不够 | 第 2 批 | 待修 | | |
 | P-25 | shot 盖住下方文字时，第 1 帧没被检查出来，第 12 帧被检查出来了 | 第 3 组 | 已修 | `fix(P-25)` | hf.test.mjs 1 例 RED→GREEN；nv 109/109；实跑：01 副本第 1 帧改回 height 720/top 1000 → hf-build ✗；现在的 01 → 通过。Ruling：原因是 hyperframes 单个采样点的遮挡只给 ℹ，改为 hf-build 把 text_occluded 一律当错误（没按计划写 bounds.py 遮挡检查） |
-| P-26 | marker 组件的高亮会盖住前一个字；steps 组件第一步时只显示两步 | 后续 | 待修 | | |
-| P-27 | 帧时长写回 STORYBOARD 的是 `nv hf-build`，不是 `nv hf-audio` | 后续 | 待修 | | |
+| P-26 | marker 组件的高亮会盖住前一个字；steps 组件第一步时只显示两步 | 第 2 批 | 待修 | | |
+| P-27 | 帧时长写回 STORYBOARD 的是 `nv hf-build`，不是 `nv hf-audio` | 第 2 批 | 待修 | | |
 | P-28 | 渲染后跑 `--motion` 会让 kv 要求重新渲染 | 第 4 组 | 已修 | `fix(P-28)` | hf.test.mjs、captions-step.test.mjs 各 1 例 RED→GREEN；nv 111/111；实跑 01：--motion 后 sheet.jpg、STORYBOARD、audio_meta 的修改时间都不变，kv 判定保持「qa.json 有没修的问题」。另外发现 hf-build 每次重写 STORYBOARD（同步帧时长）和 audio_meta（音效），一并改成内容不变就保留原时间。01 被旧代码改过的两个文件时间已手工恢复 |
 | P-29 | kv 不检查 qa.json 的 checked 和 high 级问题 | 第 3 组 | 已修 | `fix(P-29)` | practical-facts.test.mjs 4 例 RED→GREEN（旧夹具 qa.json 补全 checked）；kv 81/81；真实项目 3 期 kv status 不变 |
-| P-30 | 「落定后完全静止」的修改提示不对题 | 后续 | 待修 | | |
+| P-30 | 「落定后完全静止」的修改提示不对题 | 第 2 批 | 待修 | | |
 | P-31 | 导演做法要的 caption_groups.json 在导演路径上不会生成 | 第 1 组 | 已修 | `fix(P-31)` | captions-step.test.mjs 3 例 RED→GREEN；nv 108/108；实跑 02 删 caption_groups 后 nv hf-audio（缓存）重新生成，帧时长写回 STORYBOARD（顺带改善 P-27） |
 | P-32 | 导演脚本模板写死了真实项目的系列名 | 第 7 组 | 已修 | `fix(P-32)` | templates.test 2 例 + studio project.test 1 例 RED→GREEN（旧模板测试按新规则更新预期）；vd 110/110、studio 34/34；02 的 DIRECTOR 仍通过。同类：骨架 brand-kicker.html 默认值也写死了，一并改 |
-| P-33 | DIRECTOR.md 模板说明文字里的「@词」被当成 cue | 后续 | 待修 | | |
-| P-34 | 配音缓存不跨作品，director 做法要重新付费配一次 | 后续 | 待修 | | |
+| P-33 | DIRECTOR.md 模板说明文字里的「@词」被当成 cue | 第 2 批 | 待修 | | |
+| P-34 | 配音缓存不跨作品，director 做法要重新付费配一次 | 第 2 批 | 待修 | | |
 | P-35 | 配乐取到的曲子比样片还短，重拍对位找不到时只是从头播 | 第 7 组 | 已修 | `fix(P-35)` | music.test 3 例 RED→GREEN（+1 反向）；vd 117/117；实跑（02 副本，带 16 秒旧曲）：重新取曲得 30 秒（时长提示不可靠）→ 循环补到 92 秒，重拍对上 64.26s @四条。Ruling：取曲带时长提示 + 太短重取 + 循环兜底 |
 | P-36 | dykit 组件的动画是固定时长的，不跟 @词，也不撑满整段 | 第 2 组 | 已修（本仓库兜底） | `fix(P-36)` | components/vd 测试 4 例 RED→GREEN；vd 105/105；实跑：02 副本第 2 段改回 dy-checklist，vd build 在组装前 ✗ 拦下。Ruling：本仓库不改组件文件，只在撑不满时报错；真正撑满 + 跟 @词 见 P-36b |
 | P-37 | `vd qa` 不报「整段没内容」 | 第 3 组 | 已修 | `fix(P-37)` | douyin-qa.test.mjs 2 例 RED→GREEN（qa-run 旧夹具补一个内容元素）；vd 108/108；实跑：副本第 5 段末尾清空 → ✗「58–60.5 秒只有背景」；02 原版副本完整构建 0 ✗（无误报） |
 | P-38 | `vd build` 的检查失败时，`vd qa` 照样跑、照样报通过 | 第 3 组 | 已修 | `fix(P-38)` | qa-run.test.mjs 1 例 RED→GREEN；vd 106/106；实跑：02 副本让 build 检查失败后 vd qa 拒绝「上次 vd build 的检查没过」 |
-| P-39 | 口播里的操作说明和真实界面不符，没有任何一步查得出来（内容错误，我写的） | 后续 | 待修 | | |
-| P-40 | vd 自动加的账号结尾条会和最后一段画面重复 | 后续 | 待修 | | |
-| P-41 | nv hf-audio 生成字幕时打印「字体找不到会回退」警告（此时还没打包字体，director 做法用不到这份字幕 HTML，属误导） | 后续 | 待修 | | |
+| P-39 | 口播里的操作说明和真实界面不符，没有任何一步查得出来（内容错误，我写的） | 第 2 批 | 待修 | | |
+| P-40 | vd 自动加的账号结尾条会和最后一段画面重复 | 第 2 批 | 待修 | | |
+| P-41 | nv hf-audio 生成字幕时打印「字体找不到会回退」警告（此时还没打包字体，director 做法用不到这份字幕 HTML，属误导） | 第 2 批 | 待修 | | |
 | P-36b | 组件库（18826400652/hyperframes）28 个组件时间写死：改成按宿主时长撑满、项目可按 vars 给的 @词 时间出现 | 后续（另一个仓库） | 待修 | | |
 
 ## 第 1 批收尾（2026-10-15）
