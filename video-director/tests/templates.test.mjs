@@ -5,9 +5,9 @@ import { parseDirector } from "../scripts/lib/director.mjs";
 
 const read = (p) => readFileSync(new URL(`../templates/${p}`, import.meta.url), "utf8");
 
-test("templates/DIRECTOR.md：章节齐全、机器块合法，唯一的问题是（待填）还没写", () => {
+test("templates/DIRECTOR.md：章节齐全、机器块合法，只差（待填）和栏目标签没写", () => {
   const p = parseDirector(read("DIRECTOR.md"));
-  assert.deepEqual(p.errors, ["还有（待填）没写完"]);
+  assert.deepEqual(p.errors, ["还有（待填）没写完", "kicker（栏目标签）还没填：（栏目 · 第 N 期）"]);
   assert.ok(p.vd.segments.length > 0);
 });
 
@@ -24,4 +24,15 @@ test("单段模板只用 var(--vd-*) 字体变量（hyperframes lint 看不到�
     assert.deepEqual(literal, [], `${name} 写了字体名`);
   }
   assert.match(read("index.html"), /--vd-serif: "Noto Serif SC Variable"/);
+});
+
+test("模板不写死真实项目的系列名；kicker 是占位，校验会提醒填", () => {
+  const md = read("DIRECTOR.md");
+  assert.doesNotMatch(md, /AI 概念一分钟/);
+  assert.ok(parseDirector(md).errors.some((e) => /kicker（栏目标签）还没填/.test(e)));
+});
+
+test("kicker 填了真实栏目名就不报", () => {
+  const md = read("DIRECTOR.md").replace(/"kicker": "[^"]*"/, '"kicker": "某栏目 · 第 3 期"');
+  assert.ok(!parseDirector(md).errors.some((e) => /kicker/.test(e)));
 });

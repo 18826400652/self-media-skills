@@ -40,7 +40,7 @@
 | P-29 | kv 不检查 qa.json 的 checked 和 high 级问题 | 第 3 组 | 已修 | `fix(P-29)` | practical-facts.test.mjs 4 例 RED→GREEN（旧夹具 qa.json 补全 checked）；kv 81/81；真实项目 3 期 kv status 不变 |
 | P-30 | 「落定后完全静止」的修改提示不对题 | 后续 | 待修 | | |
 | P-31 | 导演做法要的 caption_groups.json 在导演路径上不会生成 | 第 1 组 | 已修 | `fix(P-31)` | captions-step.test.mjs 3 例 RED→GREEN；nv 108/108；实跑 02 删 caption_groups 后 nv hf-audio（缓存）重新生成，帧时长写回 STORYBOARD（顺带改善 P-27） |
-| P-32 | 导演脚本模板写死了真实项目的系列名 | 第 7 组 | 待修 | | |
+| P-32 | 导演脚本模板写死了真实项目的系列名 | 第 7 组 | 已修 | `fix(P-32)` | templates.test 2 例 + studio project.test 1 例 RED→GREEN（旧模板测试按新规则更新预期）；vd 110/110、studio 34/34；02 的 DIRECTOR 仍通过。同类：骨架 brand-kicker.html 默认值也写死了，一并改 |
 | P-33 | DIRECTOR.md 模板说明文字里的「@词」被当成 cue | 后续 | 待修 | | |
 | P-34 | 配音缓存不跨作品，director 做法要重新付费配一次 | 后续 | 待修 | | |
 | P-35 | 配乐取到的曲子比样片还短，重拍对位找不到时只是从头播 | 第 7 组 | 待修 | | |

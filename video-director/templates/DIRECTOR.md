@@ -64,7 +64,7 @@
 
 ```json vd
 {
-  "kicker": "AI 概念一分钟 · 第 1 期",
+  "kicker": "（栏目 · 第 N 期）",
   "palette": { "bg": "#F1ECE2", "ink": "#1C1A17", "muted": "#6E675C", "accent": "#FFD84D", "alert": "#D2372A" },
   "fonts": { "title": "serif", "body": "sans" },
   "segments": [

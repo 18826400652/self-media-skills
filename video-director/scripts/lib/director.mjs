@@ -50,6 +50,7 @@ function checkVd(vd) {
   const e = [];
   for (const k of ["bg", "ink", "muted", "accent", "alert"]) if (!HEX.test(vd.palette?.[k] ?? "")) e.push(`palette.${k} 必须是 #RRGGBB`);
   if (!vd.kicker) e.push("缺少 kicker（栏目标签文字）");
+  else if (/^（.*）$/.test(vd.kicker.trim())) e.push(`kicker（栏目标签）还没填：${vd.kicker}`);
   if (!Array.isArray(vd.segments) || !vd.segments.length) e.push("segments 不能为空");
   (Array.isArray(vd.segments) ? vd.segments : []).forEach((s, i) => {
     if (s.component !== undefined && !COMPONENT.test(s.component)) e.push(`segments[${i}].component 必须是 dykit 组件名（dy-开头）`);

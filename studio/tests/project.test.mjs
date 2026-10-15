@@ -167,3 +167,8 @@ test("st install：不加 --deps 时提示的是「没检查依赖」，并指�
   assert.equal(install({ home: tmp("st-home-"), log: out.log }), 0);
   assert.match(out.text(), /没检查依赖.*st doctor/);
 });
+
+test("作品项目骨架不写死任何真实系列名", () => {
+  const html = readFileSync(join(TOOLKIT_DIR, "studio/skeleton/06-品牌资产/hyperframes/brand-kicker.html"), "utf8");
+  assert.doesNotMatch(html, /AI 概念一分钟/);
+});
