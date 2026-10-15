@@ -155,6 +155,14 @@ function readJsonOrNull(p) {
   try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; }
 }
 
+/** 导演工程里 vd build 要读的配音产物：caption_groups.json 和 audio_meta.json 引用的每个音频 */
+function missingVoiceFiles(root) {
+  if (!existsSync(join(root, "caption_groups.json"))) return no(`${DIRECTOR_DIR}/ 里没有 caption_groups.json，从 抖音/ 复制过来`);
+  const voices = readJsonOrNull(join(root, "audio_meta.json"))?.voices ?? [];
+  const missing = voices.map((v) => v.path).filter((p) => p && !existsSync(join(root, p)));
+  return missing.length ? no(`${DIRECTOR_DIR}/ 里缺配音文件：${missing.join("、")}（从 抖音/ 复制 assets/voice/）`) : ok();
+}
+
 function directorSteps(dir, runVdCues) {
   const root = join(dir, DIRECTOR_DIR);
   const md = join(root, "DIRECTOR.md");
@@ -163,7 +171,7 @@ function directorSteps(dir, runVdCues) {
     : !existsSync(md) ? no(`还没有 ${DIRECTOR_DIR}/DIRECTOR.md`)
     : !existsSync(join(root, "audio_meta.json")) ? no(`还没把配音复制到 ${DIRECTOR_DIR}/（audio_meta.json、caption_groups.json、assets/voice/）`)
     : mtime(join(root, "audio_meta.json")) < mtime(voice) ? no(`抖音/ 重新配过音，把 audio_meta.json、caption_groups.json、assets/voice/ 复制到 ${DIRECTOR_DIR}/`)
-    : ok();
+    : missingVoiceFiles(root);
   if (director.ok) {
     const v = runVdCues(root);
     if (!v.ok) director = no(v.msg);

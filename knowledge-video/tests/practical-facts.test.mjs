@@ -161,12 +161,25 @@ test("director：第 8 步要配音、DIRECTOR.md、vd cues 通过；导演工�
   assert.match(f.steps.director.why, /还没配音/);
   f = dCollect(episode({ "抖音/audio_meta.json": "{}" }));
   assert.match(f.steps.director.why, /还没有 抖音-director\/DIRECTOR\.md/);
-  const dir = episode({ "抖音/audio_meta.json": "{}", [`${D}/DIRECTOR.md`]: "x", [`${D}/audio_meta.json`]: "{}" });
+  const dir = episode({ "抖音/audio_meta.json": "{}", [`${D}/DIRECTOR.md`]: "x", [`${D}/audio_meta.json`]: "{}", [`${D}/caption_groups.json`]: "{}" });
   assert.match(dCollect(dir, dRun(), { runVdCues: () => ({ ok: false, msg: "第 3 句没有分到任何段" }) }).steps.director.why, /第 3 句/);
   assert.equal(dCollect(dir).steps.director.ok, true);
   touch(dir, `${D}/audio_meta.json`, 1000);
   touch(dir, "抖音/audio_meta.json", 2000);
   assert.match(dCollect(dir).steps.director.why, /重新配过音/);
+});
+
+test("director：导演工程里缺 caption_groups.json 或 assets/voice/ 的配音文件 → 第 8 步不通过，说缺哪个", () => {
+  const meta = JSON.stringify({ voices: [{ frame: 1, path: "assets/voice/01.wav" }, { frame: 2, path: "assets/voice/02.wav" }] });
+  const dir = episode({ "抖音/audio_meta.json": meta, [`${D}/DIRECTOR.md`]: "x", [`${D}/audio_meta.json`]: meta });
+  touch(dir, "抖音/audio_meta.json", 1000);
+  assert.match(dCollect(dir).steps.director.why, /caption_groups\.json/);
+  writeFileSync(join(dir, D, "caption_groups.json"), "{}");
+  mkdirSync(join(dir, D, "assets/voice"), { recursive: true });
+  writeFileSync(join(dir, D, "assets/voice/01.wav"), "a");
+  assert.match(dCollect(dir).steps.director.why, /assets\/voice\/02\.wav/);
+  writeFileSync(join(dir, D, "assets/voice/02.wav"), "a");
+  assert.equal(dCollect(dir).steps.director.ok, true);
 });
 
 test("director：样片要有 renders/sample.mp4 且样片 vd qa 通过；只改 DIRECTOR.md 不算样片过期（③a 失效会把关）", () => {
