@@ -4,11 +4,9 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, symlinkSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { TOOLKIT_DIR } from "./project.mjs";
+import { NV_PY, TOOLKIT_DIR } from "./project.mjs";
 import { toolkitSkills } from "./doctor.mjs";
 
-/** narrated-video 的 Python 依赖（见它的 references/setup.md） */
-const NV_PY = ["dashscope", "edge-tts", "kokoro-onnx", "soundfile", "fonttools", "brotli", "pillow"];
 
 function link(target, at, log) {
   let st = null;

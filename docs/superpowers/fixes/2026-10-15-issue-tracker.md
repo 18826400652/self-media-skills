@@ -10,7 +10,7 @@
 | 编号 | 问题 | 批次 | 状态 | 提交 | 验证 |
 |---|---|---|---|---|---|
 | P-01 | 从零安装时依赖下载极慢（环境问题，非工具包） | 后续 | 待修 | | |
-| P-02 | `st doctor` 的「依赖」小节全通过时什么都不打印 | 后续 | 待修 | | |
+| P-02 | `st doctor` 的「依赖」小节全通过时什么都不打印 | 后续 | 已修 | `fix(P-14)` | 随 P-14 一起修：依赖全过时打印「✓ 依赖都装好了」 |
 | P-03 | `kv.mjs` 文件头注释的节点列表过时 | 后续 | 待修 | | |
 | P-04 | director 第 8 步只检查 audio_meta.json 复制了，没检查 caption_groups.json 和 assets/voice/ | 后续 | 待修 | | |
 | P-05 | sc 内置的 requiredSections 默认值和文档不一致 | 后续 | 待修 | | |
@@ -22,7 +22,7 @@
 | P-11 | 默认音效目录是空的，doctor 不提醒 | 第 5 组 | 已修 | `fix(P-11)` | doctor.test.mjs 2 例 RED→GREEN（+1 例反向）；studio 29/29；真实项目、flow-check 的 st doctor 不报（Review Focus 3） |
 | P-12 | `st new --只建抖音` 成功时提示「已创建：<作品>」 | 后续 | 待修 | | |
 | P-13 | narrated-video/SKILL.md 说整段配音只在 seedaudio 时生效 | 后续 | 待修 | | |
-| P-14 | `st doctor` 只看依赖目录在不在，装到一半失败也报全过 | 第 5 组 | 待修 | | |
+| P-14 | `st doctor` 只看依赖目录在不在，装到一半失败也报全过 | 第 5 组 | 已修 | `fix(P-14)` | doctor.test.mjs 2 例 RED→GREEN；studio 33/33；实跑：临时挪走 video-director 的 noto-serif-sc，doctor ✗「缺 Node 依赖」，还原后 ✓ |
 | P-15 | `sc bench` 抓到的结果噪声大，抖音收藏数为空 | 后续 | 待修 | | |
 | P-16 | 空模板的母稿 `sc check` 报「✓ 母稿结构完整」，kv 第 4 步直接判通过 | 第 3 组 | 已修 | `fix(P-16)` | sc.test.mjs 3 例（用真实母稿模板）RED→GREEN；sc 13/13；真实项目 01-不想看 / 02-不露脸 kv status 和修前一致，flow-check 两期母稿仍 ✓ |
 | P-17 | 选题关要填「评论区在要什么」，但没有工具支持 | 后续 | 待修 | | |
