@@ -28,7 +28,7 @@
 | P-17 | 选题关要填「评论区在要什么」，但没有工具支持 | 后续 | 待修 | | |
 | P-18 | 在作品项目外跑 `bd` 会悄悄连到日常浏览器 | 后续 | 待修 | | |
 | P-19 | DeepSeek「复制完整回答」失败时 `nv rec` 不提示 | 第 6 组 | 已修（实跑待手机） | `fix(P-19)` | test_rec_flow.py 3 例 RED→GREEN；phone-draft pytest 108/108；nv rec 走 stdio inherit，⚠ 原样透出。真机复现要等 DeepSeek 复制恰好失败，和 P-20 一起找机会实跑 |
-| P-20 | 豆包录屏走不通 | 第 6 组 | 待修 | | |
+| P-20 | 豆包录屏走不通 | 第 6 组 | 已修（实跑待手机） | `fix(P-20)` | test_apps.py 4 例 RED→GREEN（含一个我自己写错的 ui_texts 三元组 bug，先补测试再修）；phone-draft pytest 112/112；真机录一轮豆包待用户连手机 |
 | P-21 | 文档没写 WSL 下怎么用 USB 调试 | 后续 | 待修 | | |
 | P-22 | 第 6 步「自检」会被第 10 步才写的公众号模板挡住 | 第 4 组 | 已修 | `fix(P-22)` | practical-facts.test.mjs 3 例 RED→GREEN + 1 例补充（写了但残留占位，直接通过：覆盖前一例碰巧通过的分支）；kv 85/85；真实项目 3 期 kv status 不变 |
 | P-23 | STORYBOARD 模板第 1、12 帧的 lead 默认位置会压到字幕带 | 后续 | 待修 | | |

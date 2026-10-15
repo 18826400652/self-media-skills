@@ -13,7 +13,31 @@ IMAGE = "android.widget.ImageView"
 TOP_BAR = 300          # 像素：顶栏下边界
 # 空白新对话里应该只有这些文字；出现别的（历史消息、新推荐）就不录
 EMPTY_LABELS = {"新对话", "内容由 AI 生成", "打电话", "视频通话", "拍题答疑", "照片动起来", "按住说话",
+                "AI 创作", "AI 播客",       # 2026-10 版新对话页底部的入口
                 "发消息或按住说话...", "发消息..."}
+# 打开 App 时弹的更新窗口：认标题，再找「不更新」的按钮点掉
+UPDATE_TITLES = ("发现新版本", "版本更新", "新版本")
+UPDATE_DISMISS = ("稍后再说", "以后再说", "下次再说", "暂不更新", "稍后", "取消", "关闭")
+
+
+def update_dialog_action(labels):
+    """不是更新窗口返回 None；能关掉返回要点的按钮文字；关不掉返回 "manual"。"""
+    if not any(t in label for label in labels for t in UPDATE_TITLES):
+        return None
+    return next((d for d in UPDATE_DISMISS if d in labels), "manual")
+
+
+def guard_ui(fn):
+    """找不到界面元素时 uiautomator2 抛英文异常：换成能看懂的中文提示（多半是弹了窗口或豆包改版了）。"""
+    def wrapped(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as err:  # noqa: BLE001 —— 只认 uiautomator2 的「找不到元素」，其他照常抛
+            if type(err).__name__ != "UiObjectNotFoundError":
+                raise
+            fail("豆包的界面和脚本预期的不一样（可能弹了更新或活动窗口，也可能改版了）：把手机上的窗口关掉再录；"
+                 "还不行就用 pd ui doubao 看看现在的界面")
+    return wrapped
 
 
 def unexpected_labels(labels, input_text=""):
@@ -54,8 +78,21 @@ def short_labels(labels, width=12):
     return "、".join(t.replace("\n", " ")[:width] for t in labels[:3])
 
 
+def dismiss_update_dialog():
+    action = update_dialog_action([label for label, *_ in ui_texts()])
+    if action is None:
+        return
+    if action == "manual":
+        fail("豆包弹了更新窗口，找不到「稍后 / 取消」按钮：在手机上手动关掉再录")
+    device()(text=action).click()
+    time.sleep(1)
+
+
+@guard_ui
 def open_new_chat():
     open_app(PACKAGE)
+    time.sleep(1)
+    dismiss_update_dialog()
     menu = device()(className=IMAGE, clickable=True)
     if not menu.exists or _bounds(menu[0])["top"] > TOP_BAR:
         fail_with_ui("找不到豆包左上角的菜单按钮")

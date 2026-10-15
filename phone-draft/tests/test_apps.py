@@ -75,3 +75,39 @@ def test_unexpected_labels_ignores_leftover_input_text():
 def test_deepseek_done_marker_is_in_input_bar_not_below_answer():
     # 回答比一屏长时「复制」在屏幕外、不在界面结构里；输入栏的语音键生成时变成停止键，回答完才回来
     assert deepseek.DONE_DESC == "切换至语音"
+
+
+def test_doubao_new_chat_entries_2026_10():
+    """2026-10 版新对话页底部四个入口：打电话、AI 创作、拍题答疑、AI 播客"""
+    labels = ["新对话", "内容由 AI 生成", "打电话", "AI 创作", "拍题答疑", "AI 播客", "发消息或按住说话..."]
+    assert doubao.unexpected_labels(labels) == []
+
+
+def test_doubao_update_dialog_action():
+    assert doubao.update_dialog_action(["发现新版本", "立即更新", "稍后再说"]) == "稍后再说"
+    assert doubao.update_dialog_action(["版本更新", "立即更新", "取消"]) == "取消"
+    assert doubao.update_dialog_action(["发现新版本", "立即更新"]) == "manual"
+    assert doubao.update_dialog_action(["新对话", "打电话"]) is None
+
+
+def test_doubao_ui_not_found_becomes_chinese_hint(capsys):
+    class UiObjectNotFoundError(Exception):
+        pass
+
+    def boom():
+        raise UiObjectNotFoundError((-32001, "androidx.test.uiautomator.UiObjectNotFoundException"))
+
+    with pytest.raises(SystemExit):
+        doubao.guard_ui(boom)()
+    err = capsys.readouterr()
+    assert "豆包的界面和脚本预期的不一样" in err.out + err.err
+
+
+def test_doubao_dismiss_update_dialog_reads_ui_texts_tuples(monkeypatch):
+    """ui_texts() 给的是 (文字, id, 位置)，要按文字认弹窗"""
+    clicked = []
+    monkeypatch.setattr(doubao, "ui_texts", lambda: [("发现新版本", "id/t", "[0,0][1,1]"), ("稍后再说", "id/b", "[0,0][1,1]")])
+    monkeypatch.setattr(doubao, "device", lambda: (lambda **kw: type("S", (), {"click": lambda self: clicked.append(kw["text"])})()))
+    monkeypatch.setattr(doubao.time, "sleep", lambda s: None)
+    doubao.dismiss_update_dialog()
+    assert clicked == ["稍后再说"]
