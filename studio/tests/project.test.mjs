@@ -111,11 +111,19 @@ test("st install：软链 skill 和命令；旧软链改指向；真实目录不
   mkdirSync(join(home, ".claude/skills"), { recursive: true });
   symlinkSync("/nowhere", join(home, ".claude/skills/narrated-video"));
   mkdirSync(join(home, ".claude/skills/image-cards"));
-  const code = install({ home, log: quiet });
+  const out = capture();
+  const code = install({ home, log: out.log });
   assert.equal(code, 1, "image-cards 是真实目录，应报出来");
   assert.equal(readlinkSync(join(home, ".claude/skills/narrated-video")), join(TOOLKIT_DIR, "narrated-video"));
   assert.equal(readlinkSync(join(home, ".claude/skills/studio")), join(TOOLKIT_DIR, "studio"));
   assert.ok(!lstatSync(join(home, ".claude/skills/image-cards")).isSymbolicLink());
   assert.equal(realpathSync(join(home, ".local/bin/st")), join(TOOLKIT_DIR, "studio/bin/st"));
   assert.equal(realpathSync(join(home, ".local/bin/kv")), join(TOOLKIT_DIR, "knowledge-video/bin/kv"));
+  assert.doesNotMatch(out.text(), /依赖没装/, "不加 --deps 时不该断言依赖没装");
+});
+
+test("st install：不加 --deps 时提示的是「没检查依赖」，并指向 st doctor", () => {
+  const out = capture();
+  assert.equal(install({ home: tmp("st-home-"), log: out.log }), 0);
+  assert.match(out.text(), /没检查依赖.*st doctor/);
 });

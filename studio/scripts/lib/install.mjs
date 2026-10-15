@@ -53,7 +53,7 @@ export function install({ deps = false, home = homedir(), toolkit = TOOLKIT_DIR,
     if (existsSync(bin)) for (const f of readdirSync(bin)) ok = link(join(bin, f), join(binDir, f), log) && ok;
     if (deps) ok = installDeps(s, dir, log) && ok;
   }
-  log(ok ? `✓ 已指向 ${toolkit}${deps ? "" : "（依赖没装：要装加 --deps）"}；下一步在作品项目里跑 st doctor` : "✗ 有几项没装好，看上面");
+  log(ok ? `✓ 已指向 ${toolkit}${deps ? "，依赖已装" : "（没检查依赖：缺什么在作品项目里跑 st doctor 看，要装加 --deps）"}；下一步在作品项目里跑 st doctor` : "✗ 有几项没装好，看上面");
   if (!process.env.PATH.split(":").includes(binDir)) log(`⚠ ${binDir} 不在 PATH 上，要加进 shell 配置`);
   return ok ? 0 : 1;
 }
