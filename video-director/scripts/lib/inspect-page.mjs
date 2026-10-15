@@ -32,7 +32,19 @@ function collect() {
     }
     return o;
   };
-  const boxOf = (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)]; };
+  // 看得见的范围：元素框和所有裁切祖先（overflow 不是 visible）的框取交集
+  const boxOf = (e) => {
+    const r = e.getBoundingClientRect();
+    let [x1, y1, x2, y2] = [r.left, r.top, r.right, r.bottom];
+    for (let a = e.parentElement; a && a !== document.body; a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+      const c = a.getBoundingClientRect();
+      if (cs.overflowX !== "visible") { x1 = Math.max(x1, c.left); x2 = Math.min(x2, c.right); }
+      if (cs.overflowY !== "visible") { y1 = Math.max(y1, c.top); y2 = Math.min(y2, c.bottom); }
+    }
+    return [Math.round(x1), Math.round(y1), Math.round(Math.max(x1, x2)), Math.round(Math.max(y1, y2))];
+  };
   const area = (b) => Math.max(0, b[2] - b[0]) * Math.max(0, b[3] - b[1]);
   const onScreen = (b) => b[2] > 0 && b[3] > 0 && b[0] < innerWidth && b[1] < innerHeight;
   const ownText = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());

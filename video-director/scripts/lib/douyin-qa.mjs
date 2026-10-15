@@ -1,6 +1,7 @@
 // 抖音专用检查（纯函数）：按 @词 落定时刻查出画面、安全区、字幕带、栏目标签遮挡、@词 元素可见；每 0.5 秒比画面签名查 2 秒不动
 const W = 1080, H = 1920, TOL = 2;
 const SAFE = { top: 200, right: 160, bottom: 480 }; // 平台界面占的边（director-rules 第 11 条）
+const RIGHT_FROM = 760; // 右侧按钮列（头像、点赞、评论、收藏、分享）从这里往下；上半屏内容可以用到 x 1020
 const CAPTION = { top: 1180, bottom: 1440 }; // 字幕带只放字幕
 const SETTLE = 0.8; // @词 后多久算落定
 const SEG_TAIL = 0.3; // 每段结尾前多久截一张
@@ -34,7 +35,7 @@ export function checkFrame(f) {
     const [x1, y1, x2, y2] = e.box;
     if (x1 < -TOL || y1 < -TOL || x2 > W + TOL || y2 > H + TOL) { add("out", e.sel, "出了画面"); continue; }
     if (y1 < SAFE.top - TOL) add("top", e.sel, `进了顶部 ${SAFE.top} 像素（平台界面）`);
-    if (x2 > W - SAFE.right + TOL) add("right", e.sel, `进了右侧 ${SAFE.right} 像素（点赞、评论按钮）`);
+    if (x2 > W - SAFE.right + TOL && y2 > RIGHT_FROM + TOL) add("right", e.sel, `进了右侧 ${SAFE.right} 像素（点赞、评论按钮）`);
     if (y2 > H - SAFE.bottom + TOL) add("bottom", e.sel, `进了底部 ${SAFE.bottom} 像素（标题、文案）`);
     else if (y2 > CAPTION.top + TOL && y1 < CAPTION.bottom - TOL) add("caption", e.sel, `压到字幕带 y ${CAPTION.top}–${CAPTION.bottom}`);
   }

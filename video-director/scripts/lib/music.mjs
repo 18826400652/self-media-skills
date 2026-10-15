@@ -51,11 +51,15 @@ export function alignMusic(dir, { src, drop, duration }, hfVersion, runFn = run)
   return pick.mediaStart;
 }
 
+/** 工程里没有 @hyperframes/core 就装上（人声避让、vd qa 打包都要用） */
+export function ensureCore(dir, hfVersion, runFn = run) {
+  if (existsSync(join(dir, "node_modules/@hyperframes/core"))) return;
+  const i = runFn("npm", ["i", "-D", "--no-audit", "--no-fund", `@hyperframes/core@${hfVersion}`], { cwd: dir });
+  if (i.status !== 0) throw new Error(`安装 @hyperframes/core 失败：${i.stderr}`);
+}
+
 export function carve(dir, hfVersion, runFn = run) {
-  if (!existsSync(join(dir, "node_modules/@hyperframes/core"))) {
-    const i = runFn("npm", ["i", "-D", "--no-audit", "--no-fund", `@hyperframes/core@${hfVersion}`], { cwd: dir });
-    if (i.status !== 0) throw new Error(`安装 @hyperframes/core 失败（人声避让需要）：${i.stderr}`);
-  }
+  ensureCore(dir, hfVersion, runFn);
   const c = runFn("node", [CARVE, "--comp", "index.html", "--bed", "music", "--voice", "vo"], { cwd: dir });
   if (c.status !== 0) throw new Error(`人声避让失败：${c.stderr || c.stdout}`);
 }

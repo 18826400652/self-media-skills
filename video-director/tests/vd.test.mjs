@@ -56,3 +56,16 @@ test("installAll：升级后下载失败，锁文件不变（旧缓存还能用�
   assert.throws(() => installAll(project({}), { segments: [{ id: "a", component: "dy-x" }] }, { update: true }, deps), /下载组件库失败/);
   assert.deepEqual(writes, []);
 });
+
+test("vd cues --check：DIRECTOR.md 有错返回 1，且不写 cues.js", async () => {
+  const { existsSync } = await import("node:fs");
+  const dir = project({
+    "video-director.config.json": { fontsDir: "/f", gsap: "/g.js", brandDir: "b", sfxDir: "/s", hfVersion: "0.8.143" },
+    "ep/DIRECTOR.md": "# 导演脚本\n没有机器块",
+    "ep/audio_meta.json": { voices: [{ frame: 1, duration_s: 1, words: [{ text: "你好", start: 0, end: 1 }] }] },
+  });
+  const orig = console.error;
+  console.error = () => {};
+  try { assert.equal(await main(["cues", `${dir}/ep`, "--check"]), 1); } finally { console.error = orig; }
+  assert.equal(existsSync(`${dir}/ep/cues.js`), false);
+});

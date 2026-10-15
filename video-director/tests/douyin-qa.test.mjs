@@ -34,7 +34,8 @@ test("checkFrame：出画面、进顶部 / 右侧 / 底部安全区、压字幕�
   const kinds = (e) => checkFrame(frame({ elements: [el(e)] })).map((i) => i.kind);
   assert.deepEqual(kinds({ box: [-40, 400, 300, 500] }), ["out"]);
   assert.deepEqual(kinds({ box: [100, 150, 500, 260] }), ["top"]);
-  assert.deepEqual(kinds({ box: [600, 400, 950, 500] }), ["right"]);
+  assert.deepEqual(kinds({ box: [600, 800, 950, 900] }), ["right"]);
+  assert.deepEqual(kinds({ box: [600, 400, 950, 500] }), [], "右侧按钮只在 y 760 以下，上半屏可以用到 x 1020");
   assert.deepEqual(kinds({ box: [100, 1500, 500, 1560] }), ["bottom"]);
   assert.deepEqual(kinds({ box: [100, 1150, 500, 1200] }), ["caption"]);
   assert.deepEqual(kinds({}), []);

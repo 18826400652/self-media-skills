@@ -2,7 +2,7 @@
 name: video-director
 description: >
   视频导演：已写好的口播稿 + nv hf-audio 的配音 → 导演脚本 DIRECTOR.md → 按内容设计风格的 HyperFrames 视频工程（每段一个子画面，
-  账号固定元素：栏目标签、字幕、结尾），带配乐重拍对位和人声避让。提供 vd 命令：vd cues、vd build [--sample] [--no-music]、vd check。
+  账号固定元素：栏目标签、字幕、结尾），带配乐重拍对位和人声避让。提供 vd 命令：vd cues、vd build [--sample] [--no-music]、vd qa（抖音专用检查）、vd check。
   当用户要「按导演脚本做视频」、brief.md 里 video: director，或作品目录里有 DIRECTOR.md 时使用。配音用 narrated-video，渲染用 nv render。
 ---
 
@@ -17,6 +17,7 @@ description: >
 ```bash
 ln -s <skill 目录> ~/.claude/skills/video-director
 ln -s <skill 目录>/bin/vd ~/.local/bin/vd
+cd <skill 目录> && npm i                             # vd qa 要用 puppeteer-core
 echo 'export NODE_USE_ENV_PROXY=1' >> ~/.bashrc       # 走代理时 Node 才能联网
 curl -fsSL https://static.heygen.ai/cli/install.sh | bash   # 配乐用的 heygen CLI（先看一遍脚本）
 HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免费额度（API Key 会扣钱包）
@@ -30,9 +31,9 @@ HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免
 |---|---|---|
 | 0 | 口播稿、配音稿确认后，`nv hf-audio <抖音工程>` 生成配音和逐字时间轴 | — |
 | 1 | 新建导演工程（下面的命令），按 `templates/DIRECTOR.md` 写导演脚本；`vd cues .` 确认每个 @词都找得到 | **③a 请用户审 DIRECTOR.md** |
-| 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build . --sample`；在每个 @词 截图检查；`npx hyperframes render` 出样片 | **③b 请用户看样片** |
+| 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build . --sample`；`vd qa .` 无 ✗（看 `snapshots/cues-sheet.jpg`）；`npx hyperframes render -o renders/sample.mp4` 出样片 | **③b 请用户看样片** |
 | 3 | 写其余各段，每写一段 `vd build . --no-music` + 截图；全部写完 `vd build .` | — |
-| 4 | 全片在每个 @词 截图检查，问题记进 `qa.json`；`nv render <工程>`；和旧版做对比视频；`vd check` 列出组件候选 | **④ 请用户看成片 + 组件候选** |
+| 4 | 全片 `vd qa .` 无 ✗，按总览图逐条对照 DIRECTOR.md，问题记进 `qa.json`；`nv render <工程>`；和旧版做对比视频（`renders/compare.mp4`）；`vd check` 列出组件候选 | **④ 请用户看成片 + 组件候选** |
 
 用户没明确说通过，不往下走。
 
@@ -52,7 +53,8 @@ cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-dir
 
 | 命令 | 作用 |
 |---|---|
-| `vd cues <工程>` | 校验 DIRECTOR.md，把所有 @词 换算成秒数写进 `cues.js`，并打印出来 |
+| `vd cues <工程> [--check]` | 校验 DIRECTOR.md，把所有 @词 换算成秒数写进 `cues.js`，并打印出来；`--check` 只校验不写文件 |
+| `vd qa <工程>` | 抖音专用检查：在每个 @词 落定时刻（@词 后 0.8 秒）和每段结尾截图，查出画面、安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；每 0.5 秒比一次，2 秒不动（⚠）。被 overflow 裁掉的部分不算。结果 `qa-douyin.json`，总览 `snapshots/cues-sheet.jpg` |
 | `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
 | `vd check <工程>` | 校验 DIRECTOR.md + 列出组件候选 + `hyperframes check` |
 
