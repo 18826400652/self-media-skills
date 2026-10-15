@@ -1,8 +1,9 @@
 # 小红书「发草稿」步骤（视频笔记）：由 `nv draft --to xiaohongshu` 生成载荷后，经 `bd run` 在已登录的浏览器里执行。
-# 载荷：{"video"（本地 MP4）, "copy"（文案.md，格式见 browser-draft 的 read_copy）}
+# 载荷：{"video"（本地 MP4）, "copy"（文案.md，格式见 browser-draft 的 read_copy）, "cover"（可选，封面图 png/jpg）}
 # 只点「暂存离开」，不点「发布」。网页端的草稿只存在这台电脑的浏览器里，不同步到手机 App。
 # 标题、正文、话题、暂存和 image-cards 的图文脚本（draft_xiaohongshu.py）是同一个发布页；skill 之间不互相依赖，所以各写一份。
 import html as htmllib
+import os
 import time
 
 PUBLISH_URL = "https://creator.xiaohongshu.com/publish/publish?source=official&from=tab_switch&target=video"
@@ -45,6 +46,44 @@ def upload_video():
     log("视频已上传")
     time.sleep(1)
     dismiss(["我知道了"])
+
+
+COVER_THUMB = ".cover-plugin-preview .default"
+COVER_BG = '(document.querySelector(' + js_str(COVER_THUMB) + ') || {style: {}}).style.backgroundImage || ""'
+
+
+def set_cover():
+    """上传自己的封面图。缩略图要真实鼠标悬停才出现「编辑封面」，而且它只认真实的鼠标点击（JS click 没反应）；
+    弹窗里的图片上传框是弹窗打开后才有的。网页会把封面裁成 3:4（9:16 的图只留上面一截），封面大字要放在上半部分。"""
+    cover = PAYLOAD.get("cover")
+    if not cover:
+        log("封面：用视频第一帧（没传 --cover）")
+        return
+    before = wait_until(COVER_BG, timeout=60, what="视频第一帧封面生成")  # 缩略图有画面后，悬停才会出「编辑封面」
+    xy = None
+    for _ in range(5):
+        # 「编辑封面」靠 CSS :hover 显示（平时 display: none），JS 派发悬停事件没用：用真实鼠标点一下缩略图，鼠标就停在上面了
+        c = js(f"""(() => {{ const e = document.querySelector({js_str(COVER_THUMB)}); e.scrollIntoView({{block: "center"}});
+          const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 3]; }})()""")
+        click_at_xy(c[0], c[1])
+        time.sleep(1)
+        xy = js("""(() => { const b = document.querySelector(".cover-edit-entry"); if (!b) return null;
+          const r = b.getBoundingClientRect(); return r.width ? [r.x + r.width / 2, r.y + r.height / 2] : null; })()""")
+        if xy:
+            break
+        time.sleep(2)
+    if not xy:
+        fail("找不到「编辑封面」，发布页可能改版了")
+    click_at_xy(xy[0], xy[1])
+    wait_until("""!!document.querySelector("input[type=file][accept*=image]")""", timeout=30, what="封面弹窗")
+    time.sleep(1)
+    js("""document.querySelector("input[type=file][accept*=image]").setAttribute("data-bd", "cover")""")
+    upload('[data-bd="cover"]', cover)
+    time.sleep(5)  # 弹窗里显示上传的图后才能点「完成」
+    if not click_text("完成"):
+        fail("封面弹窗里找不到「完成」")
+    wait_until(f"""(() => {{ const b = {COVER_BG}; return b && b !== {js_str(before)}; }})()""", timeout=60, what="封面换成上传的图")
+    log(f"封面：{os.path.basename(cover)}（已上传）")
 
 
 def fill_title():
@@ -104,9 +143,10 @@ def save_draft(before):
 
 before = open_publish_page()
 upload_video()
+set_cover()
 fill_title()
 fill_body()
 add_topics()
 shot("xiaohongshu-video-draft")
 save_draft(before)
-print(f"✓ 小红书视频草稿已暂存：{COPY['title']}。在创作服务平台「草稿箱」里打开预览、选封面，确认后由你发布（草稿只在这台电脑的浏览器里）。")
+print(f"✓ 小红书视频草稿已暂存：{COPY['title']}。在创作服务平台「草稿箱」里打开预览，确认后由你发布（草稿只在这台电脑的浏览器里）。")

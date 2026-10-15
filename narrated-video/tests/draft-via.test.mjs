@@ -76,3 +76,50 @@ test("--to 的值不对就报错", () => {
   assert.equal(r.status, 1);
   assert.match(r.stderr, /douyin 或 xiaohongshu/);
 });
+
+/** 假 bd / pd 把载荷文件内容也记下来 */
+function setupWithPayload() {
+  const s = setup();
+  for (const name of ["pd", "bd"]) {
+    writeFileSync(join(s.dir, "bin", name), `#!/usr/bin/env bash\necho "${name} $*" >> "${s.dir}/calls.log"\ncat "$3" > "${s.dir}/payload.json"\n`);
+  }
+  writeFileSync(join(s.dir, "封面.png"), "png");
+  return s;
+}
+const payloadOf = (dir) => JSON.parse(readFileSync(join(dir, "payload.json"), "utf8"));
+
+test("--cover 把封面图路径放进载荷（抖音、小红书都支持）", () => {
+  for (const to of ["douyin", "xiaohongshu"]) {
+    const { dir, env } = setupWithPayload();
+    const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--cover", join(dir, "封面.png"), "--to", to], env);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(payloadOf(dir).cover, join(dir, "封面.png"));
+    assert.equal(payloadOf(dir).video, join(dir, "成片.mp4"));
+  }
+});
+
+test("不传 --cover 时载荷里没有 cover", () => {
+  const { dir, env } = setupWithPayload();
+  const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md")], env);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(payloadOf(dir).cover, undefined);
+});
+
+test("--cover 文件不存在或不是图片就报错", () => {
+  const { dir, env } = setupWithPayload();
+  let r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--cover", join(dir, "没有.png")], env);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /封面图不存在/);
+  r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--cover", join(dir, "文案.md")], env);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /png 或 jpg/);
+  assert.equal(calls(dir), "");
+});
+
+test("--cover 不支持手机", () => {
+  const { dir, env } = setupWithPayload();
+  const r = run([join(dir, "成片.mp4"), "--copy", join(dir, "文案.md"), "--cover", join(dir, "封面.png"), "--via", "phone"], env);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /封面图.*浏览器/);
+  assert.equal(calls(dir), "");
+});

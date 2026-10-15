@@ -1,7 +1,8 @@
 # 抖音「发草稿」步骤：由 `nv draft` 生成载荷后，经 `bd run` 在已登录的浏览器里执行。
-# 载荷：{"video"（本地 MP4）, "copy"（发布文案.md，格式见 browser-draft 的 read_copy）}
+# 载荷：{"video"（本地 MP4）, "copy"（发布文案.md，格式见 browser-draft 的 read_copy）, "cover"（可选，封面图 png/jpg）}
 # 只点「暂存离开」，不点「发布」。
 # 抖音网页端只保留「一条」未发布的作品（再次打开上传页会提示继续编辑 / 放弃），不是草稿列表。
+import os
 import time
 
 UPLOAD_URL = "https://creator.douyin.com/creator-micro/content/upload"
@@ -105,7 +106,7 @@ COVER_DONE_ENABLED = """(() => { const b = [...document.querySelectorAll("button
 def set_default_cover():
     """封面必填，尽力而为：打开封面弹窗，等视频画面加载出来后「完成」，用视频画面做横封面（4:3），
     抖音再据此生成竖封面（3:4）。弹窗里的视频画面有时一直加载不出来（「完成」一直灰着），
-    这时关掉弹窗、照常暂存，提示人在预览时选封面。自定义封面图暂不支持。返回是否设置成功。"""
+    这时关掉弹窗、照常暂存，提示人在预览时选封面。返回是否设置成功。"""
     if not click_text("选择封面"):
         log("封面已存在，跳过")
         return True
@@ -130,6 +131,51 @@ def set_default_cover():
     return False
 
 
+def upload_cover_in_dialog(cover):
+    """在封面弹窗当前这一栏（横 / 竖）里，把图片塞进「上传封面」旁边的文件框，等「完成」可点。"""
+    found = js("""(() => {
+      const zs = [...document.querySelectorAll("*")].filter(e => e.childElementCount === 0 && /上传封面|点击上传文件/.test(e.textContent.trim()) && e.getClientRects().length);
+      for (const z of zs) { let p = z, inp = null;
+        for (let i = 0; i < 6 && p && !inp; i++) { p = p.parentElement; inp = p.querySelector("input[type=file]"); }
+        if (inp) { document.querySelectorAll('[data-bd="cover"]').forEach(e => e.removeAttribute("data-bd")); inp.setAttribute("data-bd", "cover"); return true; } }
+      return false; })()""")
+    if not found:
+        fail("封面弹窗里找不到「上传封面」，页面可能改版了")
+    upload('[data-bd="cover"]', cover)
+    time.sleep(6)  # 等弹窗里显示上传的图
+    wait_until(COVER_DONE_ENABLED, timeout=60, what="封面图加载完")
+
+
+def set_cover():
+    """传了 --cover：横封面（4:3）、竖封面（3:4）都换成这张图（抖音按比例从中间裁）；没传：用视频画面（set_default_cover）。"""
+    cover = PAYLOAD.get("cover")
+    if not cover:
+        return set_default_cover()
+    if not click_text("选择封面"):
+        fail("找不到「选择封面」（可能已经有封面了），页面可能改版了")
+    wait_until("""/设置横封面/.test(document.body.innerText)""", what="封面弹窗")
+    time.sleep(2)
+    upload_cover_in_dialog(cover)
+    if not click_text("设置竖封面"):
+        fail("封面弹窗里找不到「设置竖封面」")
+    time.sleep(3)
+    upload_cover_in_dialog(cover)
+    click_text("完成")
+    time.sleep(3)
+    if visible_text_exists("暂不设置"):
+        click_text("暂不设置")
+        time.sleep(1)
+    if visible_text_exists("选择封面"):
+        fail("封面没设上：页面上还有「选择封面」")
+    dismiss(["我知道了"])
+    # 上传后抖音要做「封面检测」，检测完缩略图才刷新成上传的图（检测中截图看到的还是视频画面）
+    end = time.time() + 60
+    while time.time() < end and "封面检测中" in js("document.body.innerText"):
+        time.sleep(2)
+    log(f"封面：{os.path.basename(cover)}（横 4:3、竖 3:4 都已上传）")
+    return True
+
+
 def save_draft():
     # 「上传成功」在检测完成后会消失，这里只排除失败
     if "上传失败" in js("document.body.innerText"):
@@ -145,9 +191,9 @@ upload_video()
 fill_title()
 fill_description()
 add_topics()
-cover_ok = set_default_cover()
+cover_ok = set_cover()
 js("window.scrollTo(0, 0)")
 shot("douyin-draft")
 save_draft()
-note = "封面用的是视频画面，可以在那里换" if cover_ok else "封面还没设，发布前要选一张"
+note = ("封面已上传" if PAYLOAD.get("cover") else "封面用的是视频画面，可以在那里换") if cover_ok else "封面还没设，发布前要选一张"
 print(f"✓ 抖音作品已暂存：{COPY['title']}。在创作者中心「发布视频」页点「继续编辑」预览（{note}），确认后由你发布。")
