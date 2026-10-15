@@ -134,12 +134,14 @@ def _capture(mod, rec, text, mkv, timeout):
     return marks, page
 
 
-def _write_outputs(out, mkv, marks, page, copied, app, think, search):
+def _write_outputs(out, mkv, marks, page, copied, app, think, search, can_copy=False):
     base = out[:-len(".mp4")]
     finish_video(mkv, out)
     for f in (mkv, mkv + ".log"):
         os.remove(f)
     info = rec_info(marks, app, think, search)
+    if can_copy:  # 这个 App 能点「复制」拿完整回答：记下拿没拿到
+        info["copied"] = copied is not None
     with open(base + ".json", "w", encoding="utf-8") as f:
         json.dump(info, f, ensure_ascii=False, indent=2)
         f.write("\n")
@@ -148,6 +150,9 @@ def _write_outputs(out, mkv, marks, page, copied, app, think, search):
     log(f"界面文字：{base}.txt")
     print(f"✓ {out}（发送后 {info['seconds']} 秒回答完；视频里 {info['sentAt']}s 发送、{info['doneAt']}s 结束）",
           flush=True)
+    if can_copy and copied is None:
+        print(f"⚠ 没拿到完整回答（点「复制」失败）：{base}.txt 里只有录屏结束时屏幕上的那部分，长回答会缺一截。"
+              "实测记录要原样粘贴完整回答：重录一轮，或在手机上手动复制", flush=True)
     return info
 
 
@@ -172,4 +177,4 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
         rec.stop()
         _restore(mod, before)
         _restore_clipboard(d, saved_clip)
-    return _write_outputs(out, mkv, marks, page, copied, app, think, search)
+    return _write_outputs(out, mkv, marks, page, copied, app, think, search, can_copy=hasattr(mod, "copy_answer"))

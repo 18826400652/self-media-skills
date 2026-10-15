@@ -63,3 +63,31 @@ def test_privacy_refusal_leaves_no_dump(monkeypatch, mod, labels, capsys):
         mod.refuse_if_not_empty(labels)
     out = capsys.readouterr().out
     assert "私人对话内容很长很长" not in out and "第二条私人消息" not in out
+
+
+def _outputs(monkeypatch, tmp_path, copied, can_copy):
+    monkeypatch.setattr(rec, "finish_video", lambda mkv, out: None)
+    monkeypatch.setattr(rec.os, "remove", lambda f: None)
+    marks = {"typed": 1.0, "sent": 2.0, "done": 5.0}
+    out = str(tmp_path / "o.mp4")
+    rec._write_outputs(out, out + ".raw.mkv", marks, ["屏幕上的一段"], copied, "deepseek", False, False, can_copy=can_copy)
+    import json
+    return json.loads((tmp_path / "o.json").read_text(encoding="utf-8"))
+
+
+def test_copy_failed_is_recorded_and_warned(monkeypatch, tmp_path, capsys):
+    info = _outputs(monkeypatch, tmp_path, None, True)
+    assert info["copied"] is False
+    assert "没拿到完整回答" in capsys.readouterr().out
+
+
+def test_copy_ok_no_warning(monkeypatch, tmp_path, capsys):
+    info = _outputs(monkeypatch, tmp_path, "完整回答", True)
+    assert info["copied"] is True
+    assert "没拿到完整回答" not in capsys.readouterr().out
+
+
+def test_app_without_copy_no_warning(monkeypatch, tmp_path, capsys):
+    info = _outputs(monkeypatch, tmp_path, None, False)
+    assert "copied" not in info
+    assert "没拿到完整回答" not in capsys.readouterr().out

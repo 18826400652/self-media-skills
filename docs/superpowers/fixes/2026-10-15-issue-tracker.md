@@ -27,7 +27,7 @@
 | P-16 | 空模板的母稿 `sc check` 报「✓ 母稿结构完整」，kv 第 4 步直接判通过 | 第 3 组 | 已修 | `fix(P-16)` | sc.test.mjs 3 例（用真实母稿模板）RED→GREEN；sc 13/13；真实项目 01-不想看 / 02-不露脸 kv status 和修前一致，flow-check 两期母稿仍 ✓ |
 | P-17 | 选题关要填「评论区在要什么」，但没有工具支持 | 后续 | 待修 | | |
 | P-18 | 在作品项目外跑 `bd` 会悄悄连到日常浏览器 | 后续 | 待修 | | |
-| P-19 | DeepSeek「复制完整回答」失败时 `nv rec` 不提示 | 第 6 组 | 待修 | | |
+| P-19 | DeepSeek「复制完整回答」失败时 `nv rec` 不提示 | 第 6 组 | 已修（实跑待手机） | `fix(P-19)` | test_rec_flow.py 3 例 RED→GREEN；phone-draft pytest 108/108；nv rec 走 stdio inherit，⚠ 原样透出。真机复现要等 DeepSeek 复制恰好失败，和 P-20 一起找机会实跑 |
 | P-20 | 豆包录屏走不通 | 第 6 组 | 待修 | | |
 | P-21 | 文档没写 WSL 下怎么用 USB 调试 | 后续 | 待修 | | |
 | P-22 | 第 6 步「自检」会被第 10 步才写的公众号模板挡住 | 第 4 组 | 已修 | `fix(P-22)` | practical-facts.test.mjs 3 例 RED→GREEN + 1 例补充（写了但残留占位，直接通过：覆盖前一例碰巧通过的分支）；kv 85/85；真实项目 3 期 kv status 不变 |
