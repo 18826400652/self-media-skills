@@ -9,7 +9,7 @@
 // --motion：每帧截入场、中段、落定三张（动画过程），检查元素是否按时出现、过程中有没有穿帮。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
 import { CAPTION_ARGS, FACELESS_SCRIPTS, SYNC_ARGS } from "./lib/captions-step.mjs";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { SKILL_DIR } from "./lib/config.mjs";
@@ -44,6 +44,22 @@ function run(label, cmd, args, cwd) {
 }
 
 const node = (label, script, args, cwd) => run(label, process.execPath, [script, ...args], cwd);
+
+/** hyperframes check 只在一个采样点上看到的遮挡会降成 ℹ；文字被盖住就是看不见，一律当错误 */
+export function occludedText(output) {
+  return output.split("\n").filter((l) => /\btext_occluded\b/.test(l)).map((l) => l.trim());
+}
+
+/** 跑 check：输出照常打印，同时收下来查遮挡 */
+function runCheck(label, args, cwd) {
+  console.log(`\n▸ ${label}`);
+  const r = spawnSync(HF, args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  process.stdout.write(r.stdout ?? "");
+  process.stderr.write(r.stderr ?? "");
+  if (r.status !== 0) throw new Error(`「${label}」失败（hyperframes ${args.join(" ")}），修好后重跑 nv hf-build`);
+  const hidden = occludedText(`${r.stdout}\n${r.stderr}`);
+  if (hidden.length) throw new Error(`有文字被别的元素盖住（check 只给了提示级别，但画面上看不见）：\n  ${hidden.join("\n  ")}`);
+}
 
 /** 画面引用的 assets/<文件> 缺失时，从 capture/assets 或 public 补齐；哪里都没有就报错 */
 function stageAssets(dir) {
@@ -294,7 +310,7 @@ function main() {
     run("lint", HF, ["lint", "."], dir);
     // 两项检查都跑完再报错，一次看到所有问题
     const errors = [];
-    for (const step of [() => run("check（含字幕带：内容不能伸出四角框压到字幕）", HF, ["check", ".", ...captionZoneArgs(dir)], dir), () => checkBounds(dir)]) {
+    for (const step of [() => runCheck("check（含字幕带：内容不能伸出四角框压到字幕）", ["check", ".", ...captionZoneArgs(dir)], dir), () => checkBounds(dir)]) {
       try {
         step();
       } catch (err) {

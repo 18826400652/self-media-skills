@@ -413,3 +413,17 @@ test("cleanIndex：注入隐藏底色、四角框、角标、进度条、字幕�
   assert.ok(out.indexOf("data-nv-bounds") < out.indexOf("</head>"));
   for (const sel of ["#el-captions", ".kit-hud", ".kit-kicker", ".kit-progress", ".kit-atmo", '[id$="-ground"]', "#root", "box-shadow:none"]) assert.ok(out.includes(sel), sel);
 });
+
+test("occludedText：check 输出里 text_occluded 不管 ℹ 还是 ✗ 都挑出来", async () => {
+  const { occludedText } = await import("../scripts/hf-build.mjs");
+  const out = [
+    "  ℹ t=4.445s container_overflow div.kit-shot-world — Element extends outside a clipping layout container.",
+    "  ℹ t=7.74s text_occluded #p01-l inside #p01-k > img \"十秒 · 一分钱没花\" — Text is hidden beneath an opaque element.",
+    "  ✗ t=66.67-68.34s (2 samples) text_occluded #p12-l inside #p12-k > img \"就这三步，\" — Text is hidden beneath an opaque element.",
+  ].join("\n");
+  const found = occludedText(out);
+  assert.equal(found.length, 2);
+  assert.match(found[0], /#p01-l/);
+  assert.match(found[1], /#p12-l/);
+  assert.deepEqual(occludedText("  ◇ 0 issues"), []);
+});
