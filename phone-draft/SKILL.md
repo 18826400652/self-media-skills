@@ -58,6 +58,7 @@ pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout
 - 手机打开开发者选项（设置 → 关于手机 → 连点版本号 7 次）和「无线调试」，和电脑连同一个网络（或电脑能访问到手机 IP）。
 - 第一次配对：「无线调试 → 使用配对码配对设备」，在弹窗还开着时 `adb pair IP:配对端口 配对码`；再 `pd connect IP:连接端口`（连接端口在无线调试页顶部，和配对端口不同）。
 - **手机重启、换网络或重开无线调试后，IP 和端口都会变**：到无线调试页看新地址，`pd connect IP:新端口`。没变时 `pd` 断线会自动用上次地址重连。电脑和手机不在同一子网时，局域网自动发现（mDNS）用不了。
+- **WSL 里优先用无线调试**。WSL 的 adb 看不到 USB 线连的手机；从 WSL 调 Windows 的 `adb.exe` 会报 `failed to start daemon`。真要走 USB：在 Windows 用 usbipd 把手机转进 WSL（要管理员权限），而且手机正在做「USB 网络共享」给电脑上网时，转进 WSL 后电脑会断网——这种情况只能用无线调试。富文本粘贴要的「USB 调试」开关打开就行，不用真插线。
 - 第一次连接时 uiautomator2 会往手机装 ATX 辅助 App，Flyme 弹「允许安装」时点允许。
 - 富文本粘贴需要手机上装 Edge（它开放 `chrome_devtools_remote` 调试接口），并且开着「USB 调试」（`adb_enabled=1`），只开无线调试时 Edge 不开放这个接口。
 - 录 AI 实测要 scrcpy：`scripts/setup-scrcpy.sh` 下载官方 Linux 便携版到 `vendor/`（不入库；断点续传，代理慢时去掉 `http_proxy` 直连 GitHub 反而快），或设 `PD_SCRCPY` 指向已有的 scrcpy。录之前手机解锁、开勿扰。
