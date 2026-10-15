@@ -6,7 +6,8 @@ import { douyinQa } from "../scripts/lib/qa-run.mjs";
 import { project } from "./helpers.mjs";
 
 const built = { cues: { 钩子: 1 }, segments: [{ id: "s1", start: 0, duration: 4 }], total: 4 };
-const blank = { elements: [], cueMarks: [], kicker: { visible: true, occludedBy: null } };
+const CONTENT = { sel: "#c", text: true, key: false, allowSafe: false, box: [100, 300, 500, 400], opacity: 1 }; // 一个位置正常的内容元素：画面不是空的
+const blank = { elements: [CONTENT], cueMarks: [], kicker: { visible: true, occludedBy: null } };
 
 function fakePage(dataAt) {
   const seen = [];

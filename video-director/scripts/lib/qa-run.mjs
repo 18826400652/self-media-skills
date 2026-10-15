@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cuesJs } from "./assemble.mjs";
-import { checkCues, checkFrame, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
+import { checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
 
 /** 这次构建装了哪些段：index.html 里有 host-<段id> 的（样片只装几段） */
 export function presentSegments(html, segments) {
@@ -64,8 +64,12 @@ export async function douyinQa(built, page, shotDir) {
     shots.push({ t: x.t, label: x.label, file: `snapshots/cues/${name}` });
   }
   const sigs = [];
-  for (const t of grid) sigs.push({ t, sig: (await page.frame(t)).sig });
-  const errors = summarize([...frames.flatMap(checkFrame), ...checkCues(frames, built.cues)]);
+  for (const t of grid) {
+    const d = await page.frame(t);
+    sigs.push({ t, sig: d.sig, n: d.elements.length });
+  }
+  const empty = emptyWindows(sigs).map((w) => ({ level: "error", kind: "empty", sel: "", t: w.from, msg: `${w.from}–${w.to} 秒画面上只有背景（没有文字或 data-vd-key 元素）：这段没内容` }));
+  const errors = summarize([...frames.flatMap(checkFrame), ...checkCues(frames, built.cues), ...empty]);
   const warns = stillWindows(sigs).map((w) => ({ level: "warn", kind: "still", sel: "", t: w.from, msg: `${w.from}–${w.to} 秒画面没有变化（任意 2 秒内要有东西在动）` }));
   return { passed: errors.length === 0, issues: [...errors, ...warns], shots };
 }
