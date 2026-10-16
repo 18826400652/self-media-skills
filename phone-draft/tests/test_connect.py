@@ -62,6 +62,17 @@ def test_ensure_connected_explains_port_change(state_dir):
     assert "pd connect" in str(err.value) and "无线调试" in str(err.value) and "--via browser" in str(err.value)
 
 
+def test_unreachable_phone_says_it_is_optional_and_where_address_came_from(state_dir):
+    (state_dir / "last-address").write_text("192.168.3.3:43223")
+    adb = FakeAdb(LIST.format(""), "failed to connect", LIST.format(""))
+    with pytest.raises(c.DeviceUnavailable) as err:
+        c.ensure_connected(adb)
+    msg = str(err.value)
+    assert "上次的地址" not in msg
+    assert "这台电脑记住的手机地址" in msg
+    assert "手机是备用" in msg and "sc rec --url" in msg
+
+
 def test_ensure_connected_without_history_explains_pairing():
     with pytest.raises(c.DeviceUnavailable, match="adb pair"):
         c.ensure_connected(FakeAdb(LIST.format("")))
