@@ -231,7 +231,9 @@ function recordGate(dir, args) {
     return 1;
   }
   if (gate === "topic") syncTopicFile(dir, quote);
-  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate), files: gateFileHashes(dir, gate) };
+  // 再确认时把上一次的原话留进 history（改过选题关、导演脚本后重新确认，前面说过什么还看得到）
+  const history = g.quote ? [...(g.history ?? []), { at: g.at, quote: g.quote }] : g.history;
+  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate), files: gateFileHashes(dir, gate), ...(history ? { history } : {}) };
   writeRun(dir, run);
   console.log(`✓ ${P_GATE_LABEL[gate]} 通过（${today()}「${quote}」）`);
   return 0;
