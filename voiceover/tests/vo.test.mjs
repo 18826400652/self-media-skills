@@ -101,3 +101,20 @@ test("configGate：没配置、也不在作品项目里 → 不拒绝，警告�
   assert.equal(refuse, null);
   assert.match(warn, /^⚠ 没找到 voiceover\.config\.json，用默认配音设置/);
 });
+
+test("placeVoice：每帧的切片放进工程后删掉，缓存里只留付费合成的整段（不再一段声音存三份）", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const { placeVoice } = await import("../scripts/vo.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "vo-place-"));
+  const tone = (f) => execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "sine=d=0.5", f]);
+  tone(join(dir, "seg-01-02-ab.wav"));
+  for (const [slice, out, pad] of [["seg-01-02-ab.f01.wav", "01.wav", 0], ["seg-01-02-ab.f02.wav", "02.wav", 0.3]]) {
+    tone(join(dir, slice));
+    writeFileSync(join(dir, slice.replace(".wav", ".words.json")), "[]");
+    placeVoice(join(dir, slice), join(dir, out), pad);
+    assert.ok(existsSync(join(dir, out)), out);
+    assert.equal(existsSync(join(dir, slice)), false, `${slice} 应删掉`);
+    assert.equal(existsSync(join(dir, slice.replace(".wav", ".words.json"))), false);
+  }
+  assert.ok(existsSync(join(dir, "seg-01-02-ab.wav")), "付费合成的整段留在缓存");
+});

@@ -9,7 +9,7 @@
 // VOICE.md 存在且服务商支持（seedaudio、qwenaudio）时，按段整段生成再切回每帧；--pause 只加在段与段之间。
 // --check：只检查 VOICE.md 和 SCRIPT.md 对不对得上，不生成、不花钱。
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { buildCaptionGroups } from "./lib/caption-groups.mjs";
 import { parseScript } from "./lib/shared/script-md.mjs";
@@ -153,6 +153,22 @@ async function synthesizeAll(lines, segments, tts, cacheDir) {
   return out;
 }
 
+/**
+ * 把一帧的切片放进工程（要补停顿就补在工程那份上），然后删掉切片：切片每次都从缓存里的整段重新切，
+ * 不用留；缓存里只留付费合成的整段，工程里是视频用的 NN.wav
+ */
+export function placeVoice(clipFile, dest, padding = 0) {
+  if (padding > 0) execFileSync("ffmpeg", ["-y", "-v", "error", "-i", clipFile, "-af", `apad=pad_dur=${padding}`, dest]);
+  else renameOrCopy(clipFile, dest);
+  rmSync(clipFile, { force: true });
+  rmSync(clipFile.replace(/\.wav$/, ".words.json"), { force: true });
+}
+
+/** 缓存和工程不在同一个磁盘时 rename 会失败，退回复制 */
+function renameOrCopy(from, to) {
+  try { renameSync(from, to); } catch { copyFileSync(from, to); }
+}
+
 const writeJson = (dir, file, data) => writeFileSync(join(dir, file), `${JSON.stringify(data, null, 2)}\n`);
 
 /** 写 audio_meta.json（保留原有 sfx）和 caption_groups.json */
@@ -203,11 +219,7 @@ async function main() {
     const rel = `assets/voice/${pad2(line.frame)}.wav`;
     const isLast = i === results.length - 1;
     const padding = isLast ? TAIL_SECONDS : segmentEnd ? pause : 0;
-    if (padding > 0) {
-      execFileSync("ffmpeg", ["-y", "-v", "error", "-i", clip.file, "-af", `apad=pad_dur=${padding}`, join(dir, rel)]);
-    } else {
-      copyFileSync(clip.file, join(dir, rel));
-    }
+    placeVoice(clip.file, join(dir, rel), padding);
     voices.push({
       frame: line.frame,
       path: rel,
