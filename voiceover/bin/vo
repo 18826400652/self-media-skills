@@ -4,4 +4,5 @@
 set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 export PATH="$SKILL_DIR/.venv/bin:$PATH"   # cosyvoice 用的 Python 环境
+export NODE_USE_ENV_PROXY=1                 # 本机走代理时 Node 的 fetch 才读 https_proxy（和 vd 一样）
 exec node "$SKILL_DIR/scripts/vo.mjs" "$@"

@@ -221,9 +221,16 @@ async function main() {
   console.log(`✓ 配音完成：${voices.length} 帧，共 ${total} 秒 → audio_meta.json、caption_groups.json（${groups} 组字幕）`);
 }
 
+/** 报错给人看：Node fetch 连不上时只说「fetch failed」，补上底层原因和排查方向 */
+export function describeError(err) {
+  if (err?.message !== "fetch failed") return err?.message ?? String(err);
+  const cause = err.cause?.code ?? err.cause?.message ?? "原因不明";
+  return `连不上配音服务（${cause}）。检查网络；本机要走代理的话，确认 https_proxy 已设置（bin/vo 已带 NODE_USE_ENV_PROXY=1，直接跑 node scripts/vo.mjs 要自己设）`;
+}
+
 if (isMain(import.meta.url)) {
   main().catch((err) => {
-    console.error(`✗ ${err.message}`);
+    console.error(`✗ ${describeError(err)}`);
     process.exit(1);
   });
 }

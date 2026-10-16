@@ -73,3 +73,13 @@ test("--help 写在工程目录后面也打印用法、退出 0（不报「参�
     assert.doesNotMatch(r.stderr, /参数错误/);
   }
 });
+
+test("bin/vo 给 Node 打开代理支持（NODE_USE_ENV_PROXY=1），本机走代理时 fetch 才连得上", () => {
+  const work = mkdtempSync(join(tmpdir(), "vo-"));
+  writeFileSync(join(work, "SCRIPT.md"), SCRIPT_MD);
+  const probe = join(work, "probe.mjs");
+  writeFileSync(probe, "console.log('PROXY=' + process.env.NODE_USE_ENV_PROXY)\n");
+  const r = spawnSync("bash", ["-c", `sed 's#"$SKILL_DIR/scripts/vo.mjs"#"${probe}"#' "${join(SKILL, "bin/vo")}" > "${work}/vo" && bash "${work}/vo"`], { encoding: "utf8", env: { ...process.env, NODE_USE_ENV_PROXY: "" } });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /PROXY=1/);
+});
