@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { episode } from "./helpers.mjs";
-import { collectPracticalFacts, fingerprint, qaProblem, templateHashes } from "../scripts/lib/practical-facts.mjs";
+import { collectPracticalFacts, fingerprint, gateFileHashes, legacyFingerprint, qaProblem, templateHashes } from "../scripts/lib/practical-facts.mjs";
 
 // qa.md 规定的检查项全部写上的 qa.json
 const ALL_CHECKS = ["safe-area", "text-size", "density", "typo", "fact-on-screen", "rhythm", "motion"];
@@ -53,7 +53,7 @@ test("确认节点：指纹一致 passed，不一致 stale", () => {
   const dir = episode({ "选题关.md": "v1" });
   const fp = fingerprint(dir, "topic");
   const r = run({ gates: { topic: { passed: true, at: "2026-10-12", quote: "通过", fingerprint: fp, edits: [] } } });
-  assert.deepEqual(collect(dir, r).gates.topic, { passed: true, at: "2026-10-12", quote: "通过", stale: false });
+  assert.deepEqual(collect(dir, r).gates.topic, { passed: true, at: "2026-10-12", quote: "通过", stale: false, changed: [] });
   const dir2 = episode({ "选题关.md": "v2" });
   assert.equal(collect(dir2, r).gates.topic.stale, true);
   assert.equal(collect(dir, run()).gates.script.passed, false);
@@ -273,4 +273,28 @@ test("公众号文章写了但还残留占位 → 公众号那一步报 sc 的�
   assert.equal(f.steps.wechat.ok, false);
   assert.equal(f.steps.wechat.content, false);
   assert.match(f.steps.wechat.why, /残留占位符/);
+});
+
+test("③a 指纹不看排版：反引号、加粗、空白、表格对齐、机器块缩进改了不失效；改了内容才失效", () => {
+  const vd = { segments: [{ id: "seg-01", lines: [1, 2] }], palette: { bg: "#000000" } };
+  const md = (body, json = JSON.stringify(vd, null, 2)) => `# 导演脚本\n## 2. 分段\n${body}\n\`\`\`json vd\n${json}\n\`\`\`\n`;
+  const dir = episode({ [`${D}/DIRECTOR.md`]: md("说到 `@一张表` 时**表格展开**。\n\n| 段 | 画面 |\n|---|---|\n| 1 | 气泡 |") });
+  const fp = fingerprint(dir, "director");
+  writeFileSync(join(dir, D, "DIRECTOR.md"), md("说到 @一张表  时表格展开。\n| 段   | 画面 |\n|:--|:--:|\n| 1 |  气泡 |", JSON.stringify(vd)));
+  assert.equal(fingerprint(dir, "director"), fp, "只改格式");
+  writeFileSync(join(dir, D, "DIRECTOR.md"), md("说到 @一张表 时表格展开。\n| 段 | 画面 |\n|---|---|\n| 1 | 便签 |"));
+  assert.notEqual(fingerprint(dir, "director"), fp, "画面内容改了");
+  writeFileSync(join(dir, D, "DIRECTOR.md"), md("说到 `@一张表` 时**表格展开**。\n\n| 段 | 画面 |\n|---|---|\n| 1 | 气泡 |", JSON.stringify({ ...vd, palette: { bg: "#111111" } })));
+  assert.notEqual(fingerprint(dir, "director"), fp, "机器块内容改了");
+});
+
+test("确认节点：老 run.json 里按原文算的指纹照样认；失效时说出改了哪个文件", () => {
+  const dir = episode({ [`${D}/DIRECTOR.md`]: "# 导演\n说到 @词 时出现\n", [`${D}/audio_meta.json`]: "{}" });
+  const legacy = legacyFingerprint(dir, "director");
+  assert.equal(dCollect(dir, run({ gates: { director: { passed: true, fingerprint: legacy } } })).gates.director.stale, false);
+  const files = gateFileHashes(dir, "director");
+  writeFileSync(join(dir, D, "DIRECTOR.md"), "# 导演\n说到 @词 时消失\n");
+  const g = dCollect(dir, run({ gates: { director: { passed: true, fingerprint: "old", files } } })).gates.director;
+  assert.equal(g.stale, true);
+  assert.deepEqual(g.changed, [`${D}/DIRECTOR.md`]);
 });

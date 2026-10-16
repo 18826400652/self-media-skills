@@ -38,6 +38,11 @@ test("指纹不一致：节点算没通过，显示「确认后改过」", () =>
   assert.match(s.next, /确认后改过/);
 });
 
+test("确认后改过：下一步说出改了哪个文件，用户知道要重新看什么", () => {
+  const s = practicalStatus(facts({ gates: { director: { passed: true, at: "2026-10-12", quote: "通过", stale: true, changed: ["抖音/DIRECTOR.md"] } } }));
+  assert.match(s.next, /确认后改过（抖音\/DIRECTOR\.md）/);
+});
+
 test("全部做完 → 下一步「这期做完了」、waitingFor null", () => {
   const s = practicalStatus(facts());
   assert.ok(s.rows.every((r) => r.done));

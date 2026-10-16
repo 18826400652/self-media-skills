@@ -1,7 +1,7 @@
 // 实用类一期的 15 步和 5 个确认节点（纯函数）。输入 facts 由 practical-facts.mjs 从作品目录读出来。
 //   facts.steps[key] = { ok, why, content? }   这一步自己的条件满足没有；why 是没满足的原因；
 //                                              content=false 表示草稿步骤的内容本身还没写好
-//   facts.gates[gate] = { passed, at, quote, stale }   stale：确认后相关文件又改过
+//   facts.gates[gate] = { passed, at, quote, stale, changed }   stale：确认后相关文件的内容又改过（排版不算）；changed：改了哪些文件
 export const GATE_LABEL = { topic: "① 选题关", script: "② 脚本 + 配音稿", director: "③a 导演脚本", sample: "③b 风格样片", final: "④ 成片" };
 export const DRAFT_KEYS = ["wechat", "xiaohongshu", "douyin"];
 
@@ -59,7 +59,7 @@ export function practicalStatus(facts) {
     if (!own.ok) next = `${s.n} ${s.label}：${HOW[s.key]}${own.why ? `（现在：${own.why}）` : ""}`;
     else {
       waitingFor = s.gate;
-      const why = state === "stale" ? "确认后改过，需要重新确认，" : "";
+      const why = state === "stale" ? `确认后改过${g.changed?.length ? `（${g.changed.join("、")}）` : ""}，需要重新确认，` : "";
       next = `${why}等用户确认 ${GATE_LABEL[s.gate]}；用户说通过后 kv gate <作品> ${s.gate} "用户原话"`;
     }
   }

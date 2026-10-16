@@ -18,7 +18,7 @@ import { parseScript } from "./lib/shared/script-md.mjs";
 import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
 import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, GATES, practicalStatus } from "./lib/practical.mjs";
 import { FINAL_RE } from "./lib/video.mjs";
-import { collectPracticalFacts, defaultRunners, fingerprint, newestHtml, templateHashes } from "./lib/practical-facts.mjs";
+import { collectPracticalFacts, defaultRunners, fingerprint, gateFileHashes, newestHtml, templateHashes } from "./lib/practical-facts.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
 const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
@@ -231,7 +231,7 @@ function recordGate(dir, args) {
     return 1;
   }
   if (gate === "topic") syncTopicFile(dir, quote);
-  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate) };
+  run.gates[gate] = { ...g, passed: true, at: today(), quote, fingerprint: fingerprint(dir, gate), files: gateFileHashes(dir, gate) };
   writeRun(dir, run);
   console.log(`✓ ${P_GATE_LABEL[gate]} 通过（${today()}「${quote}」）`);
   return 0;
