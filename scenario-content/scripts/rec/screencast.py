@@ -53,23 +53,19 @@ try:
     wait(1.5)
     cdp("Input.insertText", text=prompt); marks["pasted"] = time.time()
     wait(1.5)
+    before = text_len() or 0
     cdp("Input.dispatchKeyEvent", type="keyDown", key="Enter", code="Enter", windowsVirtualKeyCode=13, text="\r")
     cdp("Input.dispatchKeyEvent", type="keyUp", key="Enter", code="Enter", windowsVirtualKeyCode=13)
     marks["sent"] = t_send = time.time()
-    # 页面文字连续 2.5 秒不变（且发送后至少 4 秒）= 回答结束。
-    # 有的 AI 发送后先「思考」几秒、文字不变，所以还要求页面文字比发送前多出「提问长度 + 10 字」，
-    # 即回答已经开始出现（提问本身会先显示在对话里）。回答可能只有一句（十几个字），所以只多要求 10 字
-    base = text_len() or 0
-    grown = lambda n: n is not None and n > base + len(prompt) + 10
-    last, stable = None, time.time()
+    # 回答结束的判断见 answer_watch.py（拼在本文件前面）；before 在按回车前量（输入框里的字不算 innerText）
+    watch = AnswerWatch(before=before, t_send=t_send)
     while time.time() - t_send < float(os.environ.get("REC_TIMEOUT", "120")):
         wait(0.25)
-        cur = text_len()
-        if cur != last:
-            last, stable = cur, time.time()
-        elif time.time() - stable > 2.5 and time.time() - t_send > 4 and grown(cur):
+        if watch.feed(time.time(), text_len()):
             break
-    marks["done"] = stable
+    else:
+        print(f"⚠ {os.environ.get('REC_TIMEOUT', '120')} 秒内没等到回答结束，录到超时为止", flush=True)
+    marks["done"] = watch.done_at or watch.stable_since  # 超时：用最后一次文字变化的时刻
     wait(1.5)
 finally:
     cdp("Page.stopScreencast")

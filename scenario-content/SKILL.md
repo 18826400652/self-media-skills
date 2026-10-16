@@ -53,7 +53,7 @@ AI 先写好要用的提问。然后在真实的 AI 产品里运行（人来操�
 
 **要做视频时，实测同时录屏**（用 `sc rec`）：
 - 录之前确认：已登录、新对话、模型开关（深度思考、联网搜索等）和实测记录写的一致、侧边栏收起；改过的开关录完恢复成用户原来的设置
-- `sc rec 实测/录屏-第N轮.mp4 --prompt 提问.txt --app deepseek`（或 `doubao`）：在真手机的 AI App 里自动打字、发送，回答结束自动停；同时输出用时（`.json`）和界面文字（`.txt`），用时和原文直接写进实测记录。DeepSeek 默认关深度思考 / 智能搜索（要开加 `--think` / `--search`），录完自动恢复原来的开关；手机要解锁、开勿扰。没有手机时用 `--url <AI 网址>` 走浏览器
+- `sc rec 实测/录屏-第N轮.mp4 --prompt 提问.txt --app deepseek`（或 `doubao`）：在真手机的 AI App 里自动打字、发送，回答结束自动停；同时输出用时（`.json`）和界面文字（`.txt`），用时和原文直接写进实测记录。DeepSeek 默认关深度思考 / 智能搜索（要开加 `--think` / `--search`），录完自动恢复原来的开关；手机要解锁、开勿扰。没有手机时用 `--url <AI 网址>` 走浏览器：`sc rec 实测/录屏-第N轮.mp4 --prompt 提问.txt --url https://chat.deepseek.com/ [--timeout 秒]`。浏览器打开 DeepSeek 时也默认先关深度思考、智能搜索（关不掉就报错停下）；浏览器模式打不开开关，要开就用手机，或在网页里手动打开后加 `--setup none`；别的网站要做录前准备用 `--setup 准备.py`（在浏览器里执行的 Python，可用 browser-harness 的函数，例子见 `scripts/rec/setup/deepseek-off.py`）。回答结束按「回答开始出现后页面文字 2.5 秒不变」判断，长提问被折叠、回答比提问短也能停；`--timeout`（默认 120 秒）内没停会提示
 - 录电脑上的网页操作（软件演示、多步表单，`sc rec` 只能录 AI 对话）：`sc rec-flow 实测/操作.mp4 --steps 步骤.py --url <网址> [--size 1280x720] [--fps 15] [--timeout 分钟] [--downloads 目录]`，步骤脚本是 Python，在浏览器里真实执行（可用的函数见 `scripts/rec/flow.py` 开头）；输出 `.mp4`、`.json`（每个 mark 的秒数、操作日志）、`.txt`
 - 浏览器录屏连接：环境变量 `BU_CDP_WS`，或配置 `rec.cdpPort`（推荐：自动化专用浏览器用 `--remote-debugging-port` 启动，不弹「允许」）/ `rec.devtoolsActivePort`；手机录屏调用 phone-draft 的 `pd rec`
 - **同一个提问至少跑两轮**：两次结果不同（一次错一次对、分类不一样）本身就是最好的内容素材
