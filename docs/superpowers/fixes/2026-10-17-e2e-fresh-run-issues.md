@@ -4,7 +4,7 @@
 > 选题：用 AI 把又长又乱的微信群聊记录整理成待办清单。跑到存草稿前停下（公众号例外，见 A0）。
 > 结果：kv 1–10 步全部完成，5 个确认节点都走到；成片 1 分 52 秒（抖音/renders/01-群聊整理待办.mp4）。
 > 新会话模型费用约 $21（不含配音）；中途撞过一次 Claude 会话用量上限，续上后没丢进度。
-> 状态：用户定修 A2–A5（A0、A1 不修），其余先记录。修复在分支 `fix/e2e-fresh-run`。
+> 状态：用户定修 A2–A5（A0、A1 不修），A2–A5 已修，其余先记录。修复在分支 `fix/e2e-fresh-run`。
 
 ## A 要紧（会出错、花冤枉钱或存错地方）
 
@@ -15,7 +15,7 @@
 | A2 | 骨架 `voiceover.config.json` 的 `tts.style` 是占位文字，vo 不拦，会把占位文字当人设送去付费生成（configGate 只查有没有配置文件） | vo / studio 骨架 | 已修：`vo` 遇到占位人设直接拒绝（`configGate`），不发请求 |
 | A3 | vo 不走代理：机器走代理时 Node fetch 只报「fetch failed」。vd 调子进程会自动带 `NODE_USE_ENV_PROXY=1`，vo 不带；st doctor 也没查「有 http_proxy 但没设 NODE_USE_ENV_PROXY」 | vo / studio doctor | 已修：`bin/vo` 带 `NODE_USE_ENV_PROXY=1`；「fetch failed」补上底层原因和代理提示。doctor 不再需要单独查 |
 | A4 | `vd cues --check` 给假「通过」：只查 json 机器块的 14 个词，正文里带反引号的 `` `@词` `` 不认，build 时才会因找不到时间报错。而规则文档 / 模板自己就用反引号写 `@词` 举例 | vd | 已修：带反引号的 `@词` 也算锚点（只有写法说明 `` `@词` `` 不算）；`vd cues`/`build`/`qa` 先查段 HTML 里 `at("词")` 有没有对应 @词 |
-| A5 | 组件库两个组件越出抖音安全区：`dy-rec-phone`（手机框压进字幕带，录屏里的字太小看不清）、`dy-vs-compare`（伸进右侧点赞栏，qa 报错）。打勾清单组件只占上 1/3、字小 | 组件库 | 待定方案：根因是 dykit 安全区底边 1520 与 vd 字幕带 1180–1440 不一致 |
+| A5 | 组件库两个组件越出抖音安全区：`dy-rec-phone`（手机框压进字幕带，录屏里的字太小看不清）、`dy-vs-compare`（伸进右侧点赞栏，qa 报错）。打勾清单组件只占上 1/3、字小 | 组件库 | 已修：dykit 底边改由宿主 `--hf-safe-bottom` 指定（默认仍 1520），vd 传 1150；对比表右侧留 160；清单居中（hyperframes PR，fix/dy-safe-area）。录屏字小用组件的 zoom 标注放大，不在本次范围 |
 | A6 | 第一次 `wa draft` 遇到「Target is closing」抛出 browser-harness 原始 Python 堆栈并被杀（exit 144），重跑才成功；浏览器开着很多标签页时不稳 | bd | 未修（记录） |
 
 ## B 流程不顺（多花时间、多打扰用户）

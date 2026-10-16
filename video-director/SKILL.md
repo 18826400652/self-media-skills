@@ -77,6 +77,7 @@ vd init 抖音
 
 dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独维护）。分段里写 `"component": "dy-…"` 和 `"vars": {…}` 就直接用组件，配色自动套用这条视频的 `palette`（dykit 的 custom 主题）。可用组件和变量见仓库的 `catalog/catalog.json`。
 
+- **组件不压字幕**：组件段的宿主带 `--hf-safe-bottom:1150px`，dykit 组件（hyperframes 1bf47fc 之后）内容底边停在字幕带上方；旧工程锁着更早的组件版本，`vd build --update-components` 升级
 - **组件跟着口播走**：组件按段长排时间（`HF.duration`），演完停在最后的样子，到段尾才退场。catalog 里写了 `beats` 的组件有可选变量 `cues`：用 `|` 隔开几个 @词，按顺序对应它的几拍（如清单 `"cues": "@条数|@数字|@补的话"` 是三项各自出现的时间），`vd build` 换算成段内秒数交给组件；不写 `cues` 就按默认节奏铺满整段。每个 @词 要落在这一段里，不然报错。`dy-rec-phone` 的 `cues` 是它自己的 JSON 列表（每项带 `t`），不按这个规则
 - **录屏比段短**：`dy-rec-phone` 的录屏放完停在最后一帧（通常就是 AI 的完整回答）；`vd build` 发现录屏比段短 0.5 秒以上会打 ⚠，说清停住几秒。要画面一直在动，就换长一点的录屏或把这段拆短
 - **不要用 `dy-ai-badge`**：它模仿抖音自带的 AI 标识，固定在左上角，正好压住栏目标签（栏目标签全片都在，关不掉），`vd build` 的检查会报文字重叠
