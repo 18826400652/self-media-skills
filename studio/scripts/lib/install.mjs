@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, symlinkSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { NV_PY, TOOLKIT_DIR } from "./project.mjs";
+import { TOOLKIT_DIR, VO_PY } from "./project.mjs";
 import { toolkitSkills } from "./doctor.mjs";
 
 
@@ -35,10 +35,25 @@ function installDeps(skill, dir, log, run) {
   if (existsSync(join(dir, "package-lock.json"))) steps.push(() => sh("npm", ["ci"]));
   const pip = (pkgs) => () => sh("uv", ["venv", "--allow-existing", ".venv"]) && sh("uv", ["pip", "install", "--python", ".venv/bin/python", ...pkgs]);
   if (existsSync(join(dir, "requirements.txt"))) steps.push(pip(["-r", "requirements.txt"]));
-  if (skill === "narrated-video") steps.push(pip(NV_PY));
+  if (skill === "voiceover") steps.push(pip(VO_PY));
   if (!steps.length) return true;
   log(`▸ 装 ${skill} 的依赖（npm / uv 要联网下载，网络慢时可能要几分钟；卡住可以 Ctrl+C，之后跑 st doctor 看缺什么）`);
   return steps.reduce((ok, step) => step() && ok, true);
+}
+
+/** 指向本工具包、但目标已经不存在的软链接（比如删掉的 narrated-video、nv）删掉；指向别处的不动 */
+function pruneStale(dir, toolkit, log) {
+  for (const name of readdirSync(dir)) {
+    const at = join(dir, name);
+    let target;
+    try {
+      if (!lstatSync(at).isSymbolicLink()) continue;
+      target = readlinkSync(at);
+    } catch { continue; }
+    if (!target.startsWith(`${toolkit}/`) || existsSync(at)) continue;
+    unlinkSync(at);
+    log(`  − ${at}（指向已删除的 ${target}）`);
+  }
 }
 
 export function install({ deps = false, home = homedir(), toolkit = TOOLKIT_DIR, log = console.log, run = spawnRun } = {}) {
@@ -55,6 +70,8 @@ export function install({ deps = false, home = homedir(), toolkit = TOOLKIT_DIR,
     if (existsSync(bin)) for (const f of readdirSync(bin)) ok = link(join(bin, f), join(binDir, f), log) && ok;
     if (deps && !installDeps(s, dir, log, run)) depsFailed.push(s);
   }
+  pruneStale(skillsDir, toolkit, log);
+  pruneStale(binDir, toolkit, log);
   if (depsFailed.length) {
     ok = false;
     log(`✗ 这些 skill 的依赖没装好：${depsFailed.join("、")}。网络好了重跑 st install --deps，或在作品项目里跑 st doctor 逐个看缺哪个包`);

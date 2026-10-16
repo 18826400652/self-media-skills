@@ -4,11 +4,11 @@ import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpat
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { hasAudio, mediaUseSfx } from "./init.mjs";
-import { DEFAULT_TEMPLATES, loadProject, MARKER, NV_PY, satisfies, TOOLKIT_DIR, toolkitVersion } from "./project.mjs";
+import { DEFAULT_TEMPLATES, loadProject, MARKER, satisfies, TOOLKIT_DIR, toolkitVersion, VO_PY } from "./project.mjs";
 
 /** 各 skill 的项目配置里，哪些字段是要存在的路径（点号表示嵌套） */
 export const CONFIG_PATHS = {
-  "narrated-video.config.json": ["tts.reference", "theme"],
+  "voiceover.config.json": ["tts.reference"],
   "video-director.config.json": ["fontsDir", "gsap", "brandDir", "sfxDir"],
   "knowledge-video.config.json": ["voiceGuide", "experienceDir"],
   "scenario-content.config.json": ["voiceGuide"],
@@ -18,7 +18,7 @@ export const CONFIG_PATHS = {
 };
 
 /** 命令 → 所在 skill */
-export const COMMANDS = { st: "studio", kv: "knowledge-video", sc: "scenario-content", nv: "narrated-video", vd: "video-director", wa: "wechat-article", ic: "image-cards", bd: "browser-draft", pd: "phone-draft" };
+export const COMMANDS = { st: "studio", kv: "knowledge-video", sc: "scenario-content", vo: "voiceover", vd: "video-director", vdraft: "video-draft", wa: "wechat-article", ic: "image-cards", bd: "browser-draft", pd: "phone-draft" };
 
 /** 外部程序：[命令, 用途, 必需?] */
 const EXTERNAL = [
@@ -27,7 +27,7 @@ const EXTERNAL = [
   ["ffprobe", "配音、渲染", true],
   ["uv", "装 Python 依赖", false],
   ["browser-harness", "网页存草稿（bd）、抓对标（sc bench）", true],
-  ["adb", "手机录实测（pd、nv rec --app）", false],
+  ["adb", "手机录实测（pd、sc rec --app）", false],
 ];
 
 const GENERATED = new Set(["卡片预览.html", "预览.html", "README.md"]);
@@ -95,10 +95,6 @@ function checkTemplates(p, out) {
 function checkBrand(p, out) {
   const dir = p.abs.brand;
   if (!existsSync(dir)) return out.fail(`品牌目录不存在：${p.brand}`);
-  for (const f of ["frame.md", "caption-skin.html"]) {
-    if (existsSync(join(dir, f))) out.ok(`品牌 ${f}`);
-    else out.fail(`品牌目录缺 ${f}（st new 要复制它）`);
-  }
   // 账号固定元素只用 var(--vd-*) 字体变量（hyperframes lint 看不到跨文件的 @font-face）
   for (const f of readdirSync(dir).filter((n) => /^brand-.*\.html$/.test(n))) {
     const html = readFileSync(join(dir, f), "utf8");
@@ -108,7 +104,7 @@ function checkBrand(p, out) {
 }
 
 /** 会进成品（配音人设、发草稿核对的账号名）的字段：还是占位就报 ✗；其余占位报 ⚠ */
-const PLACEHOLDER_FAIL = { "narrated-video.config.json": ["tts.style"], "wechat-article.config.json": ["account"] };
+const PLACEHOLDER_FAIL = { "voiceover.config.json": ["tts.style"], "wechat-article.config.json": ["account"] };
 
 /** 配置里还是 skeleton 的括号说明「（…）」的字符串字段：[[路径, 值]] */
 export function placeholders(cfg, prefix = "") {
@@ -132,14 +128,14 @@ function checkConfigs(p, out) {
       else out.warn(msg);
     }
     const sfx = file === "video-director.config.json" && cfg.sfxDir && resolve(p.root, cfg.sfxDir);
-    const refHint = missing.some((m) => m.startsWith("tts.reference=")) ? "（参考音色怎么录、多长、什么格式：narrated-video/references/setup.md「参考音色」）" : "";
+    const refHint = missing.some((m) => m.startsWith("tts.reference=")) ? "（参考音色怎么录、多长、什么格式：voiceover/references/setup.md「参考音色」）" : "";
     if (missing.length) out.fail(`${file} 里的路径不存在：${missing.join("；")}${refHint}`);
     else if (sfx && !hasAudio(sfx)) out.fail(`${file} 的 sfxDir 音效目录是空的（${cfg.sfxDir}）：DIRECTOR.md 写的音效会找不到。放几个音效进去，或指向 media-use 的音效库 ${mediaUseSfx("~")}`);
     else out.ok(file);
   }
   // 只看在不在，不读内容（里面是密钥）
   if (existsSync(join(p.root, ".env"))) out.ok(".env");
-  else out.warn("没有 .env：配音（nv voice / hf-audio）要用 DASHSCOPE_API_KEY 等密钥，复制 .env.example 为 .env 再填");
+  else out.warn("没有 .env：配音（vo）要用 DASHSCOPE_API_KEY 等密钥，复制 .env.example 为 .env 再填");
   const bd = join(p.root, "browser-draft.config.json");
   if (existsSync(bd)) {
     try {
@@ -174,7 +170,7 @@ function checkToolkit(out, home = homedir()) {
 }
 
 /** pip 包名 → import 名（不一样的才写） */
-const IMPORT_NAME = { "websocket-client": "websocket", "edge-tts": "edge_tts", "kokoro-onnx": "kokoro_onnx", fonttools: "fontTools", pillow: "PIL" };
+const IMPORT_NAME = { "websocket-client": "websocket" };
 const pipName = (line) => line.split(/[=<>~!;\s[]/)[0].trim();
 const requirements = (dir) => readFileSync(join(dir, "requirements.txt"), "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(pipName);
 
@@ -205,16 +201,13 @@ export function checkDeps(out, toolkit = TOOLKIT_DIR) {
       if (miss.length) fail(`${s} 缺 Python 依赖：${miss.join("、")}（cd ${dir} && uv pip install --python .venv/bin/python -r requirements.txt，或 st install --deps）`);
     }
   }
-  const nv = join(toolkit, "narrated-video");
-  if (existsSync(nv)) {
-    if (!existsSync(join(nv, ".venv"))) out.warn("narrated-video 没有 .venv（TTS、字体子集要用）：见 narrated-video/references/setup.md");
-    else {
-      const miss = missingPython(nv, NV_PY);
-      if (miss.length) out.warn(`narrated-video 的 .venv 缺：${miss.join("、")}（TTS、字体子集要用；st install --deps 重装）`);
-    }
-    const vendor = join(toolkit, "phone-draft/vendor");
-    if (!existsSync(vendor) || !readdirSync(vendor).some((n) => n.startsWith("scrcpy"))) out.warn("phone-draft 没有 scrcpy（只影响手机录实测）：phone-draft/scripts/setup-scrcpy.sh");
+  const vo = join(toolkit, "voiceover");
+  if (existsSync(join(vo, ".venv"))) {
+    const miss = missingPython(vo, VO_PY);
+    if (miss.length) out.warn(`voiceover 的 .venv 缺：${miss.join("、")}（只有 cosyvoice 要用；st install --deps 重装）`);
   }
+  const vendor = join(toolkit, "phone-draft/vendor");
+  if (!existsSync(vendor) || !readdirSync(vendor).some((n) => n.startsWith("scrcpy"))) out.warn("phone-draft 没有 scrcpy（只影响手机录实测）：phone-draft/scripts/setup-scrcpy.sh");
   for (const [cmd, use, required] of EXTERNAL) {
     if (which(cmd)) continue;
     if (required) fail(`缺外部程序 ${cmd}（${use}）`);
@@ -227,7 +220,6 @@ export function checkDeps(out, toolkit = TOOLKIT_DIR) {
 
 /** 工具包用到、但由 HyperFrames 发布的 skill：[名字, 要有的文件, 用途, 改位置的环境变量] */
 const HF_SKILLS = [
-  ["faceless-explainer", "scripts/assemble-index.mjs", "nv hf-build 拼视频", "FACELESS_DIR"],
   ["hyperframes-audio", "scripts/carve.mjs", "vd 配乐"],
 ];
 
@@ -235,7 +227,7 @@ function checkExternalSkills(out, home) {
   for (const [name, file, use, envVar] of HF_SKILLS) {
     const dir = (envVar && process.env[envVar]) || join(home, ".claude/skills", name);
     if (existsSync(join(dir, file))) out.ok(`外部 skill ${name}`);
-    else out.warn(`缺外部 skill ${name}（${use}）：cd ${join(TOOLKIT_DIR, "narrated-video")} && npx hyperframes skills update ${name}`);
+    else out.warn(`缺外部 skill ${name}（${use}）：cd ${join(TOOLKIT_DIR, "video-director")} && npx hyperframes skills update ${name}`);
   }
 }
 

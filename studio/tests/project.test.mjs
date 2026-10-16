@@ -10,6 +10,9 @@ import { install } from "../scripts/lib/install.mjs";
 import { DEFAULT_TEMPLATES, findRoot, loadProject, satisfies, TOOLKIT_DIR } from "../scripts/lib/project.mjs";
 import { substitute } from "../scripts/lib/new.mjs";
 
+const isLink = (p) => {
+  try { return lstatSync(p).isSymbolicLink(); } catch { return false; }
+};
 const tmp = (p) => mkdtempSync(join(tmpdir(), p));
 const quiet = () => {};
 const capture = () => {
@@ -71,7 +74,7 @@ test("st doctor：新建的项目里，项目、模板、品牌、配置几节�
   const text = out.text();
   const head = text.slice(0, text.indexOf("\n工具包"));
   assert.match(head, /✓ 模板：全部用工具包默认的/);
-  assert.match(head, /✓ 品牌 frame\.md/);
+  assert.doesNotMatch(head, /✗ 品牌/);
   const fails = head.split("\n").filter((l) => l.includes("✗"));
   // 起步骨架不带参考音色、配音人设和公众号名称还是占位，只允许这三处报 ✗
   for (const l of fails) assert.match(l, /tts\.reference|tts\.style 还是模板占位|account 还是模板占位/, l);
@@ -101,13 +104,13 @@ test("st doctor：登记了系列却没有系列说明，给 ⚠", () => {
   assert.doesNotMatch(out.text(), /有说明\.md/);
 });
 
-test("st doctor：缺 faceless-explainer、hyperframes-audio 这两个外部 skill，给 ⚠ 和安装命令", () => {
+test("st doctor：缺外部 skill hyperframes-audio，给 ⚠ 和安装命令", () => {
   const dir = join(tmp("st-doc-"), "proj");
   initProject({ dir }, quiet);
   const out = capture();
   doctor({ cwd: dir, log: out.log, home: tmp("st-home-") });
-  assert.match(out.text(), /⚠ 缺外部 skill faceless-explainer.*hyperframes skills update/);
-  assert.match(out.text(), /⚠ 缺外部 skill hyperframes-audio/);
+  assert.match(out.text(), /⚠ 缺外部 skill hyperframes-audio.*hyperframes skills update/);
+  assert.doesNotMatch(out.text(), /faceless-explainer/);
 });
 
 test("st doctor：项目模板覆盖——改过的认、一样的提醒删、对不上的提醒", () => {
@@ -149,17 +152,37 @@ test("st doctor：不在作品项目里，报找不到 studio.json，但仍检�
 test("st install：软链 skill 和命令；旧软链改指向；真实目录不动", () => {
   const home = tmp("st-home-");
   mkdirSync(join(home, ".claude/skills"), { recursive: true });
-  symlinkSync("/nowhere", join(home, ".claude/skills/narrated-video"));
+  symlinkSync("/nowhere", join(home, ".claude/skills/studio"));
   mkdirSync(join(home, ".claude/skills/image-cards"));
   const out = capture();
   const code = install({ home, log: out.log });
   assert.equal(code, 1, "image-cards 是真实目录，应报出来");
-  assert.equal(readlinkSync(join(home, ".claude/skills/narrated-video")), join(TOOLKIT_DIR, "narrated-video"));
   assert.equal(readlinkSync(join(home, ".claude/skills/studio")), join(TOOLKIT_DIR, "studio"));
   assert.ok(!lstatSync(join(home, ".claude/skills/image-cards")).isSymbolicLink());
   assert.equal(realpathSync(join(home, ".local/bin/st")), join(TOOLKIT_DIR, "studio/bin/st"));
   assert.equal(realpathSync(join(home, ".local/bin/kv")), join(TOOLKIT_DIR, "knowledge-video/bin/kv"));
   assert.doesNotMatch(out.text(), /依赖没装/, "不加 --deps 时不该断言依赖没装");
+});
+
+test("install：清掉指向本工具包、已经失效的旧软链接（skill 和命令）；别处的链接不动", () => {
+  const home = tmp("st-home-");
+  const toolkit = tmp("st-toolkit-");
+  for (const [skill, cmd] of [["voiceover", "vo"], ["video-draft", "vdraft"]]) {
+    mkdirSync(join(toolkit, skill, "bin"), { recursive: true });
+    writeFileSync(join(toolkit, skill, "SKILL.md"), "x");
+    writeFileSync(join(toolkit, skill, "bin", cmd), "x");
+  }
+  mkdirSync(join(home, ".claude/skills"), { recursive: true });
+  mkdirSync(join(home, ".local/bin"), { recursive: true });
+  symlinkSync(join(toolkit, "narrated-video"), join(home, ".claude/skills/narrated-video"));
+  symlinkSync(join(toolkit, "narrated-video/bin/nv"), join(home, ".local/bin/nv"));
+  symlinkSync("/nowhere", join(home, ".local/bin/other"));
+  install({ home, toolkit, log: () => {} });
+  assert.equal(isLink(join(home, ".claude/skills/narrated-video")), false);
+  assert.equal(isLink(join(home, ".local/bin/nv")), false);
+  assert.equal(readlinkSync(join(home, ".local/bin/other")), "/nowhere");
+  assert.equal(readlinkSync(join(home, ".local/bin/vo")), join(toolkit, "voiceover/bin/vo"));
+  assert.equal(readlinkSync(join(home, ".local/bin/vdraft")), join(toolkit, "video-draft/bin/vdraft"));
 });
 
 test("st install：不加 --deps 时提示的是「没检查依赖」，并指向 st doctor", () => {

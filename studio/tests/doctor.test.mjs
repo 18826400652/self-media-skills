@@ -64,7 +64,7 @@ test("st doctor：配置里还是模板占位（括号说明）→ 进成品的�
   initProject({ dir, home }, quiet);
   const out = capture();
   doctor({ cwd: dir, log: out.log, home });
-  assert.match(out.text(), /✗ narrated-video\.config\.json 的 tts\.style 还是模板占位/);
+  assert.match(out.text(), /✗ voiceover\.config\.json 的 tts\.style 还是模板占位/);
   assert.match(out.text(), /✗ wechat-article\.config\.json 的 account 还是模板占位/);
 });
 
@@ -72,7 +72,7 @@ test("st doctor：占位字段填了真实值、或字段不存在 → 不报", 
   const home = fakeHome({ withSfx: true });
   const dir = join(tmp("st-init-"), "proj");
   initProject({ dir, home, account: "小号", audience: "新手" }, quiet);
-  setJson(dir, "narrated-video.config.json", (c) => ({ tts: { ...c.tts, style: "中年男性，像跟朋友聊天" } }));
+  setJson(dir, "voiceover.config.json", (c) => ({ tts: { ...c.tts, style: "中年男性，像跟朋友聊天" } }));
   writeFileSync(join(dir, "wechat-article.config.json"), JSON.stringify({ theme: "grace" }));
   const out = capture();
   doctor({ cwd: dir, log: out.log, home });
@@ -121,5 +121,5 @@ test("st doctor：参考音色不存在时，指向怎么准备的文档", () =>
   initProject({ dir, home }, quiet);
   const out = capture();
   doctor({ cwd: dir, log: out.log, home });
-  assert.match(out.text(), /✗ narrated-video\.config\.json 里的路径不存在：tts\.reference=.*references\/setup\.md「参考音色」/);
+  assert.match(out.text(), /✗ voiceover\.config\.json 里的路径不存在：tts\.reference=.*voiceover\/references\/setup\.md「参考音色」/);
 });

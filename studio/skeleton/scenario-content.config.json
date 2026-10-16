@@ -13,5 +13,10 @@
     "xiaohongshuCopy": "小红书/文案.md",
     "douyinCopy": "抖音/发布文案.md",
     "douyinScript": "抖音/SCRIPT.md"
+  },
+  "rec": {
+    "cdpPort": 9333,
+    "hide": "#immersive-translate-popup,[id^=immersive-translate]",
+    "theme": "dark"
   }
 }
