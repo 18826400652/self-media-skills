@@ -66,11 +66,11 @@ footer: "@账号名"           # 可选，页脚文字；不写用配置的 foot
 |---|---|---|
 | `xiaohongshu` | 1080×1440 | 小红书图文（3:4，推荐） |
 | `xiaohongshu-square` | 1080×1080 | 小红书图文（1:1） |
-| `wechat-cover` | 900×383 | 公众号头条封面（2.35:1） |
+| `wechat-cover` | 900×383 | 公众号头条封面（2.35:1），文字居中（转发卡片会裁中间 1:1，标题写短、放中间） |
 | `wechat-cover-square` | 383×383 | 公众号次条、转发卡片封面（1:1） |
 | `douyin-cover` | 1080×1920 | 抖音视频封面 |
 
-新增预设：在 `presets/` 加一个 JSON，字段包括 `width`、`height`、`fontSize`（基准字号，其余字号按 em 缩放）、`padding`（上右下左）、`footer`（是否显示页脚）。
+新增预设：在 `presets/` 加一个 JSON，字段包括 `width`、`height`、`fontSize`（基准字号，其余字号按 em 缩放）、`padding`（上右下左）、`footer`（是否显示页脚）、`center`（可选，整张卡文字居中）。
 
 ## 内容规则（小红书图文）
 

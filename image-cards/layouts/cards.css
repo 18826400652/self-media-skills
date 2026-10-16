@@ -219,6 +219,12 @@ body {
   visibility: hidden;
 }
 
+/* 预设 center（公众号封面）：整张卡文字居中 */
+.card-center .card-body {
+  text-align: center;
+  align-items: center;
+}
+
 /* 金句：大字居中 */
 .layout-quote .card-body {
   justify-content: center;

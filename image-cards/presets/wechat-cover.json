@@ -1,1 +1,1 @@
-{ "label": "公众号封面 2.35:1（头条大图）", "width": 900, "height": 383, "fontSize": 26, "padding": [40, 56, 40, 56], "footer": false }
+{"label": "公众号封面 2.35:1（头条大图）", "width": 900, "height": 383, "fontSize": 26, "padding": [40, 56, 40, 56], "footer": false, "center": true}

@@ -85,7 +85,8 @@ function buildHtml({ cards, preset, themeCss, footer, baseDir }) {
     const foot = preset.footer
       ? `<footer class="card-footer"><span>${escapeHtml(footer)}</span><span class="page">${i + 1} / ${cards.length}</span></footer>`
       : "";
-    return `<section class="card layout-${c.layout}" data-index="${i + 1}"><div class="card-body">${md.render(c.src)}</div>${foot}</section>`;
+    // 预设写了 center（公众号封面）：文字居中，转发卡片裁中间 1:1 时标题不被切
+    return `<section class="card layout-${c.layout}${preset.center ? " card-center" : ""}" data-index="${i + 1}"><div class="card-body">${md.render(c.src)}</div>${foot}</section>`;
   });
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="UTF-8" />
