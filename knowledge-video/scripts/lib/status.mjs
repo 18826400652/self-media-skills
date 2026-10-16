@@ -1,6 +1,6 @@
 // 一期视频走到哪了：按「文件有没有 + 确认节点过没过」找第一个没完成的阶段。
 // 阶段：brief → research → script → director → sample → render → review → done；确认节点：script ①、director ②a、sample ②b、final ③
-import { parseScriptBasis } from "./script.mjs";
+import { parseScript } from "./shared/script-md.mjs";
 
 const step = (stage, next, waitingFor = null) => ({ stage, next, waitingFor });
 const DONE_TEST_RE = /状态[:：]\s*已实测/; // scenario-content 的实测记录：做完把状态改成「已实测」
@@ -13,7 +13,7 @@ export function isEvidenceFilled(type, text) {
 
 /** SCRIPT.md 是不是真的写了：至少一句口播，且没有剩下模板的占位口播 */
 export function isScriptFilled(md) {
-  const lines = parseScriptBasis(md);
+  const lines = parseScript(md);
   return lines.length > 0 && lines.every((l) => !PLACEHOLDER_RE.test(l.text));
 }
 

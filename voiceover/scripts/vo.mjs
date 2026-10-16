@@ -12,6 +12,7 @@ import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { buildCaptionGroups } from "./lib/caption-groups.mjs";
+import { parseScript } from "./lib/shared/script-md.mjs";
 import { configGate, loadConfig } from "./lib/config.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { loadDotEnv, probeDuration, synthesizeClean, synthesizeSegment } from "./lib/speech.mjs";
@@ -46,34 +47,6 @@ function parseArgs(argv) {
     overrides[key] = rest[i + 1];
   }
   return { dir: resolve(dir), overrides, check };
-}
-
-/** SCRIPT.md → [{ frame, text, emotion }]，规则与 HyperFrames 的 audio.mjs 相同，另读 **Emotion:** */
-export function parseHfScript(md) {
-  const out = [];
-  let cur = null;
-  const flush = () => {
-    if (cur && cur.text.trim()) out.push({ ...cur, text: cur.text.trim() });
-    cur = null;
-  };
-  for (const line of md.split(/\r?\n/)) {
-    const h = line.match(/^#{2,3}\s+.*?\(frame\s+(\d+)\)/i);
-    if (h) {
-      flush();
-      cur = { frame: Number(h[1]), text: "", emotion: "", keywords: [] };
-      continue;
-    }
-    if (!cur) continue;
-    const emotion = line.match(/^\s*\*\*(?:Emotion|情感)[:：]\*\*\s*(\S+)/i);
-    if (emotion) cur.emotion = emotion[1];
-    const keywords = line.match(/^\s*\*\*(?:Highlight|重点词)[:：]\*\*\s*(.+)$/i);
-    if (keywords) cur.keywords = keywords[1].split(/[、,，\s]+/).filter(Boolean);
-    if (/^\s*\*\*/.test(line)) continue;
-    const m = line.match(/^(?: {4,}|\t)(.+)$/);
-    if (m) cur.text += m[1].trim();
-  }
-  flush();
-  return out;
 }
 
 // 中文标点 → 英文标点：HyperFrames 的字幕分组只认英文标点为「句末」，一个分句就成为一屏字幕
@@ -206,7 +179,7 @@ async function main() {
   const { pause: pauseRaw = 0, ...tts } = { ...config.tts, ...overrides };
   const pause = Number(pauseRaw);
   if (!(pause >= 0)) throw new Error(`--pause 要写秒数（如 0.4），现在是 ${pauseRaw}`);
-  const lines = parseHfScript(readFileSync(scriptPath, "utf8"));
+  const lines = parseScript(readFileSync(scriptPath, "utf8"));
   if (!lines.length) throw new Error(`${scriptPath} 里没有口播（需要 "## … (Frame N)" 标题 + 缩进的口播原文）`);
   const segments = loadDirection(dir, lines, tts);
   if (check) {

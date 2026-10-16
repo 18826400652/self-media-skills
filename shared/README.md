@@ -25,3 +25,12 @@ skill 之间不互相引用，每个 skill 单独拷走就能用。
 - 接口：`parse_copy(path) → {"title", "paragraphs", "topics"}`；格式不对抛 `CopyFormatError`
 - 谁在用：browser-draft（`bd run` 把它拼在步骤脚本前面）、phone-draft（`pd run`，从自己的 `lib/` 导入）
 - 来源：原 browser-draft/lib，phone-draft 以前用相对路径借
+
+### node/script-md.mjs
+
+- 用途：读抖音 SCRIPT.md 的口播（sc 检查口播、kv 检查依据、vo 配音，三家同一套规则）
+- 接口：`parseScript(md) → [{ frame, text, sentences, emotion, keywords, basis }]`
+- 规则：`##` / `###` 标题带 `(Frame N)`（大小写不限）开一帧；4 个以上空格或 Tab 开头的行是口播，一行一句（`sentences`），`text` 是连起来；`**Emotion:**` / `**情感:**`、`**重点词:**` / `**Highlight:**`、`**依据:**` 是元数据（中英文冒号都行）；没有口播的帧不输出
+- 谁在用：scenario-content（`sc check`）、knowledge-video（`kv check`、`kv status`）、voiceover（`vo`）
+- 来源：原 vo `parseHfScript`、kv `parseScriptBasis`、sc `douyinLines` 三份，规则以 vo 为准（配音吃的是它）；sc 旧的「分镜表」写法删了
+- 注意：vo 的配音缓存键含口播 `text`，改这里的规则可能让已有配音缓存失效（`shared/tests/script-md.test.mjs` 里有一条用 flow-check 02 真实稿子锁住）

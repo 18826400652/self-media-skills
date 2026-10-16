@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseScript } from "./lib/shared/script-md.mjs";
 
 const CONFIG_NAME = "scenario-content.config.json";
 const DEFAULTS = {
@@ -218,47 +219,20 @@ function checkPlatforms(ep, config, r) {
 
   const douyin = read("douyinScript");
   if (douyin) {
-    const lines = douyinLines(douyin);
-    for (const { n, text, emo, sentences = [text] } of lines) {
+    const lines = parseScript(douyin);
+    for (const { frame, text, emotion, sentences } of lines) {
       for (const s of sentences) {
-        if (chars(s) > LIMITS.douyinLine) r.warn(`抖音第 ${n} 帧有一句 ${chars(s)} 字，建议 ≤ ${LIMITS.douyinLine}：${s}`, f.douyinScript);
+        if (chars(s) > LIMITS.douyinLine) r.warn(`抖音第 ${frame} 帧有一句 ${chars(s)} 字，建议 ≤ ${LIMITS.douyinLine}：${s}`, f.douyinScript);
       }
-      if (emo && !EMOTIONS.includes(emo)) r.fail(`抖音第 ${n} 句情感「${emo}」无效，可选：${EMOTIONS.slice(0, 7).join(" ")}`, f.douyinScript);
+      if (emotion && !EMOTIONS.includes(emotion)) r.fail(`抖音第 ${frame} 句情感「${emotion}」无效，可选：${EMOTIONS.slice(0, 7).join(" ")}`, f.douyinScript);
       const written = WRITTEN_WORDS.filter((w) => text.includes(w));
-      if (written.length) r.warn(`抖音第 ${n} 句有书面词「${written.join("、")}」，配音会像播报：${text}`, f.douyinScript);
-      if (/\d/.test(text)) r.warn(`抖音第 ${n} 句有阿拉伯数字，TTS 可能读错，建议写汉字：${text}`, f.douyinScript);
+      if (written.length) r.warn(`抖音第 ${frame} 句有书面词「${written.join("、")}」，配音会像播报：${text}`, f.douyinScript);
+      if (/\d/.test(text)) r.warn(`抖音第 ${frame} 句有阿拉伯数字，TTS 可能读错，建议写汉字：${text}`, f.douyinScript);
     }
     if (lines.length && !lines.some((l) => SPOKEN_MARKERS.test(l.text))) {
       r.warn("抖音口播整段没有语气词或反问（吧、呢、其实、结果……），听起来可能像念稿", f.douyinScript);
     }
   }
-}
-
-/**
- * 抖音口播 → [{ n, text, emo }]。支持两种写法：
- *   - 分镜表：表头含「口播…」「情感…」列，第一列是行号（旧流程的 脚本.md）
- *   - HyperFrames SCRIPT.md：`## … (Frame N)` 开一帧，`**Emotion:**`/`**情感:**`，缩进块是口播原文；
- *     缩进块可以有好几行，每行一句（同一个画面接着说），字数按句检查
- */
-export function douyinLines(md) {
-  if (/\(Frame \d+\)/.test(md)) {
-    return md.split(/^## /m).slice(1).flatMap((block) => {
-      const n = block.match(/\(Frame (\d+)\)/)?.[1];
-      const sentences = block.split("\n").filter((l) => /^ {4}\S/.test(l)).map((l) => l.trim());
-      const text = sentences.join("");
-      const emo = block.match(/\*\*(?:Emotion|情感)[:：]\*\*\s*(\S+)/i)?.[1] ?? "";
-      return n && text ? [{ n, text, emo, sentences }] : [];
-    });
-  }
-  const rows = md.split("\n").filter((l) => l.trim().startsWith("|"));
-  const header = rows[0]?.split("|").map((c) => c.trim()) ?? [];
-  const col = header.findIndex((h) => h.startsWith("口播"));
-  const emoCol = header.findIndex((h) => h.startsWith("情感"));
-  return rows
-    .slice(2)
-    .map((row) => row.split("|").map((c) => c.trim()))
-    .filter((cells) => /^\d+$/.test(cells[1]) && cells[col])
-    .map((cells) => ({ n: cells[1], text: cells[col], emo: emoCol >= 0 ? cells[emoCol] : "" }));
 }
 
 /** 平台上的计数：「1.2万」「10万+」「5276」→ 数字；读不出来算 0 */

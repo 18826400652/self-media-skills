@@ -6,5 +6,10 @@
   "python/copy_format.py": [
     "browser-draft/lib/copy_format.py",
     "phone-draft/lib/copy_format.py"
+  ],
+  "node/script-md.mjs": [
+    "scenario-content/scripts/lib/shared/script-md.mjs",
+    "knowledge-video/scripts/lib/shared/script-md.mjs",
+    "voiceover/scripts/lib/shared/script-md.mjs"
   ]
 }
