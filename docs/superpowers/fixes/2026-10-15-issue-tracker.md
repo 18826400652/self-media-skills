@@ -73,4 +73,4 @@
 - 修复中新发现：P-42（配音缓存键用参考音色的绝对路径，项目挪位置后要重新付费配音），改法要用户定
 - 整条分支自查：改动的 .mjs / .js 都过了 `node --check`，bash 入口过了 `bash -n`；没有调试输出、没有未使用的导入（自查，没有派独立 reviewer）
 - 还没做：P-36b（组件库仓库）、P-42、P-19 / P-20 真机实跑
-- 视频流水线重组验收（分支 refactor/video-pipeline）：flow-check 迁移配置、`st install`、`st new` 新建一期、`vo` 配音（49 组字幕，字幕总时长与配音一致）、`vd build/qa/render`（样片 + 整片，`vd verify` 全通过）、`vdraft` / `sc rec` 参数检查全部通过；`--no-music`，未存真实草稿；配音缓存键与旧缓存不同，付费重配一次
+- 视频流水线重组验收（分支 refactor/video-pipeline，flow-check 里跑了一遍，没动 self-media）：配置迁移、`st new`、`vo` 付费配音一次（49 组字幕）、`vd build/qa/render`（样片 + 整片，`--no-music`，`vd verify` 全通过）、`vdraft` / `sc rec` 参数检查都通过，没存真实草稿。要说明的：① 字幕检查是对本次 audio_meta 的自检，没有和 02 比；② `st install` 完成，但 `st doctor` 还有 1 个 ✗，原因是 worktree 里没有 phone-draft/.venv（环境问题）；③ nv / narrated-video 链接仍指向主仓库的 narrated-video，合并前是对的，合并后要在主仓库再跑一次 `st install`；④ 第 6 步构建要从 02 补拷两个 PNG 素材（计划的缺口）；⑤ `kv` 逐阶段「下一步」没有端到端核对，因为 03 里没有内容文件；⑥ 整片构建有 `clip_ends_past_root_duration` 和 GSAP 警告，来自 02 的旧分段
