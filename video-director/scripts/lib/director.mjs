@@ -21,9 +21,8 @@ export function parseDirector(md) {
 
   const seen = new Set();
   const tokens = [];
-  // 反引号里的 `@词` 是说明文字，不当锚点（``` 围栏不受影响：围栏内换行，匹配不到）
-  const prose = md.replace(/`[^`\n]+`/g, "");
-  for (const m of prose.matchAll(TOKEN)) {
+  // 反引号只是排版，`@一张表` 照样是锚点；只有写法说明里的 `@词`、`@词#2` 不算
+  for (const m of md.replace(/`@词(?:#\d+)?`/g, "").matchAll(TOKEN)) {
     const t = { text: m[1], nth: m[2] ? Number(m[2]) : 1, raw: m[0] };
     const key = `${t.text}#${t.nth}`;
     if (!seen.has(key)) { seen.add(key); tokens.push(t); }

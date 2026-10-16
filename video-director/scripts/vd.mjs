@@ -3,7 +3,7 @@
 //   init   建空的导演工程（hyperframes blank + vd 模板）；目录不为空时拒绝
 //   render 渲染到 <工程>/renders/（--sample 出 sample.mp4），完成后自动 verify
 //   verify <成片.mp4> [--project <工程>]：帧数、时长、声音、尺寸、黑屏
-//   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）；--check 只校验不写文件
+//   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）；--check 只校验不写文件；段里 at() 用了没写的词报错
 //   build  cues → 音轨 → dykit 组件 → index.html 标记块 → 配乐对位与避让 → hyperframes check
 //          [--sample] [--no-music] [--update-components]（组件库换成 GitHub 上的最新提交）
 //   check  校验 DIRECTOR.md + 列出组件候选 + hyperframes check
@@ -18,6 +18,7 @@ import { REPO, componentInfo, ensureLock, fetchArchive, fitProblem, installCompo
 import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
+import { missingAts } from "./lib/frame-ats.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
@@ -68,6 +69,8 @@ function load(dir) {
   if (errors.length) throw new Error(`DIRECTOR.md 有 ${errors.length} 处问题：\n  - ${errors.join("\n  - ")}`);
   const built = { ...buildCues(parsed, meta), vd: parsed.vd };
   for (const w of built.warnings) console.warn(`⚠ ${w}`);
+  const missing = missingAts(dir, built.cues);
+  if (missing.length) throw new Error(`段里用了 ${missing.length} 个 DIRECTOR.md 没写的 @词（在正文里写成 @词 再跑）：\n  - ${missing.map((m) => `${m.file}：at("${m.name}")`).join("\n  - ")}`);
   return { meta, parsed, built };
 }
 

@@ -99,6 +99,42 @@ test("vd cues --check：DIRECTOR.md 有错返回 1，且不写 cues.js", async (
   assert.equal(existsSync(`${dir}/ep/cues.js`), false);
 });
 
+const SECTIONS = ["## 1. 视觉方案", "## 2. 分段", "## 3. 导演规则自检", "## 4. 音乐", "## 5. 账号固定元素", "## 6. 新增内容", "## 7. 样片范围", "## 8. 组件候选"];
+const okVd = {
+  kicker: "栏目 · 第 1 期",
+  palette: { bg: "#F1ECE2", ink: "#1C1A17", muted: "#6E675C", accent: "#FFD84D", alert: "#D2372A" },
+  segments: [{ id: "seg-01", lines: [1, 1] }],
+  sfx: [], music: null,
+  ending: { next: "下一期", question: "问题", cta: "评论区说说 ↓", hold: 2 },
+  sample: { segments: ["seg-01"], end: "@你好", tail: 0.5 },
+};
+const okDirector = ["# 导演脚本", ...SECTIONS.flatMap((x) => [x, "说到 @你好 时出现。"]), "```json vd", JSON.stringify(okVd), "```"].join("\n\n");
+
+test("vd cues --check：段里用了 at(\"词\")，DIRECTOR.md 却没有这个 @词 → 返回 1，指出文件和词", async () => {
+  const dir = project({
+    "ep/DIRECTOR.md": okDirector,
+    "ep/audio_meta.json": { voices: [{ frame: 1, duration_s: 1, words: [{ text: "你好世界", start: 0, end: 1 }] }] },
+    "ep/compositions/frames/seg-01.html": `<script>tl.to(a, {}, at("你好")); tl.to(b, {}, at('世界'));</script>`,
+  });
+  const errs = [];
+  const orig = console.error;
+  console.error = (m) => errs.push(m);
+  try { assert.equal(await main(["cues", `${dir}/ep`, "--check"]), 1); } finally { console.error = orig; }
+  assert.match(errs.join("\n"), /seg-01\.html.*at\("世界"\)/);
+  assert.doesNotMatch(errs.join("\n"), /at\("你好"\)/);
+});
+
+test("vd cues --check：段里的 at() 都在 DIRECTOR.md 里 → 通过", async () => {
+  const dir = project({
+    "ep/DIRECTOR.md": okDirector,
+    "ep/audio_meta.json": { voices: [{ frame: 1, duration_s: 1, words: [{ text: "你好世界", start: 0, end: 1 }] }] },
+    "ep/compositions/frames/seg-01.html": `<script>tl.to(a, {}, at("你好"));</script>`,
+  });
+  const orig = console.log;
+  console.log = () => {};
+  try { assert.equal(await main(["cues", `${dir}/ep`, "--check"]), 0); } finally { console.log = orig; }
+});
+
 test("vd qa：找不到 Chrome 时先报错退出，不读工程、不装依赖", async () => {
   const { existsSync } = await import("node:fs");
   const dir = project({ "ep/x": "" });
