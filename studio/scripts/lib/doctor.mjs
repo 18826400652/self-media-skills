@@ -4,6 +4,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpat
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { hasAudio, mediaUseSfx } from "./init.mjs";
+import { syncShared } from "./shared-sync.mjs";
 import { DEFAULT_TEMPLATES, loadProject, MARKER, satisfies, TOOLKIT_DIR, toolkitVersion, VO_PY } from "./project.mjs";
 
 /** 各 skill 的项目配置里，哪些字段是要存在的路径（点号表示嵌套） */
@@ -145,6 +146,14 @@ function checkConfigs(p, out) {
   }
 }
 
+/** 各 skill 里的共用代码拷贝和 shared/ 正本一致 */
+export function checkShared(out, toolkit = TOOLKIT_DIR) {
+  let problems;
+  try { ({ problems } = syncShared({ toolkit, check: true })); } catch (e) { return out.fail(`共用代码：${e.message}`); }
+  if (!problems.length) return out.ok("共用代码和 shared/ 正本一致");
+  for (const p of problems) out.fail(`共用代码 ${p}：改正本后跑 st sync-shared`);
+}
+
 function checkToolkit(out, home = homedir()) {
   out.ok(`工具包：${TOOLKIT_DIR}`);
   const skills = toolkitSkills();
@@ -255,7 +264,7 @@ export function doctor({ cwd = process.cwd(), online = false, log = console.log,
     section("品牌", () => checkBrand(project, out));
     section("skill 配置", () => checkConfigs(project, out));
   }
-  section("工具包", () => { checkToolkit(out, home); checkExternalSkills(out, home); });
+  section("工具包", () => { checkToolkit(out, home); checkShared(out); checkExternalSkills(out, home); });
   section("依赖", () => checkDeps(out));
   if (online && project) section("联网检查", () => checkOnline(project, out));
   log(`\n${fails ? `✗ ${fails} 项要修` : "✓ 没有要修的"}${warns ? `，⚠ ${warns} 项提醒` : ""}${online ? "" : "（加 --online 再查浏览器能不能连上）"}`);

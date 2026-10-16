@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { checkDeps, doctor } from "../scripts/lib/doctor.mjs";
+import { checkDeps, checkShared, doctor } from "../scripts/lib/doctor.mjs";
 import { initProject } from "../scripts/lib/init.mjs";
 
 const tmp = (p) => mkdtempSync(join(tmpdir(), p));
@@ -122,4 +122,17 @@ test("st doctor：参考音色不存在时，指向怎么准备的文档", () =>
   const out = capture();
   doctor({ cwd: dir, log: out.log, home });
   assert.match(out.text(), /✗ voiceover\.config\.json 里的路径不存在：tts\.reference=.*voiceover\/references\/setup\.md「参考音色」/);
+});
+
+test("checkShared：拷贝和正本不一致 → ✗，提示改正本后跑 st sync-shared；一致 → ✓", () => {
+  const tk = mkdtempSync(join(tmpdir(), "st-doc-shared-"));
+  mkdirSync(join(tk, "shared/node"), { recursive: true });
+  mkdirSync(join(tk, "a/lib"), { recursive: true });
+  writeFileSync(join(tk, "shared/manifest.json"), JSON.stringify({ "node/x.mjs": ["a/lib/x.mjs"] }));
+  writeFileSync(join(tk, "shared/node/x.mjs"), "export const x = 1;\n");
+  writeFileSync(join(tk, "a/lib/x.mjs"), "被手改了\n");
+  const lines = [];
+  const out = { ok: (m) => lines.push(`✓ ${m}`), warn: (m) => lines.push(`⚠ ${m}`), fail: (m) => lines.push(`✗ ${m}`) };
+  checkShared(out, tk);
+  assert.match(lines.join("\n"), /✗ .*a\/lib\/x\.mjs.*改正本后跑 st sync-shared/);
 });
