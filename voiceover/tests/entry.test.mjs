@@ -64,3 +64,12 @@ test("作品项目里没有 voiceover.config.json 时 --check 照常能用", () 
   const r = spawnSync(join(SKILL, "bin/vo"), [work, "--check"], { encoding: "utf8" });
   assert.equal(r.status, 0, r.stderr);
 });
+
+test("--help 写在工程目录后面也打印用法、退出 0（不报「参数错误」）", () => {
+  for (const flag of ["--help", "-h"]) {
+    const r = spawnSync(join(SKILL, "bin/vo"), ["某个工程", flag], { encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /用法：vo <工程目录>/);
+    assert.doesNotMatch(r.stderr, /参数错误/);
+  }
+});
