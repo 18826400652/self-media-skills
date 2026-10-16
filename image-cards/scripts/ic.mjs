@@ -12,10 +12,11 @@ import MarkdownIt from "markdown-it";
 import puppeteer from "puppeteer-core";
 import YAML from "yaml";
 import { findChrome } from "./lib/shared/chrome.mjs";
+import { studioInfo } from "./lib/shared/studio-info.mjs";
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CONFIG_NAME = "image-cards.config.json";
-const DEFAULTS = { preset: "xiaohongshu", theme: null, footer: "" };
+const DEFAULTS = { preset: "xiaohongshu", theme: null };
 const LAYOUTS = ["cover", "content", "list2", "quote", "end", "image"];
 const LAYOUT_RE = /<!--\s*layout:\s*([a-z0-9-]+)\s*-->/;
 const OUTPUT_RE = /^\d{2}\.png$/;
@@ -139,7 +140,8 @@ async function main() {
   const html = buildHtml({
     cards, preset, baseDir,
     themeCss: readFileSync(themePath, "utf8"),
-    footer: meta.footer ?? config.footer,
+    // 角标：卡片 frontmatter → 配置 footer → studio.json 的账号名（只写一处）
+    footer: meta.footer ?? config.footer ?? (studioInfo(baseDir).account ? `@${studioInfo(baseDir).account}` : ""),
   });
   const htmlPath = join(baseDir, "卡片预览.html");
   writeFileSync(htmlPath, html);

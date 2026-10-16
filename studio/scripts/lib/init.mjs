@@ -17,15 +17,16 @@ function walk(dir) {
 }
 
 export function parseInitArgs(argv) {
-  const opts = { dir: null, account: "", audience: "" };
+  const opts = { dir: null, account: "", audience: "", lead: "" };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--account") opts.account = argv[++i] ?? "";
     else if (a === "--audience") opts.audience = argv[++i] ?? "";
+    else if (a === "--lead") opts.lead = argv[++i] ?? "";
     else if (a.startsWith("--")) throw new Error(`未知参数：${a}`);
     else opts.dir = a;
   }
-  if (!opts.dir) throw new Error("用法：st init <目录> [--account 账号名] [--audience 目标观众]");
+  if (!opts.dir) throw new Error("用法：st init <目录> [--account 账号名] [--audience 目标观众] [--lead 模板怎么领]");
   return opts;
 }
 
@@ -33,7 +34,7 @@ export function parseInitArgs(argv) {
 export const mediaUseSfx = (home) => join(home, ".claude/skills/media-use/audio/assets/sfx");
 export const hasAudio = (dir) => existsSync(dir) && readdirSync(dir).some((f) => /\.(mp3|wav|m4a|ogg)$/i.test(f));
 
-export function initProject({ dir, account = "", audience = "", home = homedir() }, log = console.log) {
+export function initProject({ dir, account = "", audience = "", lead = "", home = homedir() }, log = console.log) {
   const root = resolve(dir);
   if (existsSync(join(root, MARKER))) throw new Error(`已经是作品项目了：${join(root, MARKER)}`);
   mkdirSync(root, { recursive: true });
@@ -55,12 +56,13 @@ export function initProject({ dir, account = "", audience = "", home = homedir()
     const cfg = JSON.parse(readFileSync(vdCfg, "utf8"));
     writeFileSync(vdCfg, JSON.stringify({ ...cfg, sfxDir: mediaUseSfx(home) }, null, 2) + "\n");
   }
-  const studio = { ...DEFAULTS, account, audience, toolkit: `>=${toolkitVersion()}` };
+  const studio = { ...DEFAULTS, account, audience, lead, toolkit: `>=${toolkitVersion()}` };
   writeFileSync(join(root, MARKER), JSON.stringify(studio, null, 2) + "\n");
 
   log(`✓ 已建作品项目：${root}（新建 ${created} 个文件${skipped ? `，跳过 ${skipped} 个已有的` : ""}）`);
   log(`接下来：
-  1. 填 00-规划/账号定位.md、00-规划/语气指南.md，在 00-规划/系列/系列.json 登记系列：{"系列名": {"label": "显示名", "unit": "期"}}
+  1. 账号名、目标观众、模板怎么领（如「点头像进粉丝群领」「公众号回复关键词领」）只写在 studio.json 的 account、audience、lead，各工具都从这里读${account && audience && lead ? "（已填）" : "（还没填全）"}
+     填 00-规划/账号定位.md、00-规划/语气指南.md，在 00-规划/系列/系列.json 登记系列：{"系列名": {"label": "显示名", "unit": "期"}}
   2. 品牌：改 06-品牌资产/theme.css 的颜色；参考音色放 06-品牌资产/参考音色.wav；要配音时把 .env.example 复制成 .env 填密钥（字体和 GSAP 由 video-director 自带，不用准备）
   3. cd ${root} && st doctor，按提示补齐
   4. st new <系列> <简称> 开第一期`);

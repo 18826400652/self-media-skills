@@ -25,7 +25,7 @@ ffmpeg -v error -y -i out/%02d.png -vf "scale=360:-1,tile=9x1:padding=8" -frames
 ```markdown
 ---
 preset: xiaohongshu        # 可选，覆盖项目配置
-footer: "@账号名"           # 可选，页脚文字
+footer: "@账号名"           # 可选，页脚文字；不写用配置的 footer，再没有用 studio.json 的 @account
 ---
 
 # 封面大标题<br>手动断行      ← 以 # 开头的卡片自动用 cover 版式
@@ -88,7 +88,7 @@ footer: "@账号名"           # 可选，页脚文字
 ## 项目配置 image-cards.config.json（可选，向上查找）
 
 ```json
-{ "preset": "xiaohongshu", "theme": "品牌/theme.css", "footer": "@账号名" }
+{ "preset": "xiaohongshu", "theme": "品牌/theme.css" }
 ```
 
 路径相对配置文件。优先级：命令行参数 > 卡片 frontmatter > 项目配置 > 默认值。

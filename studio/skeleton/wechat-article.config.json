@@ -1,6 +1,5 @@
 {
   "theme": "grace",
   "highlight": "solarized-light",
-  "envFile": ".env",
-  "account": "（公众号名称，手机备用发草稿时核对）"
+  "envFile": ".env"
 }

@@ -65,6 +65,26 @@ test("账号、观众、账号定位从 studio.json 填进模板；角标带系�
   }
 });
 
+test("领取方式从 studio.json 的 lead 填进模板，不再写死「粉丝群」", () => {
+  const sb = sandbox({ lead: "公众号回复「待办」领" });
+  run(sb, "普通人的AI课", "周报");
+  const ep = join(sb.root, "04-作品/普通人的AI课/01-周报");
+  const files = ["场景卡.md", "母稿.md", "发布记录.md", "小红书/文案.md", "抖音/SCRIPT.md", "抖音/发布文案.md"];
+  for (const f of files) {
+    const t = readFileSync(join(ep, f), "utf8");
+    assert.doesNotMatch(t, /粉丝群|进群|\{\{领取方式\}\}/, f);
+  }
+  for (const f of ["母稿.md", "发布记录.md", "抖音/SCRIPT.md", "抖音/发布文案.md"]) assert.match(readFileSync(join(ep, f), "utf8"), /公众号回复「待办」领/, f);
+});
+
+test("studio.json 没写 lead：模板里提示去 studio.json 填，不替用户编一个入口", () => {
+  const sb = sandbox();
+  run(sb, "普通人的AI课", "周报");
+  const t = readFileSync(join(sb.root, "04-作品/普通人的AI课/01-周报/发布记录.md"), "utf8");
+  assert.match(t, /studio\.json 的 lead/);
+  assert.doesNotMatch(t, /粉丝群/);
+});
+
 test("系列说明不存在时用模板建一份并提醒去填；已有的不动", () => {
   const sb = sandbox();
   const r = run(sb, "普通人的AI课", "周报");

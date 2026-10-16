@@ -16,5 +16,9 @@
     "wechat-article/scripts/lib/shared/draft-run.mjs",
     "image-cards/scripts/lib/shared/draft-run.mjs",
     "video-draft/scripts/lib/shared/draft-run.mjs"
+  ],
+  "node/studio-info.mjs": [
+    "wechat-article/scripts/lib/shared/studio-info.mjs",
+    "image-cards/scripts/lib/shared/studio-info.mjs"
   ]
 }

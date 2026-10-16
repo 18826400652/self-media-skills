@@ -20,7 +20,7 @@ wa publish <文章.md>   # 用接口上传图片 + 创建草稿（需要凭据�
 | 方式 | 步骤 | 适合 |
 |---|---|---|
 | **浏览器发草稿（默认）** | `wa draft` → 到后台草稿箱「预览」发到手机 → 确认后发表 | 任何账号，包括没有草稿接口的个人号。需要 browser-draft（`bd`），浏览器已登录公众号后台 |
-| **手机发草稿（备用）** | `wa draft --via phone` → 在手机公众号助手的草稿里检查、设封面 → 确认后发表 | 任何账号。需要 phone-draft（`pd`），手机已连 adb、公众号助手已登录配置里 `account` 的账号 |
+| **手机发草稿（备用）** | `wa draft --via phone` → 在手机公众号助手的草稿里检查、设封面 → 确认后发表 | 任何账号。需要 phone-draft（`pd`），手机已连 adb、公众号助手已登录 `account`（配置或 studio.json）的账号 |
 | **复制粘贴** | `wa preview` → 浏览器打开 预览.html → 点「复制到公众号」→ 在编辑器粘贴 | 不想自动操作浏览器时；本地图片要手动上传 |
 | **草稿箱 API** | `wa publish` → 到后台草稿箱检查并发表 | 已认证账号，配置了 AppID、AppSecret、IP 白名单 |
 
@@ -98,6 +98,7 @@ python3 scripts/doocs-theme.py grace --primary '#1f2024' --extra themes/src/grac
 { "theme": "grace", "highlight": "solarized-light", "envFile": ".env", "macStyle": false }
 ```
 
+- `account`：公众号名称（`--via phone` 时核对）。不写就用作品项目 `studio.json` 的 `account`
 - `highlight`：代码高亮主题
 - `envFile`：凭据文件（不入 git）
 - `macStyle`：代码块是否加 Mac 窗口样式

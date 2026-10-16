@@ -65,7 +65,30 @@ test("st doctor：配置里还是模板占位（括号说明）→ 进成品的�
   const out = capture();
   doctor({ cwd: dir, log: out.log, home });
   assert.match(out.text(), /✗ voiceover\.config\.json 的 tts\.style 还是模板占位/);
-  assert.match(out.text(), /✗ wechat-article\.config\.json 的 account 还是模板占位/);
+});
+
+test("st init：账号名、观众、领取方式只在 studio.json 一处；其他配置不再重复这些字段（knowledge-video 的死字段也删了）", () => {
+  const home = fakeHome({ withSfx: true });
+  const dir = join(tmp("st-init-"), "proj");
+  initProject({ dir, home, account: "小林", audience: "上班族", lead: "公众号回复「待办」领" }, quiet);
+  const studio = JSON.parse(readFileSync(join(dir, "studio.json"), "utf8"));
+  assert.deepEqual([studio.account, studio.audience, studio.lead], ["小林", "上班族", "公众号回复「待办」领"]);
+  const cfg = (f) => JSON.parse(readFileSync(join(dir, f), "utf8"));
+  assert.equal("account" in cfg("wechat-article.config.json"), false);
+  assert.equal("footer" in cfg("image-cards.config.json"), false);
+  assert.equal("audience" in cfg("knowledge-video.config.json"), false);
+  assert.equal("series" in cfg("knowledge-video.config.json"), false);
+  assert.match(readFileSync(join(dir, "CLAUDE.md"), "utf8"), /studio\.json/);
+});
+
+test("st doctor：studio.json 没写账号名、观众、领取方式 → ⚠ 指明只改 studio.json 这一处", () => {
+  const home = fakeHome({ withSfx: true });
+  const dir = join(tmp("st-init-"), "proj");
+  initProject({ dir, home }, quiet);
+  const out = capture();
+  doctor({ cwd: dir, log: out.log, home });
+  for (const k of ["account", "audience", "lead"]) assert.match(out.text(), new RegExp(`⚠ studio\\.json 没写 ${k}`));
+  assert.match(out.text(), /只改 studio\.json 这一处/);
 });
 
 test("st doctor：占位字段填了真实值、或字段不存在 → 不报", () => {

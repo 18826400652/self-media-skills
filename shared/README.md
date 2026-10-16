@@ -42,3 +42,10 @@ skill 之间不互相引用，每个 skill 单独拷走就能用。
 - 报错：命令找不到说装哪个 skill；手机不可用（退出码 3）提示去掉 `--via phone`；其他失败「发草稿失败，看上面的输出」；没有该方式的步骤直接报错、不调命令
 - 谁在用：wechat-article（`wa draft`）、image-cards（`ic draft`）、video-draft（`vdraft`）
 - 来源：原三家各一份，报错文字已统一
+
+### node/studio-info.mjs
+
+- 用途：读作品项目 studio.json 的账号信息，账号名、目标观众、模板怎么领只在 studio.json 写一处
+- 接口：`studioInfo(start) → { account, audience, lead }`，从 `start` 往上找；没写、括号占位、找不到都返回 `""`；JSON 坏了报错
+- 谁在用：wechat-article（`wa` 的 account 默认值）、image-cards（`ic` 的角标默认 `@账号名`）
+- 来源：新写（2026-10-17 全新走一次 B1：账号名要改 4 个文件）

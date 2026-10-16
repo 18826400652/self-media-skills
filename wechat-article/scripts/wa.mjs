@@ -10,6 +10,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runDraft, takeVia } from "./lib/shared/draft-run.mjs";
+import { studioInfo } from "./lib/shared/studio-info.mjs";
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WENYAN = join(SKILL_DIR, "node_modules", ".bin", "wenyan");
@@ -75,12 +76,18 @@ function inlineLocalImages(html, baseDir) {
   return { html: out, count };
 }
 
+/** 核对用的公众号名：配置里写了（不是括号占位）就用配置的，否则用 studio.json 的 account（账号名只写一处） */
+function accountOf(file, config) {
+  const own = (config.account ?? "").trim();
+  return own && !/^（.*）$/.test(own) ? own : studioInfo(dirname(file)).account;
+}
+
 function draft(file, config, via = "browser") {
   const { html, count } = inlineLocalImages(render(file, config), dirname(file));
   const coverField = frontmatterField(file, "cover");
   const cover = coverField ? resolve(dirname(file), coverField) : "";
   if (cover && !existsSync(cover)) throw new Error(`封面不存在：${cover}`);
-  const payload = { title: frontmatterTitle(file), author: frontmatterField(file, "author"), html, cover, images: count, account: config.account ?? "" };
+  const payload = { title: frontmatterTitle(file), author: frontmatterField(file, "author"), html, cover, images: count, account: accountOf(file, config) };
   runDraft(via, { phone: join(SKILL_DIR, "scripts", "phone_wechat.py"), browser: join(SKILL_DIR, "scripts", "draft_wechat.py") }, payload, { tmpPrefix: "wa-draft-" });
 }
 
