@@ -1,4 +1,4 @@
-// 查找可用的 Chrome（浏览器测试用）：优先 CHROME_PATH，其次复用 HyperFrames / Puppeteer 已下载的 headless shell，最后找系统 Chrome。与 narrated-video、image-cards 的同名文件保持一致。
+// 查找可用的 Chrome（浏览器测试用）：优先 CHROME_PATH，其次复用 HyperFrames / Puppeteer 已下载的 headless shell，最后找系统 Chrome。与 image-cards 的同名文件保持一致。
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";

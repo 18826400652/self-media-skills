@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 用法：nv verify <成片.mp4> [--project <工程目录>]
+// 用法：vd verify <成片.mp4> [--project <工程目录>]
 //
 // 渲染出的成片自检（思路借鉴 HyperFrames-RenderKit 的 final-file verification）：
 // 「出了文件」不等于「渲染成功」，逐项核对：
@@ -8,7 +8,7 @@
 //   - 声音和画面一样长，不是静音，没有爆音（峰值不超过 -0.5 dB）
 //   - 和工程 index.html 的总时长一致（给了 --project 或成片在 <工程>/renders/ 下时）
 //   - 没有超过 0.5 秒的纯黑画面（通常是素材没加载或某一帧空白）
-// 有 ✗ 时退出码为 1。nv render 渲染完会自动运行。
+// 有 ✗ 时退出码为 1。vd render 渲染完会自动运行。
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
@@ -79,7 +79,7 @@ function main() {
   const args = process.argv.slice(2);
   const file = args.find((a) => !a.startsWith("--") && args[args.indexOf(a) - 1] !== "--project");
   if (!file || !existsSync(file)) {
-    console.error("用法：nv verify <成片.mp4> [--project <工程目录>]");
+    console.error("用法：vd verify <成片.mp4> [--project <工程目录>]");
     process.exit(1);
   }
   const abs = resolve(file);

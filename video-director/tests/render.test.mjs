@@ -1,4 +1,4 @@
-// nv render 的输出文件名
+// vd render 的输出文件名
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { renderTarget } from "../scripts/render.mjs";
