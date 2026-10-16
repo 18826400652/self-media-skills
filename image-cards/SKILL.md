@@ -11,7 +11,7 @@ description: >
 ```bash
 ic render  <卡片.md> [--preset xiaohongshu] [--out 目录]   # 输出 01.png、02.png……（默认在 <卡片.md 目录>/out/）
 ic preview <卡片.md>                                        # 只生成 卡片预览.html，在浏览器里看
-ic draft   <文案.md> [--images 目录]                         # 图片 + 文案存进小红书草稿箱（浏览器自动化；发视频笔记用 nv draft --to xiaohongshu）
+ic draft   <文案.md> [--images 目录]                         # 图片 + 文案存进小红书草稿箱（浏览器自动化；发视频笔记用 vdraft --to xiaohongshu）
 ```
 
 渲染时如果有卡片内容溢出，会提示第几张，并以退出码 2 结束。**渲染后一定要看图**（拼成总览图更快）：
@@ -83,7 +83,7 @@ footer: "@账号名"           # 可选，页脚文字
 
 ## 主题
 
-颜色和字体由主题 CSS 提供，变量约定：`--bg --fg --fg-muted --highlight --accent --surface --font-body --font-mono`。这套变量与 narrated-video 相同，项目可以共用一份品牌主题。主题里还可以给 `.card` 加背景纹理等装饰。不配置时使用 `themes/default.css`。
+颜色和字体由主题 CSS 提供，变量约定：`--bg --fg --fg-muted --highlight --accent --surface --font-body --font-mono`。这套变量约定也用在视频的品牌主题上，项目可以共用一份品牌主题。主题里还可以给 `.card` 加背景纹理等装饰。不配置时使用 `themes/default.css`。
 
 ## 项目配置 image-cards.config.json（可选，向上查找）
 
@@ -95,7 +95,7 @@ footer: "@账号名"           # 可选，页脚文字
 
 ## 存进小红书草稿箱（ic draft）
 
-`ic draft` 是**图文笔记**，只有浏览器方案（`--via phone` 会报错提示）。要发视频笔记（和抖音同一个成片）用 `nv draft <成片.mp4> --copy 小红书/文案.md --to xiaohongshu`，见 narrated-video。
+`ic draft` 是**图文笔记**，只有浏览器方案（`--via phone` 会报错提示）。要发视频笔记（和抖音同一个成片）用 `vdraft <成片.mp4> --copy 小红书/文案.md --to xiaohongshu`，见 video-draft。
 
 用已登录小红书创作服务平台的浏览器（依赖 browser-draft 的 `bd`）：上传图片 → 填标题 → 粘贴正文 → 逐个从联想里选话题（选中才是可点的话题）→ 点「暂存离开」。**不点发布。**
 
@@ -123,4 +123,4 @@ footer: "@账号名"           # 可选，页脚文字
 
 ## 环境
 
-`npm install`（国内可加 `--registry=https://registry.npmmirror.com`）。Chrome 查找顺序：`CHROME_PATH` → HyperFrames 或 Puppeteer 已下载的 chrome-headless-shell → 系统 Chrome。都找不到时运行 `npx @puppeteer/browsers install chrome-headless-shell@stable --path ~/.cache/puppeteer`。缺系统库或中文字体的处理办法见 narrated-video 的 `references/setup.md`。
+`npm install`（国内可加 `--registry=https://registry.npmmirror.com`）。Chrome 查找顺序：`CHROME_PATH` → HyperFrames 或 Puppeteer 已下载的 chrome-headless-shell → 系统 Chrome。都找不到时运行 `npx @puppeteer/browsers install chrome-headless-shell@stable --path ~/.cache/puppeteer`。缺系统库或中文字体：有 sudo 时 `sudo apt install -y libnss3 fonts-noto-cjk`；没有 sudo 时下载 `libnss3`、`libnspr4`、`fonts-noto-cjk` 的 deb 包，`dpkg -x` 解压后，把 `usr/lib/x86_64-linux-gnu/*` 放进 `~/.local/lib/chrome-deps/`（`ic` 会自动加进 `LD_LIBRARY_PATH`），`NotoSansCJK-*.ttc` 放进 `~/.local/share/fonts/` 再运行 `fc-cache -f`。

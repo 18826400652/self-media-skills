@@ -5,7 +5,7 @@ description: 在用户已登录的浏览器（Edge / Chrome）里，把做好的
 
 # browser-draft：用浏览器自动存草稿
 
-> 各平台命令（`wa draft`、`nv draft`、`ic draft`）**默认走本 skill**；手机方案（phone-draft 的 `pd`）用 `--via phone` 作备用。发布文案解析在 `lib/copy_format.py`，phone-draft 也用它。
+> 各平台命令（`wa draft`、`vdraft`、`ic draft`）**默认走本 skill**；手机方案（phone-draft 的 `pd`）用 `--via phone` 作备用。发布文案解析在 `lib/copy_format.py`，phone-draft 也用它。
 
 ```bash
 bd tabs                          # 检查能否连上浏览器，列出标签页
@@ -17,8 +17,8 @@ bd run <步骤.py> [载荷.json]      # 执行一个平台的发草稿步骤
 | 平台 | 命令 | 步骤脚本 |
 |---|---|---|
 | 公众号 | `wa draft 文章.md` | `wechat-article/scripts/draft_wechat.py` |
-| 抖音（视频） | `nv draft 成片.mp4 --copy 发布文案.md` | `narrated-video/scripts/draft_douyin.py` |
-| 小红书（视频） | `nv draft 成片.mp4 --copy 文案.md --to xiaohongshu` | `narrated-video/scripts/draft_xiaohongshu.py` |
+| 抖音（视频） | `vdraft 成片.mp4 --copy 发布文案.md` | `video-draft/scripts/draft_douyin.py` |
+| 小红书（视频） | `vdraft 成片.mp4 --copy 文案.md --to xiaohongshu` | `video-draft/scripts/draft_xiaohongshu.py` |
 | 小红书（图文） | `ic draft 文案.md` | `image-cards/scripts/draft_xiaohongshu.py` |
 
 ## 规则

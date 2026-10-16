@@ -1,4 +1,4 @@
-/* 默认主题（中性深色）。变量约定与 narrated-video 的 theme.css 相同，项目可以共用一份品牌主题。 */
+/* 默认主题（中性深色）。变量约定见 image-cards/SKILL.md，项目可以换成自己的品牌主题。 */
 :root {
   --bg: #111318;
   --fg: #f2f2f2;

@@ -4,7 +4,7 @@ description: >
   一份母稿改编成多平台内容的方法：公众号长文、小红书（视频笔记或图文卡片 + 文案）、抖音或视频号口播短视频脚本。
   包含各平台的篇幅、结构、标题套路、开头钩子和自检清单。
   当用户要把文章、笔记或母稿改写成公众号、小红书、抖音版本，或者问「这个内容怎么发各个平台」时使用。
-  做成品时配合 wechat-article（排版发布）、narrated-video（视频）、image-cards（封面和卡片出图）。
+  做成品时配合 wechat-article（排版发布）、voiceover + video-director（视频配音和画面）、video-draft（视频存草稿）、image-cards（封面和卡片出图）。
 ---
 
 # content-repurpose：一份母稿，多平台输出
@@ -33,6 +33,8 @@ description: >
 
 各平台细则见 `references/` 下的 `wechat.md`、`xiaohongshu.md`、`douyin.md`。
 
+抖音口播稿（`抖音/SCRIPT.md`）写成「成品教程」时，按 `references/douyin.md` 最后一节的结构和格式写，写完用 `vo 抖音 --check` 检查。
+
 ## 改编流程
 
 1. 读母稿，用一句话写出**核心信息**和**目标读者**。写不出来，说明母稿还没想清楚，先回去改母稿。
@@ -42,7 +44,7 @@ description: >
    - 小红书：挑 3-6 个最容易「存下来」的。发视频笔记时，这些写进正文清单。
    - 抖音：挑 1 个结论加 2-3 个支撑点。
 4. 按对应 reference 的模板写初稿。
-5. 逐条过自检清单，再交给成品工具：`wa preview`、`nv`（视频，见 narrated-video；小红书视频笔记用 `nv draft --to xiaohongshu`）、`ic render`（封面、图文卡片）。
+5. 逐条过自检清单，再交给成品工具：`wa preview`、`vo`、`vd`（视频，见 voiceover、video-director；抖音、小红书视频笔记存草稿用 `vdraft`）、`ic render`（封面、图文卡片）。
 
 ## 标题套路（三个平台通用，按平台调整长度）
 
