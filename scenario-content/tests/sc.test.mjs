@@ -6,30 +6,6 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { douyinLines } from "../scripts/sc.mjs";
-
-test("douyinLines 读旧版分镜表：行号、口播、情感", () => {
-  const md = "| # | 段落 | 口播（配音原文） | 情感 |\n|---|---|---|---|\n| 1 | 钩子 | 你有没有过这种时候？ | 惊讶 |\n| 2 | 铺垫 | 领导丢来两百条反馈。 | |\n";
-  assert.deepEqual(douyinLines(md), [
-    { n: "1", text: "你有没有过这种时候？", emo: "惊讶" },
-    { n: "2", text: "领导丢来两百条反馈。", emo: "" },
-  ]);
-});
-
-test("douyinLines 读 HyperFrames SCRIPT.md：(Frame N)、缩进口播、Emotion / 情感", () => {
-  const md = "# SCRIPT\n\n- 发布文案：xx\n\n## Line 1 — 钩子 (Frame 1)\n\n**Emotion:** 惊讶\n\n    同一个问题，问了两遍。\n\n## Line 2 (Frame 2)\n\n**情感:** 平静\n\n    第二句。\n";
-  assert.deepEqual(douyinLines(md), [
-    { n: "1", text: "同一个问题，问了两遍。", emo: "惊讶", sentences: ["同一个问题，问了两遍。"] },
-    { n: "2", text: "第二句。", emo: "平静", sentences: ["第二句。"] },
-  ]);
-});
-
-test("douyinLines：一帧写好几行口播，每行一句，text 是整帧连起来", () => {
-  const md = "## 钩子 (Frame 1)\n\n    会上说的是再看看。\n    AI写成了不加。\n";
-  assert.deepEqual(douyinLines(md), [
-    { n: "1", text: "会上说的是再看看。AI写成了不加。", emo: "", sentences: ["会上说的是再看看。", "AI写成了不加。"] },
-  ]);
-});
 
 test("parseFeynman 读追问表、术语表和类比；占位和「没有」算未回答", async () => {
   const { parseFeynman } = await import("../scripts/sc.mjs");
@@ -114,6 +90,31 @@ test("抖音发布文案标题超过 30 字给出 ⚠", async () => {
   const config = { ...loadConfig(dir), platformFiles: { douyinCopy: "抖音/发布文案.md" } };
   const items = runChecks(dir, config);
   assert.ok(items.some((i) => i.file === "抖音/发布文案.md" && i.level === "⚠" && /抖音标题/.test(i.msg)));
+});
+
+/** 只放一份抖音 SCRIPT.md 的作品，返回这份文件的检查结果 */
+const scriptItems = async (md) => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const dir = ep({ "抖音/SCRIPT.md": md });
+  const config = { ...loadConfig(dir), platformFiles: { douyinScript: "抖音/SCRIPT.md" } };
+  return runChecks(dir, config).filter((i) => i.file === "抖音/SCRIPT.md");
+};
+
+test("抖音口播检查：每句超长、情感无效、书面词按 (Frame N) 报出", async () => {
+  const items = await scriptItems("## 钩子 (Frame 1)\n**Emotion:** 惊讶怪\n\n    这一句写得特别特别特别特别特别特别特别特别特别特别长了吧。\n    因此不行。\n");
+  assert.ok(items.some((i) => i.level === "⚠" && /第 1 帧有一句/.test(i.msg)));
+  assert.ok(items.some((i) => i.level === "✗" && /情感「惊讶怪」无效/.test(i.msg)));
+  assert.ok(items.some((i) => i.level === "⚠" && /书面词「因此」/.test(i.msg)));
+});
+
+test("抖音口播检查：小写 frame、### 标题、Tab 缩进的口播也读得到（和 vo 同一套规则）", async () => {
+  const items = await scriptItems("### 钩子 (frame 1)\n\tAI 写了 3 条。\n");
+  assert.ok(items.some((i) => i.level === "⚠" && /第 1 句有阿拉伯数字/.test(i.msg)));
+});
+
+test("抖音 SCRIPT.md 写了内容但一句口播都没读到（如旧的分镜表写法）→ ⚠ 说明要怎么写", async () => {
+  const items = await scriptItems("| # | 口播 | 情感 |\n|---|---|---|\n| 1 | 你有没有过这种时候？ | 惊讶 |\n");
+  assert.ok(items.some((i) => i.level === "⚠" && /没读到口播.*\(Frame N\).*缩进/.test(i.msg)));
 });
 
 // st new 之后的母稿：{{…}} 已替换，小节下面还是模板的括号说明

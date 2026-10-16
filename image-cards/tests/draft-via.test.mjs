@@ -54,5 +54,5 @@ test("--via 的值不对就报错", () => {
   const { dir, env } = setup();
   const r = run([join(dir, "文案.md"), "--via", "usb"], env);
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /phone 或 browser/);
+  assert.match(r.stderr, /--via 只能是 browser 或 phone/);
 });

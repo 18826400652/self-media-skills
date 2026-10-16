@@ -13,7 +13,8 @@ import { renderBrief } from "./lib/brief.mjs";
 import { loadConfig } from "./lib/config.mjs";
 import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
-import { checkBasis, parseScriptBasis } from "./lib/script.mjs";
+import { checkBasis } from "./lib/script.mjs";
+import { parseScript } from "./lib/shared/script-md.mjs";
 import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
 import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, GATES, practicalStatus } from "./lib/practical.mjs";
 import { FINAL_RE } from "./lib/video.mjs";
@@ -66,7 +67,7 @@ export function runCheck(dir) {
   const scriptPath = join(dir, FILES.script);
   if (!existsSync(scriptPath)) notes.push(`· 还没有 ${FILES.script}`);
   else {
-    const lines = parseScriptBasis(readFileSync(scriptPath, "utf8"));
+    const lines = parseScript(readFileSync(scriptPath, "utf8"));
     const si = checkBasis(lines, research, type);
     if (!si.some((i) => i.level === "error")) notes.push(`✓ ${FILES.script}：${lines.length} 句口播都标了依据`);
     issues.push(...si);
@@ -99,7 +100,7 @@ function writeBrief(dir) {
     return 1;
   }
   const scriptPath = join(dir, FILES.script);
-  const lines = existsSync(scriptPath) ? parseScriptBasis(readFileSync(scriptPath, "utf8")) : [];
+  const lines = existsSync(scriptPath) ? parseScript(readFileSync(scriptPath, "utf8")) : [];
   writeFileSync(join(dir, BRIEF_OUT), renderBrief(r.data, lines));
   console.log(`✓ ${BRIEF_OUT}（${r.data.claims.length} 条事实，${lines.length} 句口播）`);
   return 0;

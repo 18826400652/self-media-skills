@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { basisOf, checkBasis, parseScriptBasis } from "../scripts/lib/script.mjs";
+import { basisOf, checkBasis } from "../scripts/lib/script.mjs";
+import { parseScript } from "../scripts/lib/shared/script-md.mjs";
 
 const MD = [
   "# SCRIPT", "",
@@ -9,8 +10,8 @@ const MD = [
   "## Line 3 — 类比 (Frame 3)", "", "    就像开卷考试。", "",
 ].join("\n");
 
-test("parseScriptBasis：读帧号、口播（多行拼接）、依据（中英文冒号都行）", () => {
-  assert.deepEqual(parseScriptBasis(MD), [
+test("kv 用的 parseScript（shared/script-md）：读帧号、口播（多行拼接）、依据（中英文冒号都行）", () => {
+  assert.deepEqual(parseScript(MD).map(({ frame, text, basis }) => ({ frame, text, basis })), [
     { frame: 1, text: "同一个问题，问知识库答对了，问它却在瞎编。", basis: "观点" },
     { frame: 2, text: "它会先翻资料，再回答。", basis: "c01、c02" },
     { frame: 3, text: "就像开卷考试。", basis: null },

@@ -5,7 +5,7 @@ description: 在用户已登录的浏览器（Edge / Chrome）里，把做好的
 
 # browser-draft：用浏览器自动存草稿
 
-> 各平台命令（`wa draft`、`vdraft`、`ic draft`）**默认走本 skill**；手机方案（phone-draft 的 `pd`）用 `--via phone` 作备用。发布文案解析在 `lib/copy_format.py`，phone-draft 也用它。
+> 各平台命令（`wa draft`、`vdraft`、`ic draft`）**默认走本 skill**；手机方案（phone-draft 的 `pd`）用 `--via phone` 作备用。发布文案解析在 `lib/copy_format.py`：正本在工具包根目录 `shared/python/`，这里和 phone-draft 各一份同步来的拷贝，要改就改正本再跑 `st sync-shared`。
 
 ```bash
 bd tabs                          # 检查能否连上浏览器，列出标签页

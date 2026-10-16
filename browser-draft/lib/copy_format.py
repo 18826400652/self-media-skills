@@ -1,3 +1,4 @@
+# 由 shared/python/copy_format.py 同步而来，不要在这里改：改正本后跑 st sync-shared
 # 发布文案（Markdown）解析：browser-draft 和 phone-draft 共用。
 # 按「## 」分段，段名以「标题」「正文」「话题」开头的分别是标题、正文（按行，连续空行合并为一个空串）、话题（#xx，不带 #）。
 import re

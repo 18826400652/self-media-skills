@@ -10,5 +10,5 @@ if [[ ! -x "$PY" ]]; then
   exit 1
 fi
 command -v adb >/dev/null || { echo "✗ 需要 adb（Android platform-tools）" >&2; exit 1; }
-export PYTHONPATH="$SKILL_DIR/lib:$SKILL_DIR/../browser-draft/lib${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH="$SKILL_DIR/lib${PYTHONPATH:+:$PYTHONPATH}"
 exec "$PY" -m phone_draft.cli "$@"

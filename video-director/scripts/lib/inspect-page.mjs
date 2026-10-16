@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, resolve, sep } from "node:path";
 import puppeteer from "puppeteer-core";
-import { findChrome } from "./chrome.mjs";
+import { findChrome } from "./shared/chrome.mjs";
 
 const MIME = { ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp", ".woff2": "font/woff2", ".woff": "font/woff", ".otf": "font/otf", ".ttf": "font/ttf", ".wav": "audio/wav", ".mp3": "audio/mpeg", ".mp4": "video/mp4" };
 

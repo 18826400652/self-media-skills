@@ -112,7 +112,7 @@ export function adoptPunctuation(words, text) {
 /**
  * 检查导演稿和口播稿对得上：每帧恰好属于一段、每段帧号连续、引号台词等于原文。
  * @param segments parseVoiceDirection 的结果
- * @param lines    parseHfScript 的结果 [{ frame, text }]
+ * @param lines    parseScript（shared/script-md）的结果 [{ frame, text }]
  * @returns 问题列表（空 = 没问题）
  */
 export function checkDirection(segments, lines) {

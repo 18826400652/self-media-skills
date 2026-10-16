@@ -5,13 +5,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { configGate } from "../scripts/lib/config.mjs";
-import { parseHfScript, restoreCase, toCaptionWords, writeOutputs } from "../scripts/vo.mjs";
+import { parseScript } from "../scripts/lib/shared/script-md.mjs";
+import { restoreCase, toCaptionWords, writeOutputs } from "../scripts/vo.mjs";
 
 const chars = (s, t0 = 0, step = 0.1) => [...s].map((ch, i) => ({ text: ch, start: t0 + i * step, end: t0 + (i + 1) * step }));
 
-test("parseHfScript 读出帧号、口播、情感和重点词", () => {
+test("vo 用的 parseScript（shared/script-md）读出帧号、口播、情感和重点词", () => {
   const md = `## Line 1 — 钩子 (Frame 1)\n\n**重点词:** 八秒钟、一下午\n**Emotion:** 惊讶\n\n    AI八秒钟，干完了我一下午的活。\n\n## Line 2 (Frame 2)\n\n    第二句。\n`;
-  const lines = parseHfScript(md);
+  const lines = parseScript(md);
   assert.equal(lines.length, 2);
   assert.deepEqual([lines[0].frame, lines[0].text, lines[0].emotion], [1, "AI八秒钟，干完了我一下午的活。", "惊讶"]);
   assert.deepEqual(lines[0].keywords, ["八秒钟", "一下午"]);

@@ -46,6 +46,7 @@ test("手机不可用时报错，不回落到浏览器", () => {
   const r = run(["draft", join(dir, "文章.md"), "--via", "phone"], { ...env, FAKE_PD_EXIT: "3" });
   assert.equal(r.status, 1);
   assert.match(r.stderr, /手机不可用/);
+  assert.match(r.stderr, /去掉 --via phone 改用浏览器/);
   assert.doesNotMatch(calls(dir), /^bd /m);
 });
 
@@ -53,7 +54,7 @@ test("--via 的值不对就报错", () => {
   const { dir, env } = setup();
   const r = run([...["draft", join(dir, "文章.md")], "--via", "usb"], env);
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /phone 或 browser/);
+  assert.match(r.stderr, /--via 只能是 browser 或 phone/);
 });
 
 test("公众号载荷带配置里的 account", () => {

@@ -1,4 +1,5 @@
-// 查找可用的 Chrome（浏览器测试用）：优先 CHROME_PATH，其次复用 HyperFrames / Puppeteer 已下载的 headless shell，最后找系统 Chrome。与 image-cards 的同名文件保持一致。
+// 由 shared/node/chrome.mjs 同步而来，不要在这里改：改正本后跑 st sync-shared
+// 查找可用的 Chrome：优先 CHROME_PATH，其次复用 HyperFrames / Puppeteer 已下载的 headless shell，最后找系统 Chrome。
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";

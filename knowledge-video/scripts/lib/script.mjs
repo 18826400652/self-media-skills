@@ -1,36 +1,8 @@
-// SCRIPT.md（HyperFrames 格式）里每句口播的「依据」：引用哪几条 claim，或是类比、观点。
+// SCRIPT.md 每句口播的「依据」检查：引用哪几条 claim，或是类比、观点。解析用 shared/script-md 的 parseScript（basis 字段）。
 // 口播块：「## Line N — 标签 (Frame N)」，口播是缩进 4 格的行；依据写一行「**依据:** c01, c03」。
-const HEADING_RE = /^#{2,3}\s+.*?\(frame\s+(\d+)\)/i;
-const BASIS_RE = /^\s*\*\*依据[:：]\*\*\s*(.*)$/;
 const SPLIT_RE = /[,，、\s]+/;
 const CLAIM_RE = /^c\d+$/;
 const LABELS = ["类比", "观点"];
-
-/** @returns {{ frame: number, text: string, basis: string|null }[]} */
-export function parseScriptBasis(md) {
-  const out = [];
-  let cur = null;
-  const flush = () => {
-    if (cur && cur.text) out.push(cur);
-    cur = null;
-  };
-  for (const line of md.split(/\r?\n/)) {
-    const h = line.match(HEADING_RE);
-    if (h) {
-      flush();
-      cur = { frame: Number(h[1]), text: "", basis: null };
-      continue;
-    }
-    if (!cur) continue;
-    const b = line.match(BASIS_RE);
-    if (b) cur.basis = b[1].trim();
-    if (/^\s*\*\*/.test(line)) continue;
-    const t = line.match(/^(?: {4,}|\t)(.+)$/);
-    if (t) cur.text += t[1].trim();
-  }
-  flush();
-  return out;
-}
 
 /** 依据原文 → { kind, ids } */
 export function basisOf(raw) {

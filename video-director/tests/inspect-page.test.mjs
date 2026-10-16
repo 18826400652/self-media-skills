@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { findChrome } from "../scripts/lib/chrome.mjs";
+import { findChrome } from "../scripts/lib/shared/chrome.mjs";
 import { openPage } from "../scripts/lib/inspect-page.mjs";
 import { project } from "./helpers.mjs";
 

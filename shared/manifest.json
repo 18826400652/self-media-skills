@@ -1,0 +1,20 @@
+{
+  "node/chrome.mjs": [
+    "image-cards/scripts/lib/shared/chrome.mjs",
+    "video-director/scripts/lib/shared/chrome.mjs"
+  ],
+  "python/copy_format.py": [
+    "browser-draft/lib/copy_format.py",
+    "phone-draft/lib/copy_format.py"
+  ],
+  "node/script-md.mjs": [
+    "scenario-content/scripts/lib/shared/script-md.mjs",
+    "knowledge-video/scripts/lib/shared/script-md.mjs",
+    "voiceover/scripts/lib/shared/script-md.mjs"
+  ],
+  "node/draft-run.mjs": [
+    "wechat-article/scripts/lib/shared/draft-run.mjs",
+    "image-cards/scripts/lib/shared/draft-run.mjs",
+    "video-draft/scripts/lib/shared/draft-run.mjs"
+  ]
+}

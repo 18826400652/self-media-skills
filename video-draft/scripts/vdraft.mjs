@@ -2,11 +2,10 @@
 // vdraft <成片.mp4> --copy <发布文案.md> [--cover <封面图>] [--to douyin|xiaohongshu] [--via browser|phone]：把视频和文案存进抖音（默认）或小红书的草稿（不发布）。
 // --cover：上传这张图做封面（只有浏览器端）；不传时抖音用视频画面、小红书用第一帧。
 // 默认用 browser-draft 的 bd 操作已登录的浏览器（抖音创作者中心、小红书创作服务平台）；phone 用 phone-draft 的 pd 操作手机 App；文案格式由它的 read_copy 解析：「## 标题」（≤ 30 字）「## 正文」「## 话题」。
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runDraft, takeVia } from "./lib/shared/draft-run.mjs";
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const USAGE = "用法：vdraft <成片.mp4> --copy <发布文案.md> [--cover <封面图>] [--to douyin|xiaohongshu] [--via browser|phone]";
@@ -25,18 +24,6 @@ function takeTo(argv) {
   if (!STEPS[to]) throw new Error(`--to 只能是 douyin 或 xiaohongshu，收到：${to}`);
   return [to, [...argv.slice(0, i), ...argv.slice(i + 2)]];
 }
-const VIA = { phone: "pd", browser: "bd" };
-const VIA_SKILL = { phone: "phone-draft", browser: "browser-draft" };
-const EXIT_NO_DEVICE = 3;
-
-/** 从参数里取出 --via browser|phone（默认 browser），返回 [via, 其余参数] */
-function takeVia(argv) {
-  const i = argv.indexOf("--via");
-  if (i < 0) return ["browser", argv];
-  const via = argv[i + 1];
-  if (!VIA[via]) throw new Error(`--via 只能是 phone 或 browser，收到：${via}`);
-  return [via, [...argv.slice(0, i), ...argv.slice(i + 2)]];
-}
 
 /** 从参数里取出 --cover <图片>，返回 [封面绝对路径或 null, 其余参数] */
 function takeCover(argv) {
@@ -47,18 +34,6 @@ function takeCover(argv) {
   if (!COVER_RE.test(cover)) throw new Error(`封面图要是 png 或 jpg：${cover}`);
   if (!existsSync(cover)) throw new Error(`封面图不存在：${cover}`);
   return [resolve(cover), [...argv.slice(0, i), ...argv.slice(i + 2)]];
-}
-
-/** phone 用 pd 操作手机，browser 用 bd 操作已登录的浏览器；手机不可用时报错，不回落到浏览器 */
-function runDraft(via, steps, payloadFile) {
-  const bin = VIA[via];
-  try {
-    execFileSync(bin, ["run", steps[via], payloadFile], { stdio: "inherit" });
-  } catch (err) {
-    if (err.code === "ENOENT") throw new Error(`需要 ${bin} 命令（skills/${VIA_SKILL[via]}，软链接到 PATH）`);
-    if (via === "phone" && err.status === EXIT_NO_DEVICE) throw new Error("手机不可用（见上面的提示）；去掉 --via phone 就用浏览器");
-    throw new Error("发草稿失败，看上面的输出");
-  }
 }
 
 function parseArgs(argv) {
@@ -76,9 +51,7 @@ function main() {
   if (!video || !copy) throw new Error(USAGE);
   if (!existsSync(video)) throw new Error(`视频不存在：${video}`);
   if (!existsSync(copy)) throw new Error(`发布文案不存在：${copy}`);
-  const payloadFile = join(mkdtempSync(join(tmpdir(), "vdraft-")), "payload.json");
-  writeFileSync(payloadFile, JSON.stringify({ video, copy, ...(cover ? { cover } : {}) }));
-  runDraft(via, { [via]: join(SKILL_DIR, "scripts", STEPS[to][via]) }, payloadFile);
+  runDraft(via, { [via]: join(SKILL_DIR, "scripts", STEPS[to][via]) }, { video, copy, ...(cover ? { cover } : {}) }, { tmpPrefix: "vdraft-" });
 }
 
 try {
