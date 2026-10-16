@@ -2,7 +2,7 @@
 const W = 1080, H = 1920, TOL = 2;
 const SAFE = { top: 200, right: 160, bottom: 480 }; // 平台界面占的边（director-rules 第 11 条）
 const RIGHT_FROM = 760; // 右侧按钮列（头像、点赞、评论、收藏、分享）从这里往下；上半屏内容可以用到 x 1020
-const CAPTION = { top: 1180, bottom: 1440 }; // 字幕带只放字幕
+export const CAPTION = { top: 1180, bottom: 1440 }; // 字幕带只放字幕
 const SETTLE = 0.8; // @词 后多久算落定
 const SEG_TAIL = 0.3; // 每段结尾前多久截一张
 const GRID = 0.5;
