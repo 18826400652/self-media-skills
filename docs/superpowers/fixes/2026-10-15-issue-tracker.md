@@ -73,3 +73,4 @@
 - 修复中新发现：P-42（配音缓存键用参考音色的绝对路径，项目挪位置后要重新付费配音），改法要用户定
 - 整条分支自查：改动的 .mjs / .js 都过了 `node --check`，bash 入口过了 `bash -n`；没有调试输出、没有未使用的导入（自查，没有派独立 reviewer）
 - 还没做：P-36b（组件库仓库）、P-42、P-19 / P-20 真机实跑
+- 视频流水线重组验收（分支 refactor/video-pipeline）：flow-check 迁移配置、`st install`、`st new` 新建一期、`vo` 配音（49 组字幕，字幕总时长与配音一致）、`vd build/qa/render`（样片 + 整片，`vd verify` 全通过）、`vdraft` / `sc rec` 参数检查全部通过；`--no-music`，未存真实草稿；配音缓存键与旧缓存不同，付费重配一次
