@@ -1,4 +1,4 @@
-# 小红书「发草稿」手机步骤（发视频）：由 `nv draft --to xiaohongshu` 生成载荷后，经 `pd run` 在手机的小红书 App 里执行。
+# 小红书「发草稿」手机步骤（发视频）：由 `vdraft --to xiaohongshu` 生成载荷后，经 `pd run` 在手机的小红书 App 里执行。
 # 载荷：{"video"（成片路径）, "copy"（发布文案.md，格式见 copy_format）}
 # 小红书的 resource-id 是混淆过的，按文字和无障碍描述找控件。只点「存草稿」，不点「发布笔记」。
 import re

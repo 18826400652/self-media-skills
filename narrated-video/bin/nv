@@ -3,7 +3,6 @@
 #   nv hf-audio <HyperFrames 工程> [--check] [--pause 秒]   配音 + 逐字时间 + 字幕分组
 #   nv render <视频目录> [--sample] [参数]  渲染到 <视频目录>/renders/，完成后自动做成片检查
 #   nv verify <成片.mp4>                成片检查
-#   nv draft <成片.mp4> --copy <发布文案.md> [--cover 图] [--to douyin|xiaohongshu] [--via browser|phone]  存草稿
 #   nv <其他>                           透传给 hyperframes（check/snapshot/preview/doctor/lint…）
 set -euo pipefail
 
@@ -25,7 +24,7 @@ cmd="${1:-help}"
 shift || true
 
 case "$cmd" in
-  verify | draft | hf-audio)
+  verify | hf-audio)
     exec node "$SKILL_DIR/scripts/$cmd.mjs" "$@"
     ;;
   render)

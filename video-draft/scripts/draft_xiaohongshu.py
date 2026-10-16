@@ -1,4 +1,4 @@
-# 小红书「发草稿」步骤（视频笔记）：由 `nv draft --to xiaohongshu` 生成载荷后，经 `bd run` 在已登录的浏览器里执行。
+# 小红书「发草稿」步骤（视频笔记）：由 `vdraft --to xiaohongshu` 生成载荷后，经 `bd run` 在已登录的浏览器里执行。
 # 载荷：{"video"（本地 MP4）, "copy"（文案.md，格式见 browser-draft 的 read_copy）, "cover"（可选，封面图 png/jpg）}
 # 只点「暂存离开」，不点「发布」。网页端的草稿只存在这台电脑的浏览器里，不同步到手机 App。
 # 标题、正文、话题、暂存和 image-cards 的图文脚本（draft_xiaohongshu.py）是同一个发布页；skill 之间不互相依赖，所以各写一份。

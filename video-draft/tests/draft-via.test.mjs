@@ -7,7 +7,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SKILL = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const SCRIPT = join(SKILL, "scripts", "draft.mjs");
+const SCRIPT = join(SKILL, "scripts", "vdraft.mjs");
 
 /** 假的 pd / bd：把参数写进 calls.log，按 FAKE_PD_EXIT / FAKE_BD_EXIT 退出 */
 function setup() {
@@ -60,7 +60,7 @@ test("--to xiaohongshu 默认走浏览器：调用 bd run draft_xiaohongshu.py",
   const { dir, env } = setup();
   const r = run([...[join(dir, "成片.mp4"), "--copy", join(dir, "文案.md")], "--to", "xiaohongshu"], env);
   assert.equal(r.status, 0, r.stderr);
-  assert.match(calls(dir), /^bd run .*narrated-video\/scripts\/draft_xiaohongshu\.py /);
+  assert.match(calls(dir), /^bd run .*video-draft\/scripts\/draft_xiaohongshu\.py /);
 });
 
 test("--to xiaohongshu --via phone 调用 pd run phone_xiaohongshu.py", () => {
@@ -122,4 +122,11 @@ test("--cover 不支持手机", () => {
   assert.equal(r.status, 1);
   assert.match(r.stderr, /封面图.*浏览器/);
   assert.equal(calls(dir), "");
+});
+
+test("缺参数：用法写 vdraft", () => {
+  const { env } = setup();
+  const r = run([], env);
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /用法：vdraft <成片\.mp4> --copy/);
 });
