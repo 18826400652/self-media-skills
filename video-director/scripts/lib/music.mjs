@@ -31,14 +31,28 @@ export function parseResolved(stdout) {
 /** 音频时长（秒）；读不到当 0 */
 export const probeLen = (p) => Number(run("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", p]).stdout) || 0;
 
+const SEAM = 2; // 循环接缝处淡入淡出的秒数：硬接一遍从头开始，听得出重复
+
+/** 把 len 秒的配乐循环铺满 duration 秒的 ffmpeg 参数：接缝处交叉淡化；太短的直接循环 */
+export function loopArgs(src, out, len, duration, fade = SEAM) {
+  const total = String(Math.ceil(duration));
+  if (!(len > 2 * fade)) return ["-y", "-v", "error", "-stream_loop", "-1", "-i", src, "-t", total, out];
+  const n = Math.max(2, Math.ceil((duration - fade) / (len - fade)));
+  const inputs = Array.from({ length: n }, () => ["-i", src]).flat();
+  const chain = Array.from({ length: n - 1 }, (_, i) => `${i ? `[a${i}]` : "[0:a]"}[${i + 1}:a]acrossfade=d=${fade}:c1=tri:c2=tri[a${i + 1}]`).join(";");
+  return ["-y", "-v", "error", ...inputs, "-filter_complex", chain, "-map", `[a${n - 1}]`, "-t", total, out];
+}
+
 /** 循环补到 duration 秒，写成 out（相对工程）；失败抛错 */
-function loopTo(dir, src, out, duration, runFn) {
+function loopTo(dir, src, out, duration, runFn, len) {
   const tmp = join(dir, "assets/audio/.loop-tmp.wav");
-  const r = runFn("ffmpeg", ["-y", "-v", "error", "-stream_loop", "-1", "-i", join(dir, src), "-t", String(Math.ceil(duration)), tmp], { cwd: dir });
+  const r = runFn("ffmpeg", loopArgs(join(dir, src), tmp, len, duration), { cwd: dir });
   if (r.status !== 0) throw new Error(`配乐循环补齐失败：${(r.stderr || "").trim()}`);
   if (existsSync(tmp)) renameSync(tmp, join(dir, out));
   return out;
 }
+
+const LOOP_HINT = "接缝处淡入淡出；不想听出重复，自己放一首够长的 assets/audio/bgm.mp3（vd 不会替换）";
 
 /**
  * 取配乐，保证不比视频短：
@@ -53,8 +67,8 @@ export function resolveMusic(dir, intent, runFn = run, { duration = 0, probe = p
   if (own && own !== "bgm.wav") {
     const src = `assets/audio/${own}`;
     if (!short(src)) return src;
-    warn(`⚠ 自己放的配乐 ${own} 比视频（${Math.ceil(duration)} 秒）短，循环补齐成 assets/audio/bgm-loop.wav`);
-    return loopTo(dir, src, "assets/audio/bgm-loop.wav", duration, runFn);
+    warn(`⚠ 自己放的配乐 ${own} 比视频（${Math.ceil(duration)} 秒）短，循环补齐成 assets/audio/bgm-loop.wav（接缝处淡入淡出）`);
+    return loopTo(dir, src, "assets/audio/bgm-loop.wav", duration, runFn, probe(join(dir, src)));
   }
   if (own && !short("assets/audio/bgm.wav")) return "assets/audio/bgm.wav";
   const ask = duration > 0 ? `${intent}, around ${Math.ceil(duration)} seconds` : intent;
@@ -70,8 +84,9 @@ export function resolveMusic(dir, intent, runFn = run, { duration = 0, probe = p
   mkdirSync(audioDir, { recursive: true });
   copyFileSync(join(dir, got), join(audioDir, "bgm.wav"));
   if (!short("assets/audio/bgm.wav")) return "assets/audio/bgm.wav";
-  warn(`⚠ 取到的配乐只有 ${Math.round(probe(join(dir, "assets/audio/bgm.wav")))} 秒，比视频（${Math.ceil(duration)} 秒）短，循环补齐`);
-  return loopTo(dir, "assets/audio/bgm.wav", "assets/audio/bgm.wav", duration, runFn);
+  const len = probe(join(dir, "assets/audio/bgm.wav"));
+  warn(`⚠ 取到的配乐只有 ${Math.round(len)} 秒，比视频（${Math.ceil(duration)} 秒）短，循环补齐：${LOOP_HINT}`);
+  return loopTo(dir, "assets/audio/bgm.wav", "assets/audio/bgm.wav", duration, runFn, len);
 }
 
 export function alignMusic(dir, { src, drop, duration }, runFn = run, { warn = console.warn, requireBin = requireHf } = {}) {
