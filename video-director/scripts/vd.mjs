@@ -10,12 +10,12 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
-import { REPO, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, writeLock } from "./lib/components.mjs";
+import { REPO, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, recordingProblem, writeLock } from "./lib/components.mjs";
 import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
-import { addMusic, alignMusic, carve, ensureCore, resolveMusic } from "./lib/music.mjs";
+import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
 import { hfBin } from "./lib/hyperframes.mjs";
 import { run } from "./lib/run.mjs";
@@ -26,7 +26,7 @@ const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
 /** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
 export function installAll(dir, built, { update = false, only = null } = {}, overrides = {}) {
-  const deps = { ensureLock, fetchArchive, installComponent, writeLock, componentInfo, ...overrides };
+  const deps = { ensureLock, fetchArchive, installComponent, writeLock, componentInfo, probeLen, ...overrides };
   const segs = built.segments.filter((s) => s.component && (!only || only.includes(s.id)));
   const names = [...new Set(segs.map((s) => s.component))];
   if (!names.length) {
@@ -38,6 +38,10 @@ export function installAll(dir, built, { update = false, only = null } = {}, ove
   const files = [...new Set(names.flatMap((n) => deps.installComponent(repo, n, dir)))];
   const unfit = segs.filter((s) => typeof s.duration === "number").map((s) => fitProblem({ name: s.component, segId: s.id, segDuration: s.duration, ...deps.componentInfo(repo, s.component, dir) })).filter(Boolean);
   if (unfit.length) throw new Error(`有 ${unfit.length} 个组件段撑不满：\n  - ${unfit.join("\n  - ")}`);
+  for (const s of segs.filter((x) => x.component === "dy-rec-phone" && x.vars?.src && typeof x.duration === "number")) {
+    const w = recordingProblem({ segId: s.id, src: s.vars.src, recLen: deps.probeLen(join(dir, s.vars.src)), segDuration: s.duration, html: deps.componentInfo(repo, s.component, dir).html });
+    if (w) console.warn(`⚠ ${w}`);
+  }
   // 下载、安装都成功才写锁文件：失败时还停在旧版本
   if (changed) {
     deps.writeLock(dir, sha);

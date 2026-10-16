@@ -97,3 +97,24 @@ test("installAll：组件撑不满它的段时报错，列出每一段", () => {
   const segs = [{ id: "seg-02", component: "dy-checklist", duration: 17.8 }, { id: "seg-05", component: "dy-checklist", duration: 5 }];
   assert.throws(() => installAll(project({}), { segments: segs }, {}, deps), (err) => /seg-02/.test(err.message) && !/seg-05/.test(err.message));
 });
+
+test("installAll：dy-rec-phone 的录屏比段短 → 打 ⚠，不中断构建", () => {
+  const deps = {
+    ensureLock: () => ({ sha: "c".repeat(40), changed: false }),
+    writeLock: () => {},
+    fetchArchive: () => "/repo",
+    installComponent: (_r, name) => [`compositions/${name}.html`],
+    componentInfo: () => ({ html: "const D = HF.duration(root, 8); [\"data-duration\", String(D)]", minDuration: 5 }),
+    probeLen: (p) => (p.endsWith("rec/a.mp4") ? 8 : 20),
+  };
+  const segs = [
+    { id: "seg-03", component: "dy-rec-phone", duration: 15, vars: { src: "rec/a.mp4" } },
+    { id: "seg-04", component: "dy-rec-phone", duration: 15, vars: { src: "rec/b.mp4" } },
+  ];
+  const warns = [];
+  const orig = console.warn;
+  console.warn = (m) => warns.push(m);
+  try { installAll(project({}), { segments: segs }, {}, deps); } finally { console.warn = orig; }
+  assert.equal(warns.length, 1);
+  assert.match(warns[0], /⚠ seg-03/);
+});

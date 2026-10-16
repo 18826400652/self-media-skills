@@ -4,7 +4,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { REPO, ensureLock, fetchArchive, fitProblem, installComponent, latestSha, readLock, writeLock } from "../scripts/lib/components.mjs";
+import { REPO, ensureLock, fetchArchive, fitProblem, installComponent, latestSha, readLock, recordingProblem, writeLock } from "../scripts/lib/components.mjs";
 import { project } from "./helpers.mjs";
 
 const SHA = "a".repeat(40), SHA2 = "b".repeat(40);
@@ -140,4 +140,30 @@ test("fitProblem：段长在组件建议时长 + 2 秒以内 → 不报", () => 
 
 test("fitProblem：组件按宿主时长（HF.duration）撑满 → 段再长也不报", () => {
   assert.equal(fitProblem({ name: "dy-scene-title", html: "const D = HF.duration(root, 4);", minDuration: 4, segId: "s", segDuration: 30 }), null);
+});
+
+const HOLDS = '["data-duration", String(D)]';
+
+test("recordingProblem：录屏比段短 → 提醒后面停在最后一帧，说出两边秒数", () => {
+  const msg = recordingProblem({ segId: "seg-03", src: "assets/rec/a.mp4", recLen: 8, segDuration: 15.2, html: HOLDS });
+  assert.match(msg, /seg-03/);
+  assert.match(msg, /assets\/rec\/a\.mp4/);
+  assert.match(msg, /8\.0 秒/);
+  assert.match(msg, /15\.2 秒/);
+  assert.match(msg, /最后一帧/);
+});
+
+test("recordingProblem：录屏和段差不到 0.5 秒、或更长 → 不报", () => {
+  assert.equal(recordingProblem({ segId: "s", src: "a.mp4", recLen: 14.8, segDuration: 15.2, html: HOLDS }), null);
+  assert.equal(recordingProblem({ segId: "s", src: "a.mp4", recLen: 30, segDuration: 15.2, html: HOLDS }), null);
+});
+
+test("recordingProblem：组件是旧版（放完不停住）→ 说后面是空的，让换新版组件", () => {
+  const msg = recordingProblem({ segId: "s", src: "a.mp4", recLen: 8, segDuration: 15, html: '["data-start", String(start)]' });
+  assert.match(msg, /空/);
+  assert.match(msg, /--update-components/);
+});
+
+test("recordingProblem：读不到录屏时长 → 说找不到或读不了", () => {
+  assert.match(recordingProblem({ segId: "s", src: "nope.mp4", recLen: 0, segDuration: 15, html: HOLDS }), /nope\.mp4 读不到时长/);
 });

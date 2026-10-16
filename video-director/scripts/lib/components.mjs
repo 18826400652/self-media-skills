@@ -125,6 +125,19 @@ export function fitProblem({ name, html, minDuration, segId, segDuration }) {
   return `${segId} 用了 ${name}：这个组件的动画时间是写死的，只演约 ${minDuration} 秒就退场，这段有 ${segDuration} 秒，后面会空屏。把这段拆短（只放一两句），或改成手画`;
 }
 
+/** 录屏比段短多少秒以内不提醒（录屏结尾和段尾差一点看不出来） */
+export const REC_SLACK = 0.5;
+
+/** dy-rec-phone 的录屏比这一段短：新版组件放完停在最后一帧，旧版后面是空手机 */
+export function recordingProblem({ segId, src, recLen, segDuration, html }) {
+  if (!(recLen > 0)) return `${segId} 的录屏 ${src} 读不到时长：路径对不对（相对视频工程目录）？`;
+  if (!(segDuration - recLen > REC_SLACK)) return null;
+  const gap = (segDuration - recLen).toFixed(1);
+  const head = `${segId} 的录屏 ${src} 只有 ${recLen.toFixed(1)} 秒，这段有 ${segDuration.toFixed(1)} 秒`;
+  if (!/\["data-duration"/.test(html)) return `${head}：组件库是旧版，后 ${gap} 秒手机里是空的。vd build . --update-components 换新版（放完停在最后一帧），或换长一点的录屏、把这段拆短`;
+  return `${head}：后 ${gap} 秒停在录屏最后一帧。要画面一直在动，就换长一点的录屏或把这段拆短`;
+}
+
 /** 读组件的 HTML 和组件库目录里的建议时长 */
 export function componentInfo(archiveDir, name, projectDir) {
   const html = readFileSync(join(projectDir, "compositions", `${name}.html`), "utf8");
