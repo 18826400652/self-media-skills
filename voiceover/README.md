@@ -24,7 +24,7 @@ vo 抖音 --check && vo 抖音
 - `SCRIPT.md`：`## 段名 (Frame N)` 开一帧；缩进 4 格的行是口播原文；可选 `**Emotion:** 惊讶`、`**重点词:** 八秒钟、一下午`
 - `VOICE.md`（可选）：配音导演稿，写法见 `references/voice-direction.md`
 
-配置：从工程目录往上找 `voiceover.config.json`，只读 `tts` 字段（`provider`、`reference`、`style`、`speed`、`voice`）；找不到用默认值（qwenaudio，倍速 1.0）。
+配置：从工程目录往上找 `voiceover.config.json`，只读 `tts` 字段（`provider`、`reference`、`style`、`speed`、`voice`）；找不到配置文件时：在作品项目里（往上能找到 `studio.json`）**拒绝配音**，提示把 `tts` 搬进 `voiceover.config.json`（免得用默认音色付费配错声音；`--check` 照常可用）；不在作品项目里才用默认值（qwenaudio，倍速 1.0），并打一行 ⚠。
 
 ## 文件接口
 

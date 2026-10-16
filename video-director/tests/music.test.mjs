@@ -110,3 +110,21 @@ test("resolveMusic：已有配乐够长 → 照旧用，不调用任何命令", 
   const never = () => { throw new Error("不应调用"); };
   assert.equal(resolveMusic(dir, "lo-fi", never, { duration: 91, probe: () => 120 }), "assets/audio/bgm.wav");
 });
+
+const noHf = () => { throw new Error("video-director 还没装 hyperframes：cd /x && npm ci（或 st install --deps）"); };
+
+test("resolveMusic：没装 hyperframes → 警告里带安装办法，不取曲、不抛错（不挡出片）", () => {
+  const dir = project({ "index.html": "" });
+  const warns = [];
+  const never = () => { throw new Error("不应调用"); };
+  assert.equal(resolveMusic(dir, "lo-fi", never, { warn: (m) => warns.push(m), requireBin: noHf }), null);
+  assert.match(warns.join("\n"), /还没装 hyperframes.*npm ci.*本次不加配乐/);
+});
+
+test("alignMusic：没装 hyperframes → 警告里带安装办法，配乐从头播放（返回 0）", () => {
+  const dir = project({ "index.html": "" });
+  const warns = [];
+  const never = () => { throw new Error("不应调用"); };
+  assert.equal(alignMusic(dir, { src: "assets/audio/bgm.wav", drop: 10, duration: 20 }, never, { warn: (m) => warns.push(m), requireBin: noHf }), 0);
+  assert.match(warns.join("\n"), /还没装 hyperframes.*npm ci.*配乐从头播放/);
+});

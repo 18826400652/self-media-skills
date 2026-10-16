@@ -23,6 +23,7 @@ export function loadRecConfig(startDir = process.cwd()) {
   } catch (err) {
     throw new Error(`${configPath} 不是合法的 JSON：${err.message}`);
   }
+  if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) throw new Error(`${configPath} 的内容要是一个对象（{ … }）`);
   return { root: dirname(configPath), configPath, rec: cfg.rec ?? {} };
 }
 

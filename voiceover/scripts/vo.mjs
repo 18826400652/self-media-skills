@@ -27,7 +27,7 @@ const pad2 = (n) => String(n).padStart(2, "0");
 
 function parseArgs(argv) {
   let [dir, ...rest] = argv;
-  if (dir === "--help" || dir === "-h") {
+  if ([dir, ...rest].some((a) => a === "--help" || a === "-h")) {
     console.log(USAGE);
     process.exit(0);
   }

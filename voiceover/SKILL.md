@@ -71,7 +71,7 @@ vo 不碰 `DIRECTOR.md`、`index.html` 等 vd 的文件；配音直接写在工�
 
 ## 服务商和配置
 
-项目根目录 `voiceover.config.json` 的 `tts`：`provider`、`reference`（参考音色，相对项目根）、`style`（嗓音和场合描述）、`speed`、`voice`。找不到配置文件用默认值（qwenaudio，倍速 1.0）。
+项目根目录 `voiceover.config.json` 的 `tts`：`provider`、`reference`（参考音色，相对项目根）、`style`（嗓音和场合描述）、`speed`、`voice`。找不到配置文件时：在作品项目里（往上能找到 `studio.json`）**拒绝配音**，提示把 `tts` 搬进 `voiceover.config.json`（免得用默认音色付费配错声音；`--check` 照常可用）；不在作品项目里才用默认值（qwenaudio，倍速 1.0），并打一行 ⚠。
 
 可选服务商：`cosyvoice`、`qwenaudio`（默认）、`seedaudio`、`volcengine`。**kokoro、edge 已删除**：它们不给逐字时间，字幕和重点词对不上。用户要用它们时说明原因，让用户在上面四个里选。
 

@@ -1,9 +1,19 @@
 // 配乐：HeyGen 曲库取曲 → 节拍对位（重拍落在指定的词上）→ 人声避让
-import { hfBin } from "./hyperframes.mjs";
+import { requireHf } from "./hyperframes.mjs";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { run } from "./run.mjs";
+
+/** 配乐是锦上添花：hyperframes 没装时只警告（带安装办法），不挡出片 */
+function hfOrWarn(requireBin, warn, fallback) {
+  try {
+    return requireBin();
+  } catch (err) {
+    warn(`⚠ ${err.message}，${fallback}`);
+    return null;
+  }
+}
 
 const CARVE = join(homedir(), ".claude/skills/hyperframes-audio/scripts/carve.mjs");
 
@@ -36,7 +46,7 @@ function loopTo(dir, src, out, duration, runFn) {
  * - 取曲时说法里带上视频时长（曲库生成会参考）；取到的还是短就循环补齐并提醒
  * opts：duration 视频秒数（不给就不查长短）；probe(绝对路径) → 秒；warn
  */
-export function resolveMusic(dir, intent, runFn = run, { duration = 0, probe = probeLen, warn = console.warn } = {}) {
+export function resolveMusic(dir, intent, runFn = run, { duration = 0, probe = probeLen, warn = console.warn, requireBin = requireHf } = {}) {
   const audioDir = join(dir, "assets/audio");
   const short = (rel) => duration > 0 && probe(join(dir, rel)) < duration;
   const own = existsSync(audioDir) ? readdirSync(audioDir).find((f) => /^bgm\.(wav|mp3|m4a)$/.test(f)) : null;
@@ -48,7 +58,9 @@ export function resolveMusic(dir, intent, runFn = run, { duration = 0, probe = p
   }
   if (own && !short("assets/audio/bgm.wav")) return "assets/audio/bgm.wav";
   const ask = duration > 0 ? `${intent}, around ${Math.ceil(duration)} seconds` : intent;
-  const r = runFn(hfBin(), ["media-use", "resolve", "--type", "bgm", "--intent", ask, "--project", "."], { cwd: dir });
+  const bin = hfOrWarn(requireBin, warn, "本次不加配乐");
+  if (!bin) return null;
+  const r = runFn(bin, ["media-use", "resolve", "--type", "bgm", "--intent", ask, "--project", "."], { cwd: dir });
   const got = r.status === 0 ? parseResolved(r.stdout) : null;
   if (!got) {
     warn(`⚠ 没有取到配乐，本次不加配乐：${(r.stderr || r.stdout).trim().split("\n").at(-1)}`);
@@ -62,20 +74,22 @@ export function resolveMusic(dir, intent, runFn = run, { duration = 0, probe = p
   return loopTo(dir, "assets/audio/bgm.wav", "assets/audio/bgm.wav", duration, runFn);
 }
 
-export function alignMusic(dir, { src, drop, duration }, runFn = run) {
-  const r = runFn(hfBin(), ["beats", ".", "--json"], { cwd: dir });
-  if (r.status !== 0) { console.warn(`⚠ 节拍分析失败，配乐从头播放：${r.stderr.trim()}`); return 0; }
+export function alignMusic(dir, { src, drop, duration }, runFn = run, { warn = console.warn, requireBin = requireHf } = {}) {
+  const bin = hfOrWarn(requireBin, warn, "配乐从头播放");
+  if (!bin) return 0;
+  const r = runFn(bin, ["beats", ".", "--json"], { cwd: dir });
+  if (r.status !== 0) { warn(`⚠ 节拍分析失败，配乐从头播放：${r.stderr.trim()}`); return 0; }
   let beats;
   try {
     beats = JSON.parse(readFileSync(join(dir, "beats", `${src}.json`), "utf8")).beats;
     if (!Array.isArray(beats)) throw new Error("节拍文件里没有 beats 数组");
   } catch (err) {
-    console.warn(`⚠ 读不到节拍结果，配乐从头播放：${err.message}`);
+    warn(`⚠ 读不到节拍结果，配乐从头播放：${err.message}`);
     return 0;
   }
   const trackLen = Number(runFn("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", join(dir, src)]).stdout);
   const pick = pickBeat(beats, drop, duration, trackLen);
-  if (!pick) { console.warn(`⚠ 配乐 ${trackLen.toFixed(1)} 秒，找不到能让重拍落在 ${drop} 秒的节拍，配乐从头播放`); return 0; }
+  if (!pick) { warn(`⚠ 配乐 ${trackLen.toFixed(1)} 秒，找不到能让重拍落在 ${drop} 秒的节拍，配乐从头播放`); return 0; }
   console.log(`✓ 配乐重拍：节拍 ${pick.beat.time}s（强度 ${pick.beat.strength}）→ 全片 ${drop}s，data-media-start=${pick.mediaStart}`);
   return pick.mediaStart;
 }

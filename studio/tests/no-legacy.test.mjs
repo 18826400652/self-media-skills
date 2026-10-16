@@ -1,11 +1,12 @@
 // 视频流水线重组（2026-10-16）以后，代码里不应再出现 template 做法和 narrated-video 的痕迹。
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { extname, join, relative } from "node:path";
 import { test } from "node:test";
 import { TOOLKIT_DIR } from "../scripts/lib/project.mjs";
 
-const SKIP_DIRS = new Set(["node_modules", ".venv", ".git", "docs", "vendor", "fixtures"]);
+const SKIP_DIRS = new Set(["node_modules", ".venv", ".git", ".claude", "docs", "vendor", "fixtures"]);
 const CODE = new Set([".mjs", ".js", ".py", ".json", ".sh", ""]);
 const LEGACY = [/narrated-video/, /抖音-director/, /STORYBOARD/, /faceless-explainer/, /hf-build/, /\bnv (hf-audio|render|draft|rec|verify|init|hf-kit)\b/, /["'`]nv["'`]/];
 // 白名单：整个文件放行，每条写明原因。其余命中都是漏网之鱼，要改代码，不要放宽正则。
@@ -26,14 +27,29 @@ function* codeFiles(dir) {
   }
 }
 
-test("代码里不再引用 narrated-video、nv 命令、抖音-director、STORYBOARD、faceless-explainer", () => {
+/** root 下代码文件里命中旧名字的行（跳过白名单和本文件） */
+function legacyHits(root) {
   const hits = [];
-  for (const f of codeFiles(TOOLKIT_DIR)) {
-    const rel = relative(TOOLKIT_DIR, f);
+  for (const f of codeFiles(root)) {
+    const rel = relative(root, f);
     if (rel === SELF || ALLOW.has(rel)) continue;
     readFileSync(f, "utf8").split("\n").forEach((line, i) => {
       if (LEGACY.some((re) => re.test(line))) hits.push(`${rel}:${i + 1}: ${line.trim().slice(0, 100)}`);
     });
   }
-  assert.deepEqual(hits, []);
+  return hits;
+}
+
+test("代码里不再引用 narrated-video、nv 命令、抖音-director、STORYBOARD、faceless-explainer", () => {
+  assert.deepEqual(legacyHits(TOOLKIT_DIR), []);
+});
+
+test("不扫 .claude/（worktree 副本、本地设置不是工具包代码），但同样的内容放在 skill 里照样抓到", () => {
+  const root = mkdtempSync(join(tmpdir(), "no-legacy-"));
+  mkdirSync(join(root, ".claude/worktrees/x/studio"), { recursive: true });
+  writeFileSync(join(root, ".claude/worktrees/x/studio/a.mjs"), "// narrated-video\n");
+  assert.deepEqual(legacyHits(root), []);
+  mkdirSync(join(root, "studio"));
+  writeFileSync(join(root, "studio/a.mjs"), "// narrated-video\n");
+  assert.equal(legacyHits(root).length, 1);
 });
