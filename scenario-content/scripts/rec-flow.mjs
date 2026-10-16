@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-// 用法：nv rec-flow <输出.mp4> --steps <步骤.py> [--url 网址] [--size 1280x720] [--fps 15] [--timeout 分钟] [--downloads 目录]
+// 用法：sc rec-flow <输出.mp4> --steps <步骤.py> [--url 网址] [--size 1280x720] [--fps 15] [--timeout 分钟] [--downloads 目录]
 //
-// 录一段「按步骤操作网页」的电脑横屏录屏（软件演示、多步表单等），nv rec 只能录 AI 对话。
+// 录一段「按步骤操作网页」的电脑横屏录屏（软件演示、多步表单等），sc rec 只能录 AI 对话。
 // 步骤脚本是 Python，在浏览器里真实执行；可用的函数见 scripts/rec/flow.py 开头。等待时持续录帧，最高帧率 --fps（默认 15，长时间录制省空间）。
 // 只录网页内容，不录浏览器边框和桌面；按 1.5 倍像素录（1280x720 → 1920x1080）。
 // 输出：<输出>.mp4、<输出>.json（每个 mark 在视频里的秒数、操作日志）、<输出>.txt（结束时的页面全文）。
 // --downloads：网页里下载的文件存到这个目录（WSL 下自动转成 Windows 路径）。注意：Windows 的 Edge 下载到 \\wsl.localhost 路径实测没生效。
-// 连接方式同 nv rec（BU_CDP_WS / 项目配置 rec.cdpPort / rec.devtoolsActivePort）。
+// 连接方式同 sc rec（BU_CDP_WS / 项目配置 rec.cdpPort / rec.devtoolsActivePort）。
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { SKILL_DIR, loadConfig } from "./lib/config.mjs";
+import { SKILL_DIR, loadRecConfig } from "./lib/rec-config.mjs";
 import { cdpEndpoint, encode } from "./lib/rec-common.mjs";
 
-const USAGE = "用法：nv rec-flow <输出.mp4> --steps <步骤.py> [--url 网址] [--size 1280x720] [--fps 15] [--timeout 分钟] [--downloads 目录]";
+const USAGE = "用法：sc rec-flow <输出.mp4> --steps <步骤.py> [--url 网址] [--size 1280x720] [--fps 15] [--timeout 分钟] [--downloads 目录]";
 
 function parseArgs(argv) {
   const opts = { size: "1280x720", url: "", fps: "15", timeout: "30", downloads: "" };
@@ -40,12 +40,12 @@ function browserPath(dir) {
 function main() {
   const o = parseArgs(process.argv.slice(2));
   if (!existsSync(o.steps)) throw new Error(`找不到步骤脚本：${o.steps}`);
-  const config = loadConfig(dirname(o.out));
-  const dir = mkdtempSync(join(tmpdir(), "nv-rec-flow-"));
+  const config = loadRecConfig(dirname(o.out));
+  const dir = mkdtempSync(join(tmpdir(), "sc-rec-flow-"));
   try {
     const env = {
-      // 单独的 browser-harness 连接：和别的会话（如同时在跑的 nv rec）共用默认连接时，对方新开标签页会把录制带走
-      ...process.env, BU_NAME: process.env.BU_NAME || "nv-rec-flow", BU_CDP_WS: cdpEndpoint(config), REC_DIR: dir, REC_STEPS: o.steps, REC_URL: o.url,
+      // 单独的 browser-harness 连接：和别的会话（如同时在跑的 sc rec）共用默认连接时，对方新开标签页会把录制带走
+      ...process.env, BU_NAME: process.env.BU_NAME || "sc-rec-flow", BU_CDP_WS: cdpEndpoint(config), REC_DIR: dir, REC_STEPS: o.steps, REC_URL: o.url,
       REC_W: String(o.w), REC_H: String(o.h), REC_FPS: o.fps, REC_THEME: config.rec?.flowTheme ?? "",
       REC_HIDE: config.rec?.hide || "", REC_DOWNLOAD_DIR: o.downloads ? browserPath(resolve(o.downloads)) : "",
     };

@@ -1,5 +1,5 @@
-# nv rec 的录前准备（REC_SETUP）：关掉 DeepSeek 网页版的「深度思考」「智能搜索」，关不掉就报错停止。
-# 用法：REC_SETUP=<本文件> nv rec <输出.mp4> --prompt <提问> --url https://chat.deepseek.com/
+# sc rec 的录前准备（REC_SETUP）：关掉 DeepSeek 网页版的「深度思考」「智能搜索」，关不掉就报错停止。
+# 用法：REC_SETUP=<本文件> sc rec <输出.mp4> --prompt <提问> --url https://chat.deepseek.com/
 # 用 JS 点击（不用鼠标事件）：窗口在后台时鼠标事件可能卡住。按钮「开」时文字是蓝色；「关」时是白色或黑色（随深浅色），所以按「是不是蓝色」判断。
 import json, time
 

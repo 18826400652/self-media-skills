@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// 用法：nv rec <输出.mp4> --prompt <文字文件> --app deepseek|doubao [--think] [--search] [--timeout 秒]   （手机，推荐）
-//       nv rec <输出.mp4> --prompt <文字文件> --url <网址> | --via browser [--input …] [--hide …] [--size 540x960]   （浏览器）
+// 用法：sc rec <输出.mp4> --prompt <文字文件> --app deepseek|doubao [--think] [--search] [--timeout 秒]   （手机，推荐）
+//       sc rec <输出.mp4> --prompt <文字文件> --url <网址> | --via browser [--input …] [--hide …] [--size 540x960]   （浏览器）
 //
 // 手机：调用 phone-draft 的 pd rec，在真手机的 AI App 里打字、发送、等回答结束并录屏（输出格式和浏览器版相同）。
 //
@@ -15,7 +15,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { SKILL_DIR, loadConfig } from "./lib/config.mjs";
+import { SKILL_DIR, loadRecConfig } from "./lib/rec-config.mjs";
 import { cdpEndpoint, encode } from "./lib/rec-common.mjs";
 
 function parseArgs(argv) {
@@ -27,8 +27,8 @@ function parseArgs(argv) {
     else if (argv[i] === "--think" || argv[i] === "--search") opts[argv[i].slice(2)] = true;
     else rest.push(argv[i]);
   }
-  const usage = "用法：nv rec <输出.mp4> --prompt <提问.txt> --app deepseek|doubao [--think] [--search] [--timeout 秒]（手机）\n" +
-    "      nv rec <输出.mp4> --prompt <提问.txt> --url <网址> | --via browser（浏览器）";
+  const usage = "用法：sc rec <输出.mp4> --prompt <提问.txt> --app deepseek|doubao [--think] [--search] [--timeout 秒]（手机）\n" +
+    "      sc rec <输出.mp4> --prompt <提问.txt> --url <网址> | --via browser（浏览器）";
   if (!rest[0] || !opts.prompt) throw new Error(usage);
   const browser = Boolean(opts.url) || opts.via === "browser";
   if (opts.app && browser) throw new Error(`--app（手机）和 --url / --via browser（浏览器）只能选一种\n${usage}`);
@@ -53,8 +53,8 @@ function main() {
   const o = parseArgs(process.argv.slice(2));
   if (!existsSync(o.prompt)) throw new Error(`找不到提问文件：${o.prompt}`);
   if (o.app) return recPhone(o);
-  const config = loadConfig(dirname(o.out));
-  const dir = mkdtempSync(join(tmpdir(), "nv-rec-"));
+  const config = loadRecConfig(dirname(o.out));
+  const dir = mkdtempSync(join(tmpdir(), "sc-rec-"));
   try {
     const env = {
       ...process.env, BU_CDP_WS: cdpEndpoint(config), REC_DIR: dir, REC_PROMPT_FILE: o.prompt, REC_URL: o.url, REC_THEME: config.rec?.theme ?? "",

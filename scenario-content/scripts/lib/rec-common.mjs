@@ -1,8 +1,8 @@
-// nv rec / nv rec-flow 共用：连接浏览器、把录到的帧编码成 MP4。
+// sc rec / sc rec-flow 共用：连接浏览器、把录到的帧编码成 MP4。
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fromRoot } from "./config.mjs";
+import { fromRoot } from "./rec-config.mjs";
 
 /**
  * 浏览器连接地址，按顺序：环境变量 BU_CDP_WS → 配置 rec.cdpPort（浏览器用 --remote-debugging-port 启动，

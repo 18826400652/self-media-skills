@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-# scenario-content 入口：sc check <作品目录>
+# scenario-content 入口：
+#   sc check <作品目录> [--json]
+#   sc bench <关键词…> [--platform 抖音|小红书|all] [--out 文件.json] [--top 10]
+#   sc rec <输出.mp4> --prompt <提问.txt> --app deepseek|doubao [--think] [--search] [--timeout 秒]   （--url <网址> 走浏览器）
+#   sc rec-flow <输出.mp4> --steps <步骤.py> --url <网址>
 set -euo pipefail
 SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
-exec node "$SKILL_DIR/scripts/sc.mjs" "$@"
+case "${1:-}" in
+  rec | rec-flow) cmd="$1"; shift; exec node "$SKILL_DIR/scripts/$cmd.mjs" "$@" ;;
+  *) exec node "$SKILL_DIR/scripts/sc.mjs" "$@" ;;
+esac

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -62,4 +62,13 @@ test("--timeout 传给 pd rec", () => {
   const r = run([join(dir, "rec.mp4"), "--prompt", join(dir, "提问.txt"), "--app", "deepseek", "--timeout", "600"], env);
   assert.equal(r.status, 0, r.stderr);
   assert.match(calls(dir), /--timeout 600\n$/);
+});
+
+test("rec.mjs 放在带中文和空格的路径下也能运行（作品目录都是中文）", () => {
+  const { dir, env } = setup();
+  const copy = join(mkdtempSync(join(tmpdir(), "sc-")), "工具 copy");
+  cpSync(join(SKILL, "scripts"), join(copy, "scripts"), { recursive: true });
+  const r = spawnSync("node", [join(copy, "scripts/rec.mjs"), join(dir, "录屏 1.mp4"), "--prompt", join(dir, "提问.txt"), "--app", "deepseek"], { env, encoding: "utf8" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(calls(dir), /^pd rec deepseek .*提问\.txt .*录屏 1\.mp4/);
 });
