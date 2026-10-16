@@ -9,7 +9,7 @@
 | 零件 | 现在 | 问题 |
 |---|---|---|
 | SCRIPT.md 解析 | vo `parseHfScript`、kv `parseScriptBasis`、sc `douyinLines` 各一份 | 规则不一样：sc 只认大写 `(Frame N)`、正好 4 个空格缩进；vo、kv 不分大小写、4 个以上空格或 Tab。同一份 SCRIPT.md 可能 vo 能配音、sc 说没有口播 |
-| 按 `--via` 调 bd/pd 存草稿 | wa、ic、vdraft 各一份 `takeVia` + `runDraft` | 报错文字已经不一样；ic 只有浏览器步骤却接受 `--via phone`，会跑出 `pd run undefined` |
+| 按 `--via` 调 bd/pd 存草稿 | wa、ic、vdraft 各一份 `takeVia` + `runDraft` | 三份几乎一样，报错文字已经不一样 |
 | 找 Chrome | image-cards、video-director 各一份 `chrome.mjs` | 代码一样，只差第一行注释；靠人记得同步 |
 | 发布文案解析 `copy_format.py` | 只在 browser-draft | phone-draft 用相对路径 `../browser-draft/lib` 借（`bin/pd` 的 PYTHONPATH、`tests/conftest.py`），phone-draft 单独拷走就坏 |
 
@@ -118,7 +118,7 @@ shared/
 
 使用方：wa、ic、vdraft 删掉各自的 `VIA`、`VIA_SKILL`、`EXIT_NO_DEVICE`、`takeVia`、`runDraft`、写载荷文件的代码，改调共用模块。各自的参数（vdraft 的 `--to`、`--cover`，ic 的 `--images`）、步骤脚本表、载荷内容不变。
 
-行为变化：ic 的 `--via phone` 从「跑出 `pd run undefined`」变成明确报错；ic、wa 的手机不可用提示文字统一。
+行为变化：wa、ic、vdraft 的手机不可用提示文字统一。ic 在 `main()` 里先拒绝 `--via phone`（提示小红书手机端改用 `vdraft`），这个 ic 自己的提示保留。
 
 ### 3.3 `node/chrome.mjs`
 
@@ -143,7 +143,7 @@ shared/
 
 - `shared/tests/script-md.test.mjs`：标题大小写、`##` / `###`、4 个以上空格和 Tab 缩进、多行口播（`sentences` 和 `text`）、三种元数据（中英文冒号）、第一个标题前的内容、没有口播的帧、`\r\n`；用 flow-check 02 的真实 SCRIPT.md 当夹具（拷进 `shared/tests/fixtures/`），结果的 `frame`、`text`、`emotion`、`keywords` 和 vo 现在的 `parseHfScript` 逐帧一致
 - `shared/tests/draft-run.test.mjs`：用假的 bd / pd（写进 PATH 的临时脚本）测 `takeVia` 默认值和非法值、`runDraft` 写出的载荷、调用参数、三种报错、没有该方式的步骤时不调命令
-- 各 skill 现有测试继续通过；sc 改两处：删「分镜表」用例，加「小写 frame、Tab 缩进也能读」用例；ic 加「`--via phone` 报没有这种方式」用例
+- 各 skill 现有测试继续通过；sc 改两处：删「分镜表」用例，加「小写 frame、Tab 缩进也能读」用例
 - browser-draft、phone-draft 的 pytest 继续通过；phone-draft 加一条：`sys.path` 里没有 `browser-draft/lib` 也能 `import copy_format`
 - studio：`st sync-shared` 写拷贝（带说明行）、内容没变不重写、`--check` 发现内容不同和缺文件、正本不存在时一个都不写；`st doctor` 不一致时报 ✗；一致性测试：仓库里所有拷贝和正本一致
 - 守护：`phone-draft/` 下的代码不再出现 `browser-draft/lib`
