@@ -8,6 +8,7 @@ const EMOTION_RE = /^\s*\*\*(?:Emotion|情感)[:：]\*\*\s*(\S+)/i;
 const KEYWORDS_RE = /^\s*\*\*(?:Highlight|重点词)[:：]\*\*\s*(.+)$/i;
 const BASIS_RE = /^\s*\*\*依据[:：]\*\*\s*(.*)$/;
 const KEYWORD_SPLIT = /[、,，\s]+/;
+const EMOTION_ANYWHERE_RE = /\*\*(?:Emotion|情感)[:：]\*\*\s*(\S+)/i;
 
 /** @returns {{ frame: number, text: string, sentences: string[], emotion: string, keywords: string[], basis: string|null }[]} */
 export function parseScript(md) {
@@ -37,4 +38,30 @@ export function parseScript(md) {
   }
   flush();
   return out;
+}
+
+/**
+ * 情感写法的问题（parseScript 不报错，只按规则取值，这里把会让人意外的情况找出来）：
+ * multiple：同一帧有好几行情感，parseScript 用最后一个；inline：不在行首的情感不生效。
+ * @returns {{ frame: number, kind: "multiple"|"inline", values: string[] }[]}
+ */
+export function emotionIssues(md) {
+  const frames = [];
+  let cur = null;
+  for (const line of md.split(/\r?\n/)) {
+    const h = line.match(HEADING_RE);
+    if (h) {
+      cur = { frame: Number(h[1]), used: [], inline: [] };
+      frames.push(cur);
+      continue;
+    }
+    if (!cur) continue;
+    const used = line.match(EMOTION_RE);
+    if (used) cur.used.push(used[1]);
+    else if (EMOTION_ANYWHERE_RE.test(line)) cur.inline.push(line.match(EMOTION_ANYWHERE_RE)[1]);
+  }
+  return frames.flatMap(({ frame, used, inline }) => [
+    ...(used.length > 1 ? [{ frame, kind: "multiple", values: used }] : []),
+    ...(inline.length ? [{ frame, kind: "inline", values: inline }] : []),
+  ]);
 }

@@ -89,3 +89,15 @@ def test_connect_without_address_uses_last(state_dir):
     adb = FakeAdb("connected to 192.168.3.3:43223")
     c.connect(None, adb)
     assert adb.calls == [["connect", "192.168.3.3:43223"]]
+
+
+def test_adb_timeout_becomes_device_unavailable(monkeypatch):
+    """adb 卡住（如无线调试地址变了）超时 → 当成「手机不可用」给出重连提示，不抛原始 TimeoutExpired 堆栈"""
+    import subprocess
+
+    def hang(cmd, **kw):
+        raise subprocess.TimeoutExpired(cmd, kw.get("timeout"))
+
+    monkeypatch.setattr(c.subprocess, "run", hang)
+    with pytest.raises(c.DeviceUnavailable, match=r"adb connect 1\.2\.3\.4:5555 超过 \d+ 秒没响应.*pd connect IP:端口"):
+        c.adb(["connect", "1.2.3.4:5555"])

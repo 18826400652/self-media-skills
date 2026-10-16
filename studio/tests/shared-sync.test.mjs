@@ -70,3 +70,8 @@ test("仓库里所有拷贝都和 shared/ 正本一致（改了拷贝没改正�
   const { problems } = syncShared({ toolkit: TOOLKIT_DIR, check: true });
   assert.deepEqual(problems, [], "改 shared/ 里的正本，再跑 st sync-shared");
 });
+
+test("syncShared：工具包里没有 shared/manifest.json（如 studio 单独拷走）→ 说清楚，不报原始 ENOENT", () => {
+  const tk = mkdtempSync(join(tmpdir(), "st-shared-none-"));
+  assert.throws(() => syncShared({ toolkit: tk }), (e) => /没找到 shared\/manifest\.json/.test(e.message) && !/ENOENT/.test(e.message));
+});

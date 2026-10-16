@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseScript } from "./lib/shared/script-md.mjs";
+import { emotionIssues, parseScript } from "./lib/shared/script-md.mjs";
 
 const CONFIG_NAME = "scenario-content.config.json";
 const DEFAULTS = {
@@ -229,6 +229,10 @@ function checkPlatforms(ep, config, r) {
       const written = WRITTEN_WORDS.filter((w) => text.includes(w));
       if (written.length) r.warn(`抖音第 ${frame} 句有书面词「${written.join("、")}」，配音会像播报：${text}`, f.douyinScript);
       if (/\d/.test(text)) r.warn(`抖音第 ${frame} 句有阿拉伯数字，TTS 可能读错，建议写汉字：${text}`, f.douyinScript);
+    }
+    for (const { frame, kind, values } of emotionIssues(douyin)) {
+      if (kind === "multiple") r.warn(`抖音第 ${frame} 帧写了 ${values.length} 个情感（${values.join("、")}），配音用最后一个「${values.at(-1)}」，一帧只留一个`, f.douyinScript);
+      else r.warn(`抖音第 ${frame} 帧的情感「${values.join("、")}」不在行首，不生效：**Emotion:** 要单独一行写`, f.douyinScript);
     }
     if (lines.length && !lines.some((l) => SPOKEN_MARKERS.test(l.text))) {
       r.warn("抖音口播整段没有语气词或反问（吧、呢、其实、结果……），听起来可能像念稿", f.douyinScript);

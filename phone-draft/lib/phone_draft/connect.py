@@ -17,7 +17,10 @@ class DeviceUnavailable(Exception):
 
 
 def adb(args):
-    proc = subprocess.run(["adb", *args], capture_output=True, text=True, timeout=ADB_TIMEOUT)
+    try:
+        proc = subprocess.run(["adb", *args], capture_output=True, text=True, timeout=ADB_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise DeviceUnavailable(f"adb {' '.join(args)} 超过 {ADB_TIMEOUT} 秒没响应，手机可能断开或地址变了。{RECONNECT_HELP}") from None
     return (proc.stdout + proc.stderr).strip()
 
 
