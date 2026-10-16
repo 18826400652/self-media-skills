@@ -54,8 +54,9 @@
 
 | P-42 | 配音缓存键里是参考音色的绝对路径（config.mjs 展开），项目挪位置或复制后缓存全部失效、要重新付费配音（修 P-34 时发现） | 第 2 批（用户定：按内容哈希，不管旧缓存） | 已修 | `fix(P-42)` | speech-cache-key.test.mjs 4 例 RED→GREEN；nv 128/128。实跑核对：flow-check 原目录和 scratchpad 副本（不同绝对路径）里同一份参考音色算出的键相同（ref:9ddd8a81…），修前分别是 bf3fca32 / e2c92413。按用户决定不兼容旧键：现有配音缓存全部失效一次，下次配音会重新付费。setup.md 删掉「换文件要清缓存」 |
 | P-43 | 豆包提问太长时回答在屏幕外，nv rec 发送后 9 秒就判「回答完」，录屏和 txt 都只有提问（P-20 实跑发现） | 待定 | 已修 | `fix(P-43)` | test_apps / test_rec_flow 新增 11 例，均 RED→GREEN；phone-draft 126/126。原因三层：①豆包没有完成标记，标题从「新对话」变成对话名（12 字）就被当成回答；②回答在屏幕外，录不到；③完成按钮在屏幕下沿外。改：DONE_ID=msg_action_regenerate（平常界面只有 id，没有描述）；等回答时每轮 follow_answer 点 ↓（无描述 ImageView，按位置认）或「转至底部」；文字稳定但看不到标记时 reveal_done 往上推一小段。真机实跑（同一 1230 字节提问）：修前 9 秒误判、只录到提问；修中三轮 300 秒超时（逐层排查）；修后发送后 22.6 秒回答完，视频里回答边出边跟、结尾有按钮行，txt 有回答结尾；DeepSeek 回归一轮正常（有复制的完整回答） |
-| P-44 | dy-rec-phone 的录屏比段短时，后半段手机里是空的（修 P-36b 时发现：测试录屏 8 秒、挂 15 秒） | 待定 | 修复中 | | |
-| P-45 | dy-rec-phone 写了上方标题时和 vd 的栏目标签叠在一起（修 P-44 时发现，旧版组件就有） | 待定 | 待修 | | |
+| P-44 | dy-rec-phone 的录屏比段短时，后半段手机里是空的（修 P-36b 时发现：测试录屏 8 秒、挂 15 秒） | 后续（用户定：两种都做） | 已修 | `fix(P-44)` + 组件库 PR #5（abcb97b） | 组件库：新用例 dy-rec-phone-hold（8 秒录屏挂 12 秒段）10.5 秒处 snapshot 和真实渲染手机屏色度 0 → 通过；撑满检查去掉 skip，原来段尾只剩 17% → 38/38 撑满。改法：视频 data-duration 设成整段时长，框架放完停在最后一帧（渲染帧对比：放完后 7.9 秒与 11 秒一样，3 秒不同，不是循环）。vd：recordingProblem 4 例 + installAll 1 例 RED→GREEN，vd 127/127；旧版组件提示「后面是空的，--update-components」，新版提示「停在最后一帧」。端到端：flow-check 02 副本第 2 段（17.8 秒）挂 8 秒录屏，vd build 两种提示都实测到；渲染样片手机区第 22 秒与 27 秒 SSIM 0.989（播放中 0.88–0.91） |
+| P-45 | dy-rec-phone 写了上方标题时和 vd 的栏目标签叠在一起（修 P-44 时发现，旧版组件就有） | 后续（用户定：一起修） | 已修 | 组件库 PR #5（6ed2f81） | 组件库测试工程新增 case.kicker（同 brand-kicker 位置字号的栏目标签），dy-rec-phone 用例打开后修前 3 个带标题变体报 content_overlap → 标题 top 240 改 300 后 5 主题通过；组件库 npm test 215/215。端到端：副本 vd build 的 hyperframes check 不再报 #rp-title 压 #bk-text，样片截图标题在栏目标签下方 |
+| P-46 | dy-ai-badge（模仿抖音 AI 标识，左上角）和 vd 的栏目标签重叠（修 P-45 时给所有组件加栏目标签排查发现） | 待定 | 待修 | | 排查：42 个用例加模拟栏目标签跑 hyperframes check，38 个没问题；dy-ai-badge 重叠；dy-tr-glitch / wipe / zoom 是整屏转场，命中属正常 |
 
 ## 第 1 批收尾（2026-10-15）
 
@@ -72,4 +73,13 @@
 - 实跑留下的东西：`~/flow-check/.media/voice-cache/`（P-34 共用缓存，自带 .gitignore）；scratchpad 的 01 副本被改动过，不影响 flow-check
 - 修复中新发现：P-42（配音缓存键用参考音色的绝对路径，项目挪位置后要重新付费配音），改法要用户定
 - 整条分支自查：改动的 .mjs / .js 都过了 `node --check`，bash 入口过了 `bash -n`；没有调试输出、没有未使用的导入（自查，没有派独立 reviewer）
-- 还没做：P-36b（组件库仓库）、P-42、P-19 / P-20 真机实跑
+- 还没做：P-36b（组件库仓库）、P-42、P-19 / P-20 真机实跑（都已在下一节补完）
+
+## 第 2 批之后的收尾（2026-10-16）
+
+- 补完第 2 批留下的：P-19、P-20 真机实跑（MEIZU 20：DeepSeek 复制成功；豆包走通，发现 P-43）；P-42 按用户定的方案（参考音色按内容哈希）修好；P-36b 组件库改动经 PR #4 合并（0dde9f4）
+- 这期间新发现并修好：P-43（豆包长提问回答在屏幕外，真机验证）、P-44（录屏比段短，组件停在最后一帧 + vd 提醒）、P-45（rec-phone 标题压住栏目标签）；P-44、P-45 的组件库改动经 PR #5 合并（96f89f5）。flow-check 02 副本跑 `vd build --update-components` 实测锁到 96f89f5
+- 全部测试：studio 37、knowledge-video 86、scenario-content 15、video-director 127、wechat-article 5、image-cards 4、narrated-video 128（node --test，0 失败）；phone-draft 126、browser-draft 8（pytest，0 失败）。组件库：npm test 215/215，test:fill 38/38
+- 新发现、还没修：P-46（dy-ai-badge 和栏目标签重叠）
+- 组件库已合并，已有作品项目要跑一次 `vd build . --update-components` 才换成新版组件
+
