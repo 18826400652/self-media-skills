@@ -1,5 +1,5 @@
 // 一句口播 → 干净的音频片段：合成（按内容缓存）→ 切掉首尾静音 → 逐字时间戳（若 TTS 提供）。
-// nv voice（自带视频模板）和 nv hf-audio（HyperFrames 工作流）共用。
+// vo 配音时用。
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -20,7 +20,7 @@ const PUNCTUATION = /^[\p{P}\p{S}\s]+$/u;
 export function voiceKeyParts(tts) {
   const parts = [tts.style];
   if (tts.reference) {
-    if (!existsSync(tts.reference)) throw new Error(`找不到参考音频：${tts.reference}（narrated-video.config.json 的 tts.reference）`);
+    if (!existsSync(tts.reference)) throw new Error(`找不到参考音频：${tts.reference}（voiceover.config.json 的 tts.reference）`);
     parts.push(`ref:${createHash("sha1").update(readFileSync(tts.reference)).digest("hex")}`);
   }
   parts.push(tts.seed);

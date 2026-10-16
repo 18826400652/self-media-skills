@@ -8,13 +8,11 @@
 //   - 能给逐字时间戳的适配器导出 wordTimestamps = true，并把时间戳写到 <outFile 去掉 .wav>.words.json
 //   - 能读 SSML 的适配器导出 ssml = true，读音表 tts.pronounce 才会生效（scripts/lib/pronounce.mjs）
 import * as cosyvoice from "./cosyvoice.mjs";
-import * as edge from "./edge.mjs";
-import * as kokoro from "./kokoro.mjs";
 import * as qwenaudio from "./qwenaudio.mjs";
 import * as seedaudio from "./seedaudio.mjs";
 import * as volcengine from "./volcengine.mjs";
 
-const PROVIDERS = { cosyvoice, edge, kokoro, qwenaudio, seedaudio, volcengine };
+const PROVIDERS = { cosyvoice, qwenaudio, seedaudio, volcengine };
 
 export function getProvider(name) {
   const provider = PROVIDERS[name];

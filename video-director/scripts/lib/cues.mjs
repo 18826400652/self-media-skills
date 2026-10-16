@@ -1,4 +1,4 @@
-// audio_meta.json（nv hf-audio）→ 全片字流 → @词 的秒数
+// audio_meta.json（vo）→ 全片字流 → @词 的秒数
 const KEEP = /[\p{L}\p{N}]/u;
 const norm = (s) => Array.from(String(s).toLowerCase()).filter((c) => KEEP.test(c)).join("");
 const round = (x) => Math.round(x * 1000) / 1000;

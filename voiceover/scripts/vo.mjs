@@ -1,31 +1,18 @@
 #!/usr/bin/env node
-// 用法：nv hf-audio <HyperFrames 工程目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>] [--pause <秒>] [--check]
+// 用法：vo <工程目录> [--voice <音色>] [--speed <倍速>] [--provider <服务商>] [--model <模型>] [--pause <秒>] [--check]
 //
-// 给 HyperFrames 官方工作流（/faceless-explainer 等）配音：用本模块的 TTS（默认读项目配置，如 CosyVoice）
-// 代替它自带的 HeyGen / Kokoro，产出与它的音频引擎完全相同的文件，后续 sync-durations、fetch-sfx、
-// captions、assemble-index 照常运行：
-//   assets/voice/NN.wav        每帧一段配音（首尾静音已切）
-//   audio_engine_meta.json     引擎的中性格式（fetch-sfx 会在它上面合并音效）
-//   audio_meta.json            按帧组织的格式（captions / assemble-index 读取）
-// 已有的音效（nv hf-sfx 写入的 sfx 段）会保留，重新配音后不用重放音效。
-// 字幕的「词」按中文习惯生成：一个分句一屏；`**重点词:** 八秒钟、一下午` 里的词单独成段并以 * 标记，
-// 由项目的字幕皮肤高亮（见 references/hyperframes.md）。
-//
-// 读取工程里的 SCRIPT.md：`## … (Frame N)` 开一句，缩进块是口播原文；
-// 可选 `**Emotion:** 惊讶`（平静 开心 惊讶 难过 生气 害怕 厌恶）逐句指定情感；
-// 可选 `**重点词:** 八秒钟、一下午` 指定字幕里要高亮的词。
-// 一帧的缩进块可以写好几句，画面不换、口播接着说（聊天式的慢节奏）。
-// --pause（或配置 tts.pause）：每帧说完后留几秒停顿再切下一帧，默认 0。
-//
-// 导演稿模式：工程里有 VOICE.md、且服务商支持（seedaudio、qwenaudio）时，按段整段生成再切回每帧（scripts/lib/voice-direction.mjs）。
-// 段内帧与帧之间保留说话本身的停顿，--pause 只加在段与段之间；Emotion 不再单独生效（写进导演稿）。
-// --check：只检查 VOICE.md 和 SCRIPT.md 对不对得上，不生成。
+// 按工程里的 SCRIPT.md（+ 可选的配音导演稿 VOICE.md）配音，写出（格式见 README「文件接口」）：
+//   assets/voice/NN.wav    每帧一段配音（首尾静音已切）
+//   audio_meta.json        每帧的词和字时间（帧内秒数），重点词以 * 开头；原有的 sfx 保留
+//   caption_groups.json    字幕分组（全片秒数），vd 的字幕组件读它
+// SCRIPT.md：`## … (Frame N)` 开一句，缩进块是口播原文；可选 `**Emotion:** 惊讶`、`**重点词:** 八秒钟、一下午`。
+// VOICE.md 存在且服务商支持（seedaudio、qwenaudio）时，按段整段生成再切回每帧；--pause 只加在段与段之间。
+// --check：只检查 VOICE.md 和 SCRIPT.md 对不对得上，不生成、不花钱。
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { buildCaptions } from "./lib/captions-step.mjs";
+import { buildCaptionGroups } from "./lib/caption-groups.mjs";
 import { loadConfig } from "./lib/config.mjs";
-import { writeCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { loadDotEnv, probeDuration, synthesizeClean, synthesizeSegment } from "./lib/speech.mjs";
 import { adoptLegacyCache, voiceCacheDir } from "./lib/voice-cache.mjs";
@@ -40,7 +27,7 @@ const pad2 = (n) => String(n).padStart(2, "0");
 function parseArgs(argv) {
   let [dir, ...rest] = argv;
   if (!dir) {
-    console.error("用法：nv hf-audio <HyperFrames 工程目录> [--voice x] [--speed 1.1] [--provider x] [--model x]");
+    console.error("用法：vo <工程目录> [--voice x] [--speed 1.1] [--provider x] [--model x]");
     process.exit(1);
   }
   const overrides = {};
@@ -188,6 +175,19 @@ async function synthesizeAll(lines, segments, tts, cacheDir) {
   return out;
 }
 
+const writeJson = (dir, file, data) => writeFileSync(join(dir, file), `${JSON.stringify(data, null, 2)}\n`);
+
+/** 写 audio_meta.json（保留原有 sfx）和 caption_groups.json */
+export function writeOutputs(dir, voices) {
+  const file = join(dir, "audio_meta.json");
+  const sfx = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")).sfx ?? [] : [];
+  const meta = { bgm: null, bgm_pending: false, voices, sfx };
+  writeJson(dir, "audio_meta.json", meta);
+  const captions = buildCaptionGroups(meta);
+  writeJson(dir, "caption_groups.json", captions);
+  return { total: captions.total_duration_s, groups: captions.groups.length };
+}
+
 async function main() {
   const { dir, overrides, check } = parseArgs(process.argv.slice(2));
   const scriptPath = join(dir, "SCRIPT.md");
@@ -228,37 +228,16 @@ async function main() {
       copyFileSync(clip.file, join(dir, rel));
     }
     voices.push({
-      id: pad2(line.frame),
       frame: line.frame,
       path: rel,
       duration_s: padding > 0 ? Math.round(probeDuration(join(dir, rel)) * 1000) / 1000 : clip.speechDuration,
       words: withIds(toCaptionWords(clip.words, line.keywords)),
-      chars: clip.words, // 逐字时间（nv hf-sfx 按关键词放音效时用）
+      chars: clip.words, // 逐字时间（vd 按 @词 算时间时用）
     });
   }
 
-  const previous = (file) => (existsSync(join(dir, file)) ? JSON.parse(readFileSync(join(dir, file), "utf8")) : {});
-  const total = Math.round(voices.reduce((a, v) => a + v.duration_s, 0) * 1000) / 1000;
-  const neutral = {
-    tts_provider: tts.provider,
-    voice_id: tts.voice,
-    bgm: null,
-    bgm_pending: false,
-    voices: voices.map(({ frame, ...v }) => v),
-    sfx: previous("audio_engine_meta.json").sfx ?? [],
-    total_duration_s: total,
-  };
-  const frameKeyed = {
-    bgm: null,
-    bgm_pending: false,
-    voices: voices.map(({ id, ...v }) => v),
-    sfx: previous("audio_meta.json").sfx ?? [],
-  };
-  writeFileSync(join(dir, "audio_engine_meta.json"), `${JSON.stringify(neutral, null, 2)}\n`);
-  writeFileSync(join(dir, "audio_meta.json"), `${JSON.stringify(frameKeyed, null, 2)}\n`);
-  console.log(`✓ 配音完成：${voices.length} 帧，共 ${total} 秒 → audio_meta.json`);
-  if (existsSync(join(dir, "compositions"))) console.log(`✓ 逐字时间 → compositions/kit/cues.js（${writeCues(dir)} 帧）`);
-  if (buildCaptions(dir, { quietFontFallback: true }).built) console.log("✓ 帧时长写回 STORYBOARD、字幕分组 → caption_groups.json");
+  const { total, groups } = writeOutputs(dir, voices);
+  console.log(`✓ 配音完成：${voices.length} 帧，共 ${total} 秒 → audio_meta.json、caption_groups.json（${groups} 组字幕）`);
 }
 
 if (isMain(import.meta.url)) {

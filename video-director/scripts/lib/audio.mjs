@@ -1,4 +1,4 @@
-// 配音（nv hf-audio 的每句 wav）首尾拼接 + 音效 → assets/audio/vo.wav
+// 配音（vo 的每句 wav）首尾拼接 + 音效 → assets/audio/vo.wav
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,7 +33,7 @@ export function mixArgs({ voice, sfx, duration, out }) {
 export function buildAudio(dir, { vd, cues, lines, total }, config) {
   const voices = lines.map((l) => join(dir, "assets/voice", `${String(l.line).padStart(2, "0")}.wav`));
   const missing = voices.filter((p) => !existsSync(p));
-  if (missing.length) throw new Error(`缺少配音文件：${missing.join("、")}（先跑 nv hf-audio）`);
+  if (missing.length) throw new Error(`缺少配音文件：${missing.join("、")}（先跑 vo <工程>）`);
   const tmp = mkdtempSync(join(tmpdir(), "vd-audio-"));
   try {
     writeFileSync(join(tmp, "list.txt"), voiceListFile(voices));

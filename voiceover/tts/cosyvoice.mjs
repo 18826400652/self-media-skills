@@ -9,7 +9,7 @@
 //   pronounce = 读音表（可选），如 { "AI": "<say-as interpret-as=\"characters\">AI</say-as>" }，见 scripts/lib/pronounce.mjs
 // 每句同时输出逐字时间戳 <音频名>.words.json（单位秒）。
 // 音色支持哪些场景，以官方音色列表为准：https://help.aliyun.com/zh/model-studio/cosyvoice-voice-list
-// 密钥：环境变量 DASHSCOPE_API_KEY，可写在项目根目录 .env（nv voice 会自动读取，.env 不入 git）。
+// 密钥：环境变量 DASHSCOPE_API_KEY，可写在项目根目录 .env（.env 不入 git）。
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { SKILL_DIR } from "../scripts/lib/config.mjs";
@@ -61,7 +61,7 @@ export async function synthesize(opts) {
   }
   const instruction = buildInstruction(opts);
   try {
-    // 逐字时间戳写在音频旁边：xx.wav → xx.words.json（voice.mjs 用它精确切静音、对齐关键词）
+    // 逐字时间戳写在音频旁边：xx.wav → xx.words.json（speech.mjs 用它精确切静音、对齐关键词）
     const wordsFile = outFile.replace(/\.wav$/, ".words.json");
     execFileSync(PYTHON, [SCRIPT, model || DEFAULT_MODEL, voice, String(speed), outFile, instruction, wordsFile], {
       input: text,

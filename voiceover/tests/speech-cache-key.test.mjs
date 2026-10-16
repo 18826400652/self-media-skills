@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { voiceKeyParts } from "../scripts/lib/speech.mjs";
 
-const tmp = () => mkdtempSync(join(tmpdir(), "nv-ref-"));
+const tmp = () => mkdtempSync(join(tmpdir(), "vo-ref-"));
 
 test("voiceKeyParts：同一份参考音频换了位置（项目挪目录、复制一份），键不变", () => {
   const a = join(tmp(), "参考音色.wav");

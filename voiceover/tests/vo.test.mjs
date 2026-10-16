@@ -1,7 +1,10 @@
-// HyperFrames 配音与成片检查相关的纯逻辑测试：node --test tests/*.test.mjs
+// 配音脚本解析与输出文件的测试：node --test tests/*.test.mjs
 import assert from "node:assert/strict";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
-import { parseHfScript, restoreCase, toCaptionWords } from "../scripts/hf-audio.mjs";
+import { parseHfScript, restoreCase, toCaptionWords, writeOutputs } from "../scripts/vo.mjs";
 
 const chars = (s, t0 = 0, step = 0.1) => [...s].map((ch, i) => ({ text: ch, start: t0 + i * step, end: t0 + (i + 1) * step }));
 
@@ -30,4 +33,25 @@ test("toCaptionWords：TTS 把标点和后面的字并成一个时间戳，也�
   const words = [{ text: "为", start: 0, end: 0.2 }, { text: "啥", start: 0.2, end: 0.4 }, { text: "？AI", start: 0.4, end: 0.8 }, { text: "不", start: 0.8, end: 1 }, { text: "是", start: 1, end: 1.2 }];
   assert.deepEqual(toCaptionWords(words, []).map((w) => w.text), ["为啥?", "AI不是"]);
   assert.deepEqual(toCaptionWords([{ text: "「A/B」", start: 0, end: 1 }], []).map((w) => w.text), ["「A/B」"]);
+});
+
+const v = (frame, duration_s) => ({ frame, path: `assets/voice/0${frame}.wav`, duration_s, words: [{ id: "w0", text: `第${frame}句.`, start: 0, end: 0.5 }], chars: [] });
+
+test("writeOutputs：写 audio_meta.json 和 caption_groups.json，不再写 audio_engine_meta.json、cues.js、STORYBOARD", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vo-"));
+  writeOutputs(dir, [v(1, 1.2), v(2, 0.8)]);
+  const meta = JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8"));
+  assert.deepEqual(Object.keys(meta), ["bgm", "bgm_pending", "voices", "sfx"]);
+  assert.deepEqual(meta.sfx, []);
+  const caps = JSON.parse(readFileSync(join(dir, "caption_groups.json"), "utf8"));
+  assert.deepEqual(caps.groups.map((g) => [g.frame, g.start]), [[1, 0], [2, 1.2]]);
+  for (const f of ["audio_engine_meta.json", "compositions/kit/cues.js", "STORYBOARD.md"]) assert.equal(existsSync(join(dir, f)), false, f);
+});
+
+test("writeOutputs：重新配音时保留 audio_meta.json 里原有的 sfx（vd build 放的音效不丢）", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vo-"));
+  const sfx = [{ id: "s1", path: "assets/sfx/ping.wav", start: 1.2 }];
+  writeFileSync(join(dir, "audio_meta.json"), JSON.stringify({ bgm: null, bgm_pending: false, voices: [], sfx }));
+  writeOutputs(dir, [v(1, 1)]);
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8")).sfx, sfx);
 });

@@ -3,7 +3,7 @@
 import { copyFileSync, existsSync, linkSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
-/** 在项目里（找到了 narrated-video.config.json）→ <项目根>/.media/voice-cache；否则 <工程>/.media/voice-cache */
+/** 在项目里（找到了 voiceover.config.json）→ <项目根>/.media/voice-cache；否则 <工程>/.media/voice-cache */
 export function voiceCacheDir(workDir, { root, configPath }) {
   if (!configPath) return join(workDir, ".media", "voice-cache");
   const media = join(root, ".media");

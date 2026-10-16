@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# voiceover 入口：vo <工程目录> [--check] [--pause 秒] [--voice x] [--speed x] [--provider x] [--model x]
+# 按 SCRIPT.md + VOICE.md 配音，写 assets/voice/、audio_meta.json、caption_groups.json。
+set -euo pipefail
+SKILL_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+export PATH="$SKILL_DIR/.venv/bin:$PATH"   # cosyvoice 用的 Python 环境
+exec node "$SKILL_DIR/scripts/vo.mjs" "$@"

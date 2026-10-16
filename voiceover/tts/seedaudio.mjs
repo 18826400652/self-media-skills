@@ -1,7 +1,7 @@
 // 火山引擎豆包音频生成模型 Seed-Audio 1.0（音频创作）：用一段自然语言描述「谁、用什么语气说」，生成接近真人的口播。
 // 接口文档：https://docs.volcengine.com/docs/DoubaoVoice/audio-generation-http（非流式 HTTP）
 // 两种用法：
-//   - 导演稿（推荐）：工程里有 VOICE.md 时，nv hf-audio 按段把表演提示（direction）交给它，整段一次生成，
+//   - 导演稿（推荐）：工程里有 VOICE.md 时，vo 按段把表演提示（direction）交给它，整段一次生成，
 //     说话前后连贯；写法见 references/voice-direction.md
 //   - 逐帧：没有 VOICE.md 时一帧一次，提示只有人设 + 台词
 // 配置（tts 字段）：

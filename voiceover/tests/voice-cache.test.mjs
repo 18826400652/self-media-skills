@@ -6,13 +6,13 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { adoptLegacyCache, voiceCacheDir } from "../scripts/lib/voice-cache.mjs";
 
-const tmp = () => mkdtempSync(join(tmpdir(), "nv-cache-"));
+const tmp = () => mkdtempSync(join(tmpdir(), "vo-cache-"));
 
-test("voiceCacheDir：在作品项目里（有 narrated-video.config.json）→ 项目根的 .media/voice-cache，并放 .gitignore 不让缓存进库", () => {
+test("voiceCacheDir：在作品项目里（有 voiceover.config.json）→ 项目根的 .media/voice-cache，并放 .gitignore 不让缓存进库", () => {
   const root = tmp();
   const work = join(root, "04-作品/系列/01-x/抖音");
   mkdirSync(work, { recursive: true });
-  const dir = voiceCacheDir(work, { root, configPath: join(root, "narrated-video.config.json") });
+  const dir = voiceCacheDir(work, { root, configPath: join(root, "voiceover.config.json") });
   assert.equal(dir, join(root, ".media/voice-cache"));
   assert.ok(existsSync(dir));
   assert.equal(readFileSync(join(root, ".media/.gitignore"), "utf8").trim(), "*");

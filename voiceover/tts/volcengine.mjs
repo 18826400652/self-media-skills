@@ -31,7 +31,7 @@ export function buildBody({ text, voice, speed, model, instruction }) {
   const isV1 = /-1\.0/.test(model || DEFAULT_RESOURCE);
   const additions = instruction ? { context_texts: [instruction] } : null;
   return {
-    user: { uid: "narrated-video" },
+    user: { uid: "voiceover" },
     req_params: {
       text,
       speaker: voice,
