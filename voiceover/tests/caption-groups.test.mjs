@@ -61,3 +61,15 @@ test("去掉空词和只有标点的词；重点词的 * 保留在 text 里", ()
   const meta = { voices: [voice(1, 2, [w(" ", 0, 0.1), w(",", 0.1, 0.2), w("*十秒", 0.2, 0.6), w("改完.", 0.6, 1.0)])] };
   assert.deepEqual(buildCaptionGroups(meta).groups.map((x) => x.text), ["*十秒 改完."]);
 });
+
+test("字数上限：往后 1 秒 3 个词（> 2.5 个/秒）最多 3 个词", () => {
+  const starts = [0, 0.35, 0.7, 1.05, 1.4, 1.75, 2.1];
+  const words = starts.map((t, i) => w(`词${i}`, t, t + 0.3));
+  assert.deepEqual(buildCaptionGroups({ voices: [voice(1, 3, words)] }).groups.map((x) => x.words.length), [3, 3, 1]);
+});
+
+test("字数上限：往后 1 秒 2 个词（≤ 2.5 个/秒）最多 4 个词", () => {
+  const starts = [0, 0.5, 1, 1.5, 2, 2.5];
+  const words = starts.map((t, i) => w(`词${i}`, t, t + 0.4));
+  assert.deepEqual(buildCaptionGroups({ voices: [voice(1, 3, words)] }).groups.map((x) => x.words.length), [4, 2]);
+});
