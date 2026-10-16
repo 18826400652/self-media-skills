@@ -6,38 +6,14 @@
 //   wa publish <文章.md>     用接口上传图片并存草稿（需要 AppID/AppSecret、IP 白名单和草稿接口权限，个人号没有）
 // 主题、凭据文件等来自项目配置 wechat-article.config.json（向上查找）。
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runDraft, takeVia } from "./lib/shared/draft-run.mjs";
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WENYAN = join(SKILL_DIR, "node_modules", ".bin", "wenyan");
 const CONFIG_NAME = "wechat-article.config.json";
-const VIA = { phone: "pd", browser: "bd" };
-const VIA_SKILL = { phone: "phone-draft", browser: "browser-draft" };
-const EXIT_NO_DEVICE = 3;
-
-/** 从参数里取出 --via browser|phone（默认 browser），返回 [via, 其余参数] */
-function takeVia(argv) {
-  const i = argv.indexOf("--via");
-  if (i < 0) return ["browser", argv];
-  const via = argv[i + 1];
-  if (!VIA[via]) throw new Error(`--via 只能是 phone 或 browser，收到：${via}`);
-  return [via, [...argv.slice(0, i), ...argv.slice(i + 2)]];
-}
-
-/** phone 用 pd 操作手机，browser 用 bd 操作已登录的浏览器；手机不可用时报错，不回落到浏览器 */
-function runDraft(via, steps, payloadFile) {
-  const bin = VIA[via];
-  try {
-    execFileSync(bin, ["run", steps[via], payloadFile], { stdio: "inherit" });
-  } catch (err) {
-    if (err.code === "ENOENT") throw new Error(`需要 ${bin} 命令（skills/${VIA_SKILL[via]}，软链接到 PATH）`);
-    if (via === "phone" && err.status === EXIT_NO_DEVICE) throw new Error("手机不可用（见上面的提示）；去掉 --via phone 就用浏览器");
-    throw new Error("发草稿失败，看上面的输出");
-  }
-}
 
 const DEFAULTS = { theme: "default", highlight: "solarized-light", envFile: ".env", macStyle: false };
 
@@ -105,9 +81,7 @@ function draft(file, config, via = "browser") {
   const cover = coverField ? resolve(dirname(file), coverField) : "";
   if (cover && !existsSync(cover)) throw new Error(`封面不存在：${cover}`);
   const payload = { title: frontmatterTitle(file), author: frontmatterField(file, "author"), html, cover, images: count, account: config.account ?? "" };
-  const payloadFile = join(mkdtempSync(join(tmpdir(), "wa-draft-")), "payload.json");
-  writeFileSync(payloadFile, JSON.stringify(payload));
-  runDraft(via, { phone: join(SKILL_DIR, "scripts", "phone_wechat.py"), browser: join(SKILL_DIR, "scripts", "draft_wechat.py") }, payloadFile);
+  runDraft(via, { phone: join(SKILL_DIR, "scripts", "phone_wechat.py"), browser: join(SKILL_DIR, "scripts", "draft_wechat.py") }, payload, { tmpPrefix: "wa-draft-" });
 }
 
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);

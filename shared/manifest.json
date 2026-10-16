@@ -11,5 +11,10 @@
     "scenario-content/scripts/lib/shared/script-md.mjs",
     "knowledge-video/scripts/lib/shared/script-md.mjs",
     "voiceover/scripts/lib/shared/script-md.mjs"
+  ],
+  "node/draft-run.mjs": [
+    "wechat-article/scripts/lib/shared/draft-run.mjs",
+    "image-cards/scripts/lib/shared/draft-run.mjs",
+    "video-draft/scripts/lib/shared/draft-run.mjs"
   ]
 }

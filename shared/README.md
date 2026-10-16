@@ -34,3 +34,11 @@ skill 之间不互相引用，每个 skill 单独拷走就能用。
 - 谁在用：scenario-content（`sc check`）、knowledge-video（`kv check`、`kv status`）、voiceover（`vo`）
 - 来源：原 vo `parseHfScript`、kv `parseScriptBasis`、sc `douyinLines` 三份，规则以 vo 为准（配音吃的是它）；sc 旧的「分镜表」写法删了
 - 注意：vo 的配音缓存键含口播 `text`，改这里的规则可能让已有配音缓存失效（`shared/tests/script-md.test.mjs` 里有一条用 flow-check 02 真实稿子锁住）
+
+### node/draft-run.mjs
+
+- 用途：存草稿的公共部分——`--via` 选浏览器（bd）还是手机（pd），写载荷 JSON，调 `bd run` / `pd run`
+- 接口：`takeVia(argv) → [via, rest]`（默认 browser）；`runDraft(via, steps, payload, { tmpPrefix })`，`steps` 是 `{ browser?, phone? }` 步骤脚本路径
+- 报错：命令找不到说装哪个 skill；手机不可用（退出码 3）提示去掉 `--via phone`；其他失败「发草稿失败，看上面的输出」；没有该方式的步骤直接报错、不调命令
+- 谁在用：wechat-article（`wa draft`）、image-cards（`ic draft`）、video-draft（`vdraft`）
+- 来源：原三家各一份，报错文字已统一
