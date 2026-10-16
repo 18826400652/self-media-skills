@@ -23,7 +23,7 @@ curl -fsSL https://static.heygen.ai/cli/install.sh | bash   # 配乐用的 heyge
 HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免费额度（API Key 会扣钱包）
 ```
 
-项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）、`hfVersion`（HyperFrames 版本）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
+项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）；`hfVersion` 不用写（hyperframes 统一用 narrated-video 装的那一份，写了且不一致会报错）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
 
 ## 流程（一期的抖音部分）
 
@@ -33,7 +33,7 @@ HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免
 |---|---|---|
 | 0 | 口播稿、配音稿确认后，`nv hf-audio <抖音工程>` 生成配音和逐字时间轴 | — |
 | 1 | 新建导演工程（下面的命令），按 `templates/DIRECTOR.md` 写导演脚本；`vd cues .` 确认每个 @词都找得到 | **③a 请用户审 DIRECTOR.md** |
-| 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build . --sample`；`vd qa .` 无 ✗（看 `snapshots/cues-sheet.jpg`）；`npx hyperframes render -o renders/sample.mp4` 出样片 | **③b 请用户看样片** |
+| 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build . --sample`；`vd qa .` 无 ✗（看 `snapshots/cues-sheet.jpg`）；`nv render . --sample` 出样片（`renders/sample.mp4`） | **③b 请用户看样片** |
 | 3 | 写其余各段，每写一段 `vd build . --no-music` + 截图；全部写完 `vd build .` | — |
 | 4 | 全片 `vd qa .` 无 ✗，按总览图逐条对照 DIRECTOR.md，问题记进 `qa.json`；`nv render <工程>`；和旧版做对比视频（`renders/compare.mp4`）；`vd check` 列出组件候选 | **④ 请用户看成片 + 组件候选** |
 
@@ -49,15 +49,15 @@ cp -r 抖音/assets/voice 抖音-director/assets/
 cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-director/
 ```
 
-`package.json` 里的 `hyperframes@X.Y.Z` 改成 `video-director.config.json` 的 `hfVersion`。
+`caption_groups.json` 由 `nv hf-audio` 配音时生成（同时把每帧时长写回 `抖音/STORYBOARD.md`），不用先跑 `nv hf-build`。
 
 ## 命令
 
 | 命令 | 作用 |
 |---|---|
 | `vd cues <工程> [--check]` | 校验 DIRECTOR.md，把所有 @词 换算成秒数写进 `cues.js`，并打印出来；`--check` 只校验不写文件 |
-| `vd qa <工程>` | 抖音专用检查：在每个 @词 落定时刻（@词 后 0.8 秒）和每段结尾截图，查出画面、安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；每 0.5 秒比一次，2 秒不动（⚠）。被 overflow 裁掉的部分不算。结果 `qa-douyin.json`（样片构建时写 `qa-douyin-sample.json`，只查装了的段），总览 `snapshots/cues-sheet.jpg`。DIRECTOR.md 改了 @词或分段还没 `vd build` 时直接报错 |
-| `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
+| `vd qa <工程>` | 抖音专用检查：在每个 @词 落定时刻（@词 后 0.8 秒）和每段结尾截图，查出画面、安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；每 0.5 秒比一次，连续 2 秒只有背景、没有文字或 `data-vd-key` 元素（✗，纯图形的关键画面要加 `data-vd-key`），2 秒不动（⚠）。被 overflow 裁掉的部分不算。结果 `qa-douyin.json`（样片构建时写 `qa-douyin-sample.json`，只查装了的段），总览 `snapshots/cues-sheet.jpg`。DIRECTOR.md 改了 @词或分段还没 `vd build` 时直接报错 |
+| `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲（说法里自动带上视频时长；vd 以前取的 `bgm.wav` 比视频短会重新取，还是短就循环补齐；自己放的 `bgm.mp3` 不替换、太短时循环成 `bgm-loop.wav`）、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
 | `vd check <工程>` | 校验 DIRECTOR.md + 列出组件候选 + `hyperframes check` |
 
 `index.html` 里标记块之外的内容（背景、贯穿元素）是手写的，`vd build` 不会动。
@@ -75,6 +75,10 @@ cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-dir
 
 dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独维护）。分段里写 `"component": "dy-…"` 和 `"vars": {…}` 就直接用组件，配色自动套用这条视频的 `palette`（dykit 的 custom 主题）。可用组件和变量见仓库的 `catalog/catalog.json`。
 
+- **组件跟着口播走**：组件按段长排时间（`HF.duration`），演完停在最后的样子，到段尾才退场。catalog 里写了 `beats` 的组件有可选变量 `cues`：用 `|` 隔开几个 @词，按顺序对应它的几拍（如清单 `"cues": "@条数|@数字|@补的话"` 是三项各自出现的时间），`vd build` 换算成段内秒数交给组件；不写 `cues` 就按默认节奏铺满整段。每个 @词 要落在这一段里，不然报错。`dy-rec-phone` 的 `cues` 是它自己的 JSON 列表（每项带 `t`），不按这个规则
+- **录屏比段短**：`dy-rec-phone` 的录屏放完停在最后一帧（通常就是 AI 的完整回答）；`vd build` 发现录屏比段短 0.5 秒以上会打 ⚠，说清停住几秒。要画面一直在动，就换长一点的录屏或把这段拆短
+- **不要用 `dy-ai-badge`**：它模仿抖音自带的 AI 标识，固定在左上角，正好压住栏目标签（栏目标签全片都在，关不掉），`vd build` 的检查会报文字重叠
+- **旧版组件**：`components.lock.json` 锁的还是 2026-10 之前的组件库时，组件时间是写死的；放进比 `minDuration + 2` 秒还长的段，`vd build` 直接报错——`vd build . --update-components` 换成新版
 - 第一次 `vd build` 把最新提交号写进 `components.lock.json`，之后一直用这个版本，重新渲染不会变样；要用新版组件：`vd build . --update-components`
 - 下载的仓库缓存在 `~/.cache/video-director/hyperframes/<提交号>/`，断网时已缓存的版本照常能用
 - 配色怎么套：`palette.accent` 是荧光笔底色；组件里当文字、描边用的强调色取 `accent`、`alert`、`ink` 里第一个在底色上看得清的（对比度 ≥ 3:1）。纸面 + 荧光黄的配色下，组件强调色会是 `alert` 红——如果本片红色代表「错的」，用组件前想清楚会不会混淆

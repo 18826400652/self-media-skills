@@ -41,6 +41,7 @@
     ".kit-chip.kit-chip{border-radius:99px;padding:8px 22px;box-shadow:0 0 30px " + A(45) + "}",
     ".kit-label.kit-label{border-radius:14px;box-shadow:0 0 30px " + A(40) + "}",
     ".kit-glass-panel.kit-glass-panel{" + GLASS + ";border-left:1.5px solid " + A(55) + "}",
+    ".kit-glass-panel.kit-on-rec{background:color-mix(in srgb,var(--kit-bg) 92%,transparent)}", /* 叠在录屏上：不透明底，浅色界面上也看得清 */
     /* 组件玻璃皮肤 */
     ".kit-card,.kit-prompt,.kit-tpl,.kit-panel,.kit-chain .cd{" + GLASS + "}",
     ".kit-stream{" + GLASS + ";padding:36px 40px}",

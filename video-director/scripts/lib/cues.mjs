@@ -74,5 +74,25 @@ export function buildCues({ vd, tokens }, meta) {
     if (t.nth === 1 && r.lines.length > 1)
       warnings.push(`@${t.text} 在口播里出现了 ${r.lines.length} 次（第 ${r.lines.join("、")} 句），现在用的是第 1 次；要别的写 @${t.text}#2`);
   }
-  return { cues, warnings, segments: segmentTimes(vd.segments, lines), lines, total: lines.at(-1).end };
+  const segments = segmentTimes(vd.segments, lines).map((s) => withVarCues(s, stream, cues));
+  return { cues, warnings, segments, lines, total: lines.at(-1).end };
+}
+
+const CUE = /^@(.+?)(?:#(\d+))?$/;
+
+/** 组件段 vars.cues（| 隔开）里的 @词 → 从这段开头算的秒数，交给组件的 HF.cues；数字原样保留 */
+function withVarCues(seg, stream, cues) {
+  // JSON 列表是 dy-rec-phone 自己的 cues 格式（点击、框选，每项带 t），原样交给组件
+  if (typeof seg.vars?.cues !== "string" || seg.vars.cues.trim().startsWith("[")) return seg;
+  const beats = seg.vars.cues.split("|").map((raw, i) => {
+    const m = raw.trim().match(CUE);
+    if (!m) return raw.trim();
+    const nth = m[2] ? Number(m[2]) : 1;
+    const t = cues[nth > 1 ? `${m[1]}#${nth}` : m[1]] ?? resolveCue(stream, m[1], nth).start;
+    const rel = round(t - seg.start);
+    if (rel < 0 || rel > seg.duration)
+      throw new Error(`段 ${seg.id} 的 cues 第 ${i + 1} 拍「${raw.trim()}」在 ${round(t)} 秒，不在这一段（${round(seg.start)}–${round(seg.start + seg.duration)} 秒）里`);
+    return String(rel);
+  });
+  return { ...seg, vars: { ...seg.vars, cues: beats.join("|") } };
 }

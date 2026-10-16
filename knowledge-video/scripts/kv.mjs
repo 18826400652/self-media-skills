@@ -4,7 +4,7 @@
 //   brief   research.json → 研究简报.md（给人在确认节点 ① 看）
 //   status  当前阶段、下一步、还没通过的确认节点（实用类：完整一期的 14 步）
 //   init    [--fresh] [--video director|template]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」；--video 视频做法
-//   gate    <节点> [--edit] "用户原话"   记录用户确认（实用类：topic script storyboard final）
+//   gate    <节点> [--edit] "用户原话"   记录用户确认。实用类 template：topic script storyboard final；director：topic script director sample final（lib/practical.mjs gatesFor）。概念科普：template 为 script storyboard final，director 为 script director sample final
 //   done    <wechat|xiaohongshu|douyin>   存草稿成功后记一笔
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";

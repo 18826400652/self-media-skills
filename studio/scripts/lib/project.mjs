@@ -60,3 +60,6 @@ export function satisfies(version, want) {
   for (let i = 0; i < 3; i++) if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0);
   return true;
 }
+
+/** narrated-video 的 Python 依赖（见它的 references/setup.md） */
+export const NV_PY = ["dashscope", "edge-tts", "kokoro-onnx", "soundfile", "fonttools", "brotli", "pillow"];

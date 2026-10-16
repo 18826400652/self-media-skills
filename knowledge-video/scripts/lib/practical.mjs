@@ -52,7 +52,7 @@ const HOW = {
   record: "在 发布记录.md 填置顶评论原文",
   retro: "在经验库写这期的复盘（文件名带作品简称）",
   director: "nv hf-audio 抖音 配音 → 按 video-director 新建 抖音-director/，写 DIRECTOR.md，vd cues 抖音-director --check 通过",
-  sample: "按 video-director 写样片的几段 → vd build 抖音-director --sample → vd qa 无 ✗ → npx hyperframes render -o renders/sample.mp4",
+  sample: "按 video-director 写样片的几段 → vd build 抖音-director --sample → vd qa 无 ✗ → nv render 抖音-director --sample",
   renderDirector: "写其余各段 → vd build 抖音-director → vd qa 无 ✗ → nv render 抖音-director，按 knowledge-video references/qa.md 写 qa.json；vd check 列出组件候选，交成片时一起给用户",
 };
 

@@ -4,11 +4,9 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, symlinkSync, unlinkSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { TOOLKIT_DIR } from "./project.mjs";
+import { NV_PY, TOOLKIT_DIR } from "./project.mjs";
 import { toolkitSkills } from "./doctor.mjs";
 
-/** narrated-video 的 Python 依赖（见它的 references/setup.md） */
-const NV_PY = ["dashscope", "edge-tts", "kokoro-onnx", "soundfile", "fonttools", "brotli", "pillow"];
 
 function link(target, at, log) {
   let st = null;
@@ -21,37 +19,45 @@ function link(target, at, log) {
   return true;
 }
 
-function sh(cmd, args, cwd, log) {
-  log(`  $ (${cwd}) ${cmd} ${args.join(" ")}`);
-  const r = spawnSync(cmd, args, { cwd, stdio: "inherit" });
-  if (r.status !== 0) log(`  ✗ 失败（退出码 ${r.status}）`);
-  return r.status === 0;
+/** 真的跑命令（输出直接给终端，下载进度看得到） */
+function spawnRun(cmd, args, cwd) {
+  return spawnSync(cmd, args, { cwd, stdio: "inherit" }).status === 0;
 }
 
-function installDeps(skill, dir, log) {
-  let ok = true;
-  if (existsSync(join(dir, "package-lock.json"))) ok = sh("npm", ["ci"], dir, log) && ok;
-  if (existsSync(join(dir, "requirements.txt"))) {
-    ok = sh("uv", ["venv", "--allow-existing", ".venv"], dir, log) && sh("uv", ["pip", "install", "--python", ".venv/bin/python", "-r", "requirements.txt"], dir, log) && ok;
-  }
-  if (skill === "narrated-video") {
-    ok = sh("uv", ["venv", "--allow-existing", ".venv"], dir, log) && sh("uv", ["pip", "install", "--python", ".venv/bin/python", ...NV_PY], dir, log) && ok;
-  }
-  return ok;
+function installDeps(skill, dir, log, run) {
+  const sh = (cmd, args) => {
+    log(`  $ (${dir}) ${cmd} ${args.join(" ")}`);
+    const ok = run(cmd, args, dir);
+    if (!ok) log(`  ✗ ${skill}：${cmd} ${args[0]} 失败`);
+    return ok;
+  };
+  const steps = [];
+  if (existsSync(join(dir, "package-lock.json"))) steps.push(() => sh("npm", ["ci"]));
+  const pip = (pkgs) => () => sh("uv", ["venv", "--allow-existing", ".venv"]) && sh("uv", ["pip", "install", "--python", ".venv/bin/python", ...pkgs]);
+  if (existsSync(join(dir, "requirements.txt"))) steps.push(pip(["-r", "requirements.txt"]));
+  if (skill === "narrated-video") steps.push(pip(NV_PY));
+  if (!steps.length) return true;
+  log(`▸ 装 ${skill} 的依赖（npm / uv 要联网下载，网络慢时可能要几分钟；卡住可以 Ctrl+C，之后跑 st doctor 看缺什么）`);
+  return steps.reduce((ok, step) => step() && ok, true);
 }
 
-export function install({ deps = false, home = homedir(), toolkit = TOOLKIT_DIR, log = console.log } = {}) {
+export function install({ deps = false, home = homedir(), toolkit = TOOLKIT_DIR, log = console.log, run = spawnRun } = {}) {
   const skillsDir = join(home, ".claude/skills");
   const binDir = join(home, ".local/bin");
   mkdirSync(skillsDir, { recursive: true });
   mkdirSync(binDir, { recursive: true });
   let ok = true;
+  const depsFailed = [];
   for (const s of toolkitSkills(toolkit)) {
     const dir = join(toolkit, s);
     ok = link(dir, join(skillsDir, s), log) && ok;
     const bin = join(dir, "bin");
     if (existsSync(bin)) for (const f of readdirSync(bin)) ok = link(join(bin, f), join(binDir, f), log) && ok;
-    if (deps) ok = installDeps(s, dir, log) && ok;
+    if (deps && !installDeps(s, dir, log, run)) depsFailed.push(s);
+  }
+  if (depsFailed.length) {
+    ok = false;
+    log(`✗ 这些 skill 的依赖没装好：${depsFailed.join("、")}。网络好了重跑 st install --deps，或在作品项目里跑 st doctor 逐个看缺哪个包`);
   }
   log(ok ? `✓ 已指向 ${toolkit}${deps ? "，依赖已装" : "（没检查依赖：缺什么在作品项目里跑 st doctor 看，要装加 --deps）"}；下一步在作品项目里跑 st doctor` : "✗ 有几项没装好，看上面");
   if (!process.env.PATH.split(":").includes(binDir)) log(`⚠ ${binDir} 不在 PATH 上，要加进 shell 配置`);

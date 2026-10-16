@@ -91,14 +91,29 @@ def _check_sent(app, rec, prompt, mkv):
     fail_with_ui(f"点了发送，但提问还在输入框里，没发出去（原始录屏留在 {mkv}）")
 
 
+def _done_marker(app):
+    """回答完的标记在不在屏幕上：DONE_ID（resource-id）或 DONE_DESC（描述）任一出现；两个都没定义的 App 不看标记"""
+    done_id, desc = getattr(app, "DONE_ID", None), app.DONE_DESC
+    if done_id is None and desc is None:
+        return True
+    return bool((done_id and device()(resourceId=done_id).exists) or (desc and device()(description=desc).exists))
+
+
 def _wait_answer(app, rec, baseline, prompt, sent, timeout, mkv):
     history = []
     while True:
         time.sleep(POLL)
+        follow = getattr(app, "follow_answer", None)  # 回答在屏幕外时把它滚进来（豆包）
+        if follow:
+            follow()
         history.append(_labels())
-        marker = app.DONE_DESC is None or device()(description=app.DONE_DESC).exists
+        marker = _done_marker(app)
         if answer_done(history, baseline, prompt, marker):
             return
+        # 文字已经不变了、完成标记却不在屏幕上：多半在屏幕下沿外，让 App 往上推一点（豆包）
+        reveal = getattr(app, "reveal_done", None)
+        if reveal and not marker and answer_done(history, baseline, prompt):
+            reveal()
         if rec.now() - sent > timeout:
             rec.stop()
             fail_with_ui(f"等了 {timeout} 秒回答还没结束（原始录屏留在 {mkv}）")
@@ -134,12 +149,14 @@ def _capture(mod, rec, text, mkv, timeout):
     return marks, page
 
 
-def _write_outputs(out, mkv, marks, page, copied, app, think, search):
+def _write_outputs(out, mkv, marks, page, copied, app, think, search, can_copy=False):
     base = out[:-len(".mp4")]
     finish_video(mkv, out)
     for f in (mkv, mkv + ".log"):
         os.remove(f)
     info = rec_info(marks, app, think, search)
+    if can_copy:  # 这个 App 能点「复制」拿完整回答：记下拿没拿到
+        info["copied"] = copied is not None
     with open(base + ".json", "w", encoding="utf-8") as f:
         json.dump(info, f, ensure_ascii=False, indent=2)
         f.write("\n")
@@ -148,6 +165,9 @@ def _write_outputs(out, mkv, marks, page, copied, app, think, search):
     log(f"界面文字：{base}.txt")
     print(f"✓ {out}（发送后 {info['seconds']} 秒回答完；视频里 {info['sentAt']}s 发送、{info['doneAt']}s 结束）",
           flush=True)
+    if can_copy and copied is None:
+        print(f"⚠ 没拿到完整回答（点「复制」失败）：{base}.txt 里只有录屏结束时屏幕上的那部分，长回答会缺一截。"
+              "实测记录要原样粘贴完整回答：重录一轮，或在手机上手动复制", flush=True)
     return info
 
 
@@ -172,4 +192,4 @@ def record(app, prompt, out, think=False, search=False, timeout=DEFAULT_TIMEOUT)
         rec.stop()
         _restore(mod, before)
         _restore_clipboard(d, saved_clip)
-    return _write_outputs(out, mkv, marks, page, copied, app, think, search)
+    return _write_outputs(out, mkv, marks, page, copied, app, think, search, can_copy=hasattr(mod, "copy_answer"))

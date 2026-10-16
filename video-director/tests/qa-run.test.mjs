@@ -6,7 +6,8 @@ import { douyinQa } from "../scripts/lib/qa-run.mjs";
 import { project } from "./helpers.mjs";
 
 const built = { cues: { 钩子: 1 }, segments: [{ id: "s1", start: 0, duration: 4 }], total: 4 };
-const blank = { elements: [], cueMarks: [], kicker: { visible: true, occludedBy: null } };
+const CONTENT = { sel: "#c", text: true, key: false, allowSafe: false, box: [100, 300, 500, 400], opacity: 1 }; // 一个位置正常的内容元素：画面不是空的
+const blank = { elements: [CONTENT], cueMarks: [], kicker: { visible: true, occludedBy: null } };
 
 function fakePage(dataAt) {
   const seen = [];
@@ -55,4 +56,18 @@ test("staleBuild：cues.js 和 DIRECTOR.md 算出来的不一样（改了 @词�
   writeFileSync(join(dir, "cues.js"), cuesJs(b));
   assert.equal(staleBuild(dir, b), null);
   assert.match(staleBuild(dir, { ...b, cues: { 甲: 1.5 } }), /DIRECTOR\.md 在上次 vd build 之后改过.*先 vd build/);
+});
+
+test("buildProblem：没构建过 / 上次检查没过 / 画面在构建后改过 → 都不让 vd qa 跑", async () => {
+  const { mkdirSync, utimesSync, writeFileSync } = await import("node:fs");
+  const { buildProblem, writeBuildStatus } = await import("../scripts/lib/qa-run.mjs");
+  const dir = project({ "index.html": "<html>", "compositions/frames/s1.html": "<div>" });
+  assert.match(buildProblem(dir), /先 vd build/);
+  writeBuildStatus(dir, false);
+  assert.match(buildProblem(dir), /上次 vd build 的检查没过/);
+  writeBuildStatus(dir, true);
+  assert.equal(buildProblem(dir), null);
+  const later = Date.now() / 1000 + 60;
+  utimesSync(join(dir, "compositions/frames/s1.html"), later, later);
+  assert.match(buildProblem(dir), /s1\.html.*上次 vd build 之后改过/);
 });

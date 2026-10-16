@@ -5,7 +5,7 @@
 - 依据：../research.json（每句的「依据」行写引用了哪条事实，如 c01；类比、观点单独标）
 - 发布文案：写在 `抖音/发布文案.md`（`## 标题` / `## 正文` / `## 话题`，`nv draft --copy` 读它）
 
-**Voice:** 项目配置的 TTS（seedaudio + 参考音色）；先写 `VOICE.md` 导演稿，`nv hf-audio . --check` 核对，再 `nv hf-audio . --pause 0.3`
+**Voice:** 项目配置的 TTS（支持导演稿的 seedaudio / qwenaudio + 参考音色）；先写 `VOICE.md` 导演稿，`nv hf-audio . --check` 核对，再 `nv hf-audio . --pause 0.3`
 
 > 一个 `## … (Frame N)` = 一句口播 = 一帧画面。口播写成说话的样子，数字写汉字，每句 ≤ 28 字。
 > 情感：平静 开心 惊讶 难过 生气 害怕 厌恶。重点词会在字幕里高亮，顿号分隔。写完跑 `kv check <作品目录>`。

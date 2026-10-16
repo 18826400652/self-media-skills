@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import vm from "node:vm";
 import { parseHfScript, restoreCase, toCaptionWords } from "../scripts/hf-audio.mjs";
-import { boundsTimes, captionZoneSpec, cleanIndex, frameEndTimes, frameMotionTimes, sparseFrames, stillFrames } from "../scripts/hf-build.mjs";
+import { boundsTimes, captionZoneSpec, cleanIndex, frameEndTimes, frameMotionTimes, sparseFrames, stillFrames, stillHint } from "../scripts/hf-build.mjs";
 import { mergeTokens } from "../scripts/hf-kit.mjs";
 import { parseStoryboardSfx } from "../scripts/hf-sfx.mjs";
 import { writeCues } from "../scripts/lib/cues.mjs";
@@ -90,6 +90,20 @@ test("stillFrames：落定前后两张几乎没差别的帧算「落定后静止
     { frame: 3, diff: 0.6 },
   ]);
   assert.deepEqual(r.map((x) => x.frame), [2]);
+});
+
+test("stillHint：按这一帧的写法给修改提示——写了 camera:false 才叫人去掉；截图帧、录屏帧默认不缓推，提示写 camera:\"push\"", () => {
+  assert.match(stillHint({ camera: false, kit: { name: "steps" } }), /去掉 "camera": false/);
+  for (const b of [{ kit: { name: "shot" } }, { rec: { src: "a.mp4" } }]) {
+    const h = stillHint(b);
+    assert.doesNotMatch(h, /去掉 "camera": false/);
+    assert.match(h, /"camera": "push"/);
+  }
+  assert.match(stillHint({ rec: { src: "a.mp4" } }), /录屏/);
+  const plain = stillHint({ kit: { name: "steps" } });
+  assert.doesNotMatch(plain, /camera/);
+  assert.match(plain, /持续的小动作/);
+  assert.match(stillHint(null), /持续的小动作/);
 });
 
 function loadKit(cues) {
@@ -250,7 +264,7 @@ test("帧模板 glow：底色层、HUD、进度条、kit-glow.js、样式钩子"
   assert.match(html, /<div class="kit-hud"><i class="c tl"><\/i><i class="c tr"><\/i><i class="c bl"><\/i><i class="c br"><\/i><div class="kit-progress"><i class="on"><\/i><i class="on"><\/i><i><\/i><i><\/i><\/div><\/div>/);
   assert.match(html, /class="p02-kicker kit-kicker">K/);
   assert.match(html, /class="p02-chip kit-chip"/);
-  assert.match(html, /class="p02-panel kit-glass-panel"/);
+  assert.match(html, /class="p02-panel kit-glass-panel kit-on-rec"/); // FLAT_BUILD 有录屏，面板叠在录屏上
   assert.match(html, /class="p02-label kit-label"/);
   assert.match(html, /<script src="compositions\/kit\/kit\.js"><\/script>\s*<script src="compositions\/kit\/kit-glow\.js"><\/script>/);
   assert.ok(html.indexOf('class="kit-hud"') < html.indexOf('id="p02-cam"'), "HUD 在推镜层外面，不跟着推");
@@ -412,4 +426,49 @@ test("cleanIndex：注入隐藏底色、四角框、角标、进度条、字幕�
   const out = cleanIndex(html);
   assert.ok(out.indexOf("data-nv-bounds") < out.indexOf("</head>"));
   for (const sel of ["#el-captions", ".kit-hud", ".kit-kicker", ".kit-progress", ".kit-atmo", '[id$="-ground"]', "#root", "box-shadow:none"]) assert.ok(out.includes(sel), sel);
+});
+
+test("occludedText：check 输出里 text_occluded 不管 ℹ 还是 ✗ 都挑出来", async () => {
+  const { occludedText } = await import("../scripts/hf-build.mjs");
+  const out = [
+    "  ℹ t=4.445s container_overflow div.kit-shot-world — Element extends outside a clipping layout container.",
+    "  ℹ t=7.74s text_occluded #p01-l inside #p01-k > img \"十秒 · 一分钱没花\" — Text is hidden beneath an opaque element.",
+    "  ✗ t=66.67-68.34s (2 samples) text_occluded #p12-l inside #p12-k > img \"就这三步，\" — Text is hidden beneath an opaque element.",
+  ].join("\n");
+  const found = occludedText(out);
+  assert.equal(found.length, 2);
+  assert.match(found[0], /#p01-l/);
+  assert.match(found[1], /#p12-l/);
+  assert.deepEqual(occludedText("  ◇ 0 issues"), []);
+});
+
+test("snapshotPaths：--motion 的过程图单独存，不碰 ③ 用的 sheet.jpg", async () => {
+  const { snapshotPaths } = await import("../scripts/hf-build.mjs");
+  assert.deepEqual(snapshotPaths(false), { dir: "snapshots", sheet: "snapshots/sheet.jpg" });
+  assert.deepEqual(snapshotPaths(true), { dir: "snapshots/motion", sheet: "snapshots/motion-sheet.jpg" });
+});
+
+test("帧模板 glow：计时面板叠在录屏上时用不透明底（玻璃面板几乎透明，浅色录屏上数字看不清）；不叠录屏时照旧是玻璃", async () => {
+  const { buildFrame } = await import("../scripts/lib/frame-build.mjs");
+  const f = { n: 7, id: "07-rec", kicker: "K", tokens: FLAT_TOKENS, total: 9, duration: 6, look: "glow" };
+  assert.match(buildFrame({ ...f, build: { rec: { src: "assets/rec.mp4" }, timer: { value: 9 } } }), /class="p07-panel kit-glass-panel kit-on-rec"/);
+  assert.match(buildFrame({ ...f, build: { timer: { value: 9 } } }), /class="p07-panel kit-glass-panel"/);
+  const glowCss = readFileSync(new URL("../hf-kit/kit-glow.js", import.meta.url), "utf8");
+  assert.match(glowCss, /\.kit-glass-panel\.kit-on-rec\{background:color-mix\(in srgb,var\(--kit-bg\) 9\d%,transparent\)/);
+});
+
+test("lateItems：steps / checklist / chain 里没写 at 的项接着上一项顺延，帧结束前出不来的报出来", async () => {
+  const { lateItems } = await import("../scripts/lib/frame-build.mjs");
+  const cues = [["开", 2.0], ["启", 2.1], ["过", 1.0]];
+  // 01 第 4 帧：第 1 步挂在 2.0 秒，后两步顺延到 2.6、3.2 秒，帧 3.4 秒——第 3 步出来时帧快结束了
+  const steps = { kit: { name: "steps", opts: { steps: [{ title: "a", at: "@开启" }, { title: "b" }, { title: "c" }] } } };
+  assert.deepEqual(lateItems({ n: 4, duration: 3.4, build: steps }, cues), [{ component: "steps", index: 3, at: 3.2, frameEnd: 3.4 }]);
+  assert.deepEqual(lateItems({ n: 4, duration: 5, build: steps }, cues), []);
+  // 全部默认时间（0.2 起每 0.6 秒）
+  assert.deepEqual(lateItems({ n: 1, duration: 1, build: { kit: { name: "steps", opts: { steps: [{ title: "a" }, { title: "b" }] } } } }, cues), [{ component: "steps", index: 2, at: 0.8, frameEnd: 1 }]);
+  // checklist 从 at + 0.3 开始，间隔 0.4
+  assert.deepEqual(lateItems({ n: 2, duration: 1.5, build: { kit: { name: "checklist", opts: { items: ["a", "b", "c"] } } } }, cues).map((x) => x.index), [3]);
+  // 自己写了 at 的项交给 lateAnimations；找不到的词不往下算
+  assert.deepEqual(lateItems({ n: 4, duration: 3.4, build: { kit: { name: "steps", opts: { steps: [{ title: "a", at: "@没有" }, { title: "b" }] } } } }, cues), []);
+  assert.deepEqual(lateItems({ n: 4, duration: 3, build: { kit: { name: "compare", opts: {} } } }, cues), []);
 });

@@ -1,6 +1,6 @@
 ---
 format: 1080x1920
-duration: 0s
+duration: 60s
 message: ""
 arc: story-explainer
 audience: 上班族
@@ -14,7 +14,7 @@ kicker: {{角标}}
 - **recipe** — 按 narrated-video 的 references/douyin-recipe.md 聊天版：一个画面讲一个意思，口播几句说完再换；先给原话、再给 AI 写的，让人自己看出问题；为什么、类比、方法三帧来自费曼检查；配音 1.1 倍速，帧间停 0.3 秒。
 - **palette system** — frame.md 的墨黑底（`ink-black`）+ 纸白字（`cream`），荧光黄（`fire-orange`）是唯一强调色。整片最多一帧整屏翻成强调色（`build.ground: "accent"`）。
 - **identity chrome** — 每一帧左上角固定角标（frontmatter 的 `kicker`），帧模板自动加。
-- **frames** — 每帧写 `- build: {…}`，`nv hf-build` 自动生成画面；时间写 `"@词"`（说到这个词时，词必须在这一帧的口播里）。表里放不下的画面删掉 build 行手写。duration 先写 1s，`nv hf-audio` 后自动改成配音时长。
+- **frames** — 每帧写 `- build: {…}`，`nv hf-build` 自动生成画面；时间写 `"@词"`（说到这个词时，词必须在这一帧的口播里）。表里放不下的画面删掉 build 行手写。duration 先写 1s，`nv hf-audio` 后自动改成配音时长。开头 frontmatter 的 `duration` 是预计总长（约 1 分钟），不会自动改：组装时实际总长偏差超过 10% 会提醒，按需改它或调节奏。
 - **layout** — 标题每行 ≤ 9 个字（再长会折行、和下面的内容重叠）；`prompt` / `stream` 要在这一帧结束前打完（不够就调高 `cps` / `rate`）。
 - **safe zones (hard)** — 内容在 x 60–1020、y 230–1150；y 1180–1440 是字幕带；右侧 160px、底部 480px 有平台界面。
 - **negative list** — 不要紫蓝「AI 感」光效、粒子、和口播无关的装饰；回弹缓动只给弹出的小元素（组件已分好）；不要连着三帧以上纯文字（先想这句话能画成什么动作）。

@@ -7,7 +7,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { SKILL_DIR, loadConfig, resolveLook } from "./lib/config.mjs";
-import { buildFrame, lateAnimations, parseStoryboardFrames, textOnlyRuns } from "./lib/frame-build.mjs";
+import { buildFrame, lateAnimations, lateItems, parseStoryboardFrames, textOnlyRuns } from "./lib/frame-build.mjs";
 import { loadCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { mergeTokens } from "./hf-kit.mjs";
@@ -37,6 +37,9 @@ function main() {
     if (!f.build) continue;
     for (const x of lateAnimations(f, cues[f.n])) {
       console.log(`  ⚠ 第 ${f.n} 帧：${x.component} 挂在「${x.word}」（${x.cue.toFixed(2)} 秒），约 ${x.readable.toFixed(2)} 秒才看得清，帧在 ${x.frameEnd.toFixed(2)} 秒结束，观众来不及读；挂到更早的词上`);
+    }
+    for (const x of lateItems(f, cues[f.n])) {
+      console.log(`  ⚠ 第 ${f.n} 帧：${x.component} 第 ${x.index} 项没写 at，顺延到 ${x.at.toFixed(2)} 秒才出现，帧在 ${x.frameEnd.toFixed(2)} 秒结束，画面上基本看不到；给它写 at（可以和前一项同时出现），或把这帧要讲的项挂早一点`);
     }
   }
   for (const r of textOnlyRuns(frames)) {

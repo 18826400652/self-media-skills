@@ -13,6 +13,20 @@ const KEEP_TAIL = 0.08; // 句尾留一点，让尾音自然收住
 const SILENCE_DB = -45;
 const PUNCTUATION = /^[\p{P}\p{S}\s]+$/u;
 
+/**
+ * 缓存键里和音色有关的部分：style、参考音频、seed，只在填了时才进键。
+ * 参考音频按文件内容算（不按路径）：项目挪目录、复制一份照样命中；同名文件换了录音会重新配。
+ */
+export function voiceKeyParts(tts) {
+  const parts = [tts.style];
+  if (tts.reference) {
+    if (!existsSync(tts.reference)) throw new Error(`找不到参考音频：${tts.reference}（narrated-video.config.json 的 tts.reference）`);
+    parts.push(`ref:${createHash("sha1").update(readFileSync(tts.reference)).digest("hex")}`);
+  }
+  parts.push(tts.seed);
+  return parts.filter((v) => v !== undefined && v !== "");
+}
+
 export function probeDuration(file) {
   const out = execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file]);
   return Number(out.toString().trim());
@@ -61,9 +75,7 @@ export async function synthesizeClean(line, tts, dir, name) {
   const provider = getProvider(tts.provider);
   // 读音表只对支持 SSML 的服务商生效；送出去的是 ttsText，字幕和关键词仍按 line.text
   const { ttsText, spans } = provider.ssml ? applyPronounce(line.text, tts.pronounce) : { ttsText: line.text, spans: [] };
-  // style / reference / seed 只在填了时才进 key，旧缓存不失效
-  const extra = [tts.style, tts.reference, tts.seed].filter((v) => v !== undefined && v !== "");
-  const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, ...extra, ttsText].join("|");
+  const key = [tts.provider, tts.model, tts.voice, tts.speed, tts.scene, tts.emotion, tts.instruction, ...voiceKeyParts(tts), ttsText].join("|");
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const raw = join(dir, `${name}-${hash}.wav`);
   const wordsRaw = raw.replace(/\.wav$/, ".words.json");
@@ -93,10 +105,9 @@ export async function synthesizeClean(line, tts, dir, name) {
  */
 export async function synthesizeSegment(segment, lines, tts, dir) {
   const provider = getProvider(tts.provider);
-  if (!provider.direction) throw new Error(`${tts.provider} 不支持导演稿（VOICE.md），只有 seedaudio 支持`);
+  if (!provider.direction) throw new Error(`${tts.provider} 不支持导演稿（VOICE.md），只有 seedaudio、qwenaudio 支持`);
   const text = lines.map((l) => l.text).join("");
-  const extra = [tts.style, tts.reference, tts.seed].filter((v) => v !== undefined && v !== "");
-  const key = [tts.provider, tts.model, tts.voice, tts.speed, ...extra, segment.prompt, text].join("|");
+  const key = [tts.provider, tts.model, tts.voice, tts.speed, ...voiceKeyParts(tts), segment.prompt, text].join("|");
   const hash = createHash("sha1").update(key).digest("hex").slice(0, 8);
   const name = `seg-${String(lines[0].frame).padStart(2, "0")}-${String(lines.at(-1).frame).padStart(2, "0")}`;
   const raw = join(dir, `${name}-${hash}.wav`);

@@ -1,5 +1,6 @@
 // st init：建一个新的作品项目（目录骨架 + 各 skill 的默认配置 + 起步品牌样式）。已有的文件不覆盖。
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { extname, join, relative, resolve } from "node:path";
 import { DEFAULTS, MARKER, STUDIO_DIR, toolkitVersion } from "./project.mjs";
 import { substitute } from "./new.mjs";
@@ -28,7 +29,11 @@ export function parseInitArgs(argv) {
   return opts;
 }
 
-export function initProject({ dir, account = "", audience = "" }, log = console.log) {
+/** media-use 自带的音效库（HyperFrames skills 装的）；有音频文件才算 */
+export const mediaUseSfx = (home) => join(home, ".claude/skills/media-use/audio/assets/sfx");
+export const hasAudio = (dir) => existsSync(dir) && readdirSync(dir).some((f) => /\.(mp3|wav|m4a|ogg)$/i.test(f));
+
+export function initProject({ dir, account = "", audience = "", home = homedir() }, log = console.log) {
   const root = resolve(dir);
   if (existsSync(join(root, MARKER))) throw new Error(`已经是作品项目了：${join(root, MARKER)}`);
   mkdirSync(root, { recursive: true });
@@ -43,6 +48,12 @@ export function initProject({ dir, account = "", audience = "" }, log = console.
     if (TEXT.has(extname(name))) writeFileSync(dest, substitute(readFileSync(src, "utf8"), vars));
     else copyFileSync(src, dest);
     created++;
+  }
+  // 默认音效目录是项目里的空目录：找得到 media-use 的音效库就直接用它（vd build 的 sfx 要从这里找）
+  const vdCfg = join(root, "video-director.config.json");
+  if (existsSync(vdCfg) && hasAudio(mediaUseSfx(home))) {
+    const cfg = JSON.parse(readFileSync(vdCfg, "utf8"));
+    writeFileSync(vdCfg, JSON.stringify({ ...cfg, sfxDir: mediaUseSfx(home) }, null, 2) + "\n");
   }
   const studio = { ...DEFAULTS, account, audience, toolkit: `>=${toolkitVersion()}` };
   writeFileSync(join(root, MARKER), JSON.stringify(studio, null, 2) + "\n");

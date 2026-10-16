@@ -7,13 +7,43 @@ from ..device import device, fail_with_ui, hide_keyboard, open_app, ui_texts
 from ..rec_logic import content_labels
 
 PACKAGE = "com.larus.nova"
-DONE_DESC = None
+# 回答完，回答下面的一排按钮（复制、朗读、收藏、分享、重新生成）才出现。平常的界面里只有 resource-id，
+# 往上翻过之后的另一种渲染里才有描述，两个都认
+DONE_ID = "com.larus.nova:id/msg_action_regenerate"
+DONE_DESC = "重新生成"
+SCROLL_TO_BOTTOM = "转至底部"   # 往上翻过回答时，回答右下角的「到底部」按钮有这个描述
+SPLITTER = "com.larus.nova:id/splitter"   # 输入区上沿的分隔线
+ARROW_GAP = 60         # 像素：刚发送时的 ↓（没有描述）贴在分隔线上方这么近
 EDIT = "android.widget.EditText"
 IMAGE = "android.widget.ImageView"
 TOP_BAR = 300          # 像素：顶栏下边界
 # 空白新对话里应该只有这些文字；出现别的（历史消息、新推荐）就不录
 EMPTY_LABELS = {"新对话", "内容由 AI 生成", "打电话", "视频通话", "拍题答疑", "照片动起来", "按住说话",
+                "AI 创作", "AI 播客",       # 2026-10 版新对话页底部的入口
                 "发消息或按住说话...", "发消息..."}
+# 打开 App 时弹的更新窗口：认标题，再找「不更新」的按钮点掉
+UPDATE_TITLES = ("发现新版本", "版本更新", "新版本")
+UPDATE_DISMISS = ("稍后再说", "以后再说", "下次再说", "暂不更新", "稍后", "取消", "关闭")
+
+
+def update_dialog_action(labels):
+    """不是更新窗口返回 None；能关掉返回要点的按钮文字；关不掉返回 "manual"。"""
+    if not any(t in label for label in labels for t in UPDATE_TITLES):
+        return None
+    return next((d for d in UPDATE_DISMISS if d in labels), "manual")
+
+
+def guard_ui(fn):
+    """找不到界面元素时 uiautomator2 抛英文异常：换成能看懂的中文提示（多半是弹了窗口或豆包改版了）。"""
+    def wrapped(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as err:  # noqa: BLE001 —— 只认 uiautomator2 的「找不到元素」，其他照常抛
+            if type(err).__name__ != "UiObjectNotFoundError":
+                raise
+            fail("豆包的界面和脚本预期的不一样（可能弹了更新或活动窗口，也可能改版了）：把手机上的窗口关掉再录；"
+                 "还不行就用 pd ui doubao 看看现在的界面")
+    return wrapped
 
 
 def unexpected_labels(labels, input_text=""):
@@ -54,8 +84,21 @@ def short_labels(labels, width=12):
     return "、".join(t.replace("\n", " ")[:width] for t in labels[:3])
 
 
+def dismiss_update_dialog():
+    action = update_dialog_action([label for label, *_ in ui_texts()])
+    if action is None:
+        return
+    if action == "manual":
+        fail("豆包弹了更新窗口，找不到「稍后 / 取消」按钮：在手机上手动关掉再录")
+    device()(text=action).click()
+    time.sleep(1)
+
+
+@guard_ui
 def open_new_chat():
     open_app(PACKAGE)
+    time.sleep(1)
+    dismiss_update_dialog()
     menu = device()(className=IMAGE, clickable=True)
     if not menu.exists or _bounds(menu[0])["top"] > TOP_BAR:
         fail_with_ui("找不到豆包左上角的菜单按钮")
@@ -123,3 +166,42 @@ def send():
     if i is None:
         fail_with_ui("找不到豆包的发送键")
     views[i].click()
+
+
+def down_arrow_index(splitter, candidates, width):
+    """刚发送、回答在屏幕外时出现的 ↓：水平居中、紧贴在输入区分隔线上方的图标。返回下标或 None"""
+    if splitter is None:
+        return None
+    for i, b in enumerate(candidates):
+        centered = abs((b["left"] + b["right"]) / 2 - width / 2) <= width * 0.06
+        if centered and 0 <= splitter["top"] - b["bottom"] <= ARROW_GAP:
+            return i
+    return None
+
+
+def _down_arrow():
+    line = device()(resourceId=SPLITTER)
+    if not line.exists:
+        return None
+    sel = device()(className=IMAGE, clickable=True)
+    views = [sel[i] for i in range(sel.count)]
+    i = down_arrow_index(_bounds(line), [_bounds(v) for v in views], device().info["displayWidth"])
+    return None if i is None else views[i]
+
+
+def follow_answer():
+    """等回答时每轮调一次：提问长到占满屏幕时回答在屏幕外，点 ↓ 把它滚进来，录屏录得到回答、也看得见完成标记"""
+    btn = device()(description=SCROLL_TO_BOTTOM)
+    if btn.exists:
+        btn.click()
+        return
+    arrow = _down_arrow()
+    if arrow is not None:
+        arrow.click()
+
+
+def reveal_done():
+    """回答写完、文字不再变时调：完成标记那排按钮常在屏幕下沿外，往上推一小段把它露出来"""
+    d = device()
+    w, h = d.info["displayWidth"], d.info["displayHeight"]
+    d.swipe(w // 2, int(h * 0.65), w // 2, int(h * 0.45), 0.3)

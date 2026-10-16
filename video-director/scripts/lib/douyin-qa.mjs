@@ -64,18 +64,25 @@ export function checkCues(frames, cues) {
   return out;
 }
 
-export function stillWindows(grid) {
+/** 网格里连续满足 same(起点, 当前) 且时间不断开、持续 ≥ STILL 秒的区间 */
+function runs(grid, keep, same) {
   const out = [];
   let i = 0;
   while (i < grid.length) {
+    if (!keep(grid[i])) { i++; continue; }
     let j = i;
     // 时间不连续（中间是没构建的段）就断开
-    while (j + 1 < grid.length && grid[j + 1].sig === grid[i].sig && grid[j + 1].t - grid[j].t <= GRID + 0.01) j++;
+    while (j + 1 < grid.length && same(grid[i], grid[j + 1]) && grid[j + 1].t - grid[j].t <= GRID + 0.01) j++;
     if (grid[j].t - grid[i].t >= STILL) out.push({ from: grid[i].t, to: grid[j].t });
     i = j + 1;
   }
   return out;
 }
+
+export const stillWindows = (grid) => runs(grid, () => true, (a, b) => a.sig === b.sig);
+
+/** 段内一个内容元素（文字或 data-vd-key）都没有、只剩背景和账号固定元素的区间 */
+export const emptyWindows = (grid) => runs(grid, (g) => g.n === 0, (_a, b) => b.n === 0);
 
 export function summarize(issues) {
   const groups = new Map();

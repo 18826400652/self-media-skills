@@ -78,6 +78,45 @@ function cueRefs(b) {
  * @param {[string, number][]} cues 这一帧的逐字时间
  * @returns {{ word: string, component: string, cue: number, readable: number, frameEnd: number }[]}
  */
+// 逐项出现的组件：列表在哪个参数、第一项从哪开始、间隔多久（和 kit.js 的 itemsWithTimes 调用一致）
+const ITEM_KITS = {
+  steps: { list: "steps", start: (at) => at, at: 0.2, stagger: 0.6 },
+  checklist: { list: "items", start: (at) => at + 0.3, at: 0.2, stagger: 0.4 },
+  chain: { list: "cards", start: (at) => at, at: 0.2, stagger: 0.7 },
+};
+
+/** 一个时间值 → 秒：数字直接用，「@词」查这一帧的逐字时间，查不到返回 null */
+function seconds(v, cues) {
+  if (typeof v === "number") return v;
+  const m = typeof v === "string" ? v.match(CUE_RE) : null;
+  return m ? cueTime(cues ?? [], m[1], m[2] ? Number(m[2]) : 1) : null;
+}
+
+/**
+ * 没写 at、接着上一项顺延的列表项，帧结束前来不及看清的（自己写了 at 的交给 lateAnimations）。
+ * 例：第 1 步挂在句尾，后几步顺延到帧外，画面上只看到前两步。
+ * @returns {{ component: string, index: number, at: number, frameEnd: number }[]}
+ */
+export function lateItems(f, cues) {
+  const k = f.build?.kit;
+  const spec = k && ITEM_KITS[k.name];
+  if (!spec) return [];
+  const o = k.opts ?? {};
+  const first = seconds(o.at ?? spec.at, cues);
+  const stagger = typeof o.stagger === "number" ? o.stagger : spec.stagger;
+  if (first == null) return [];
+  const out = [];
+  let t = spec.start(first);
+  for (const [i, it] of (o[spec.list] ?? []).entries()) {
+    const own = it && typeof it === "object" && it.at != null;
+    if (own) t = seconds(it.at, cues);
+    else if (i > 0) t = Math.round((t + stagger) * 100) / 100;
+    if (t == null) return out;
+    if (!own && t + READABLE_DEFAULT > f.duration - READ_TIME) out.push({ component: k.name, index: i + 1, at: t, frameEnd: f.duration });
+  }
+  return out;
+}
+
 // 以文字为主的组件：只用它们（或只有大字、说明）的帧算「纯文字帧」
 const TEXT_KITS = new Set(["marker", "strike", "template", "prompt", "stream"]);
 const MAX_TEXT_RUN = 2; // 纯文字帧最多连着 2 帧，再多节奏就平了（RAG 第 9–12 帧四张文字卡）
@@ -170,7 +209,8 @@ export function buildFrame(f) {
   }
   if (b.timer) {
     const t = b.timer;
-    body.push(`<div class="P-panel${hook("kit-glass-panel")}"><div id="P-n"></div>${t.note ? `<div class="P-note">${esc(t.note)}</div>` : ""}</div>`);
+    // 玻璃面板几乎透明，叠在浅色录屏（白色 App 界面）上数字看不清：叠录屏时 kit-on-rec 换成不透明底
+    body.push(`<div class="P-panel${hook(b.rec ? "kit-glass-panel kit-on-rec" : "kit-glass-panel")}"><div id="P-n"></div>${t.note ? `<div class="P-note">${esc(t.note)}</div>` : ""}</div>`);
     css.push(".P-panel { position: absolute; left: 60px; top: 860px; z-index: 5; padding: 24px 36px; background: color-mix(in srgb, var(--kit-bg) 90%, transparent); border-left: 8px solid var(--kit-accent); }");
     css.push(".P-note { font-size: 30px; font-weight: 500; color: var(--kit-muted); margin-top: 48px; }");
     js.push(`Kit.number(tl, "#P-n", ${toJs({ value: t.value, unit: t.unit ?? "秒", countFrom: 0, countDur: t.countDur ?? Math.max(0.5, f.duration - 0.3), at: 0.05, size: t.size ?? 150 })});`);

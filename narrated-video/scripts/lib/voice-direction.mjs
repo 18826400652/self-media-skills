@@ -1,4 +1,4 @@
-// 配音导演稿 VOICE.md：按段写给音频生成模型（seedaudio）的提示，一段覆盖连续几帧，整段一次生成，
+// 配音导演稿 VOICE.md：按段写给音频生成模型（seedaudio、qwenaudio）的提示，一段覆盖连续几帧，整段一次生成，
 // 再按逐字时间戳切回每一帧。写法见 references/voice-direction.md。
 //
 //   ## 段 1 (Frame 1-4)

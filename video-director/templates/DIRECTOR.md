@@ -1,7 +1,7 @@
 # 导演脚本 · （标题）
 
 > 输入：本目录的 SCRIPT.md + assets/voice/*.wav + audio_meta.json（`nv hf-audio` 生成）。口播原文和事实一字不改。
-> 时间全部来自真实配音：跑 `vd cues .` 看每个 @词 的秒数。
+> 时间全部来自真实配音：跑 `vd cues .` 看每个 `@词` 的秒数。
 > 写法：动作锚定到词，写成 `@词`（后面跟空格或标点）；同一个词出现多次写 `@词#2`。规则见 references/director-rules.md。
 
 ## 1. 视觉方案
@@ -14,8 +14,8 @@
 
 ## 2. 分段
 
-按意思分段（不是一句一帧）。每段：包含哪几句、起止时间、画面、每个动作的 @词、和下一段怎么连（由哪个元素连起来）。
-功能性的画面（步骤、对比、数字、手机录屏框……）先查 dykit 组件库（hyperframes 仓库的 `catalog/catalog.json`），有就写「用组件 dy-…」，机器块里给这段写 `component` 和 `vars`。
+按意思分段（不是一句一帧）。每段：包含哪几句、起止时间、画面、每个动作的 `@词`、和下一段怎么连（由哪个元素连起来）。
+功能性的画面（步骤、对比、数字、手机录屏框……）先查 dykit 组件库（hyperframes 仓库的 `catalog/catalog.json`），有就写「用组件 dy-…」，机器块里给这段写 `component` 和 `vars`；要跟着口播一拍拍出现，`vars` 里写 `cues`（`|` 隔开的 `@词`，对应 catalog 里这个组件的 `beats`）。
 
 ### 段 1 · （名字）（第 ? 句）
 
@@ -43,6 +43,7 @@
 - 栏目标签：（待填）
 - 字幕：nv 生成的 caption_groups.json，重点词用强调色（不用写）
 - 结尾：下一期预告（待填）；问题（待填）；评论引导（待填）
+  （vd 按机器块 `ending` 在最后一段之后自动加结尾条：下一期、问题、评论引导。最后一段别再画「下一期」或同样的问题，会和结尾条叠在一起；要自己画就把 `ending` 里对应的项删掉）
 
 ## 6. 新增内容
 
@@ -64,12 +65,12 @@
 
 ```json vd
 {
-  "kicker": "AI 概念一分钟 · 第 1 期",
+  "kicker": "（栏目 · 第 N 期）",
   "palette": { "bg": "#F1ECE2", "ink": "#1C1A17", "muted": "#6E675C", "accent": "#FFD84D", "alert": "#D2372A" },
   "fonts": { "title": "serif", "body": "sans" },
   "segments": [
     { "id": "seg-01-hook", "lines": [1, 2] },
-    { "id": "seg-02-steps", "lines": [3, 3], "component": "dy-scene-steps", "vars": { "title": "……", "steps": "第一步::说明|第二步::说明" } }
+    { "id": "seg-02-steps", "lines": [3, 3], "component": "dy-scene-steps", "vars": { "title": "……", "steps": "第一步::说明|第二步::说明", "cues": "@词|@词" } }
   ],
   "sfx": [{ "name": "pop", "at": "@词", "volume": 0.6 }],
   "music": { "intent": "light curious lo-fi explainer, clear steady beat", "drop": "@词", "volume": 0.4 },

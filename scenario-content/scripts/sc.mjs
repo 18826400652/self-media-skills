@@ -12,7 +12,7 @@ const CONFIG_NAME = "scenario-content.config.json";
 const DEFAULTS = {
   voiceGuide: null,
   bannedPhrases: [],
-  requiredSections: ["场景", "痛点", "实测", "解法", "可复制"],
+  requiredSections: ["成品", "场景", "步骤", "坑", "领"],
   feynmanCheck: "费曼检查.md", // 母稿后的「讲没讲明白」检查；设为 null 关闭
   topicGate: "选题关.md", // 实测前的「有没有人想看」检查；设为 null 关闭
   minBenchmarks: 5, // 选题关里至少几条对标
@@ -121,9 +121,22 @@ function checkDraft(ep, config, r) {
   const p = join(ep, "母稿.md");
   const file = "母稿.md";
   if (!existsSync(p)) return r.fail("缺少 母稿.md", file);
-  const headings = [...readFileSync(p, "utf8").matchAll(/^##\s+(.+)$/gm)].map((m) => m[1]);
-  const missing = config.requiredSections.filter((k) => !headings.some((h) => h.includes(k)));
-  return missing.length ? r.fail(`母稿缺少小节：${missing.join("、")}`, file) : r.pass("母稿结构完整", file);
+  const sections = draftSections(readFileSync(p, "utf8"));
+  const find = (k) => sections.find((x) => x.heading.includes(k));
+  const missing = config.requiredSections.filter((k) => !find(k));
+  const empty = config.requiredSections.filter((k) => find(k) && !find(k).written);
+  if (missing.length) r.fail(`母稿缺少小节：${missing.join("、")}`, file);
+  if (empty.length) r.fail(`母稿这些小节还没写内容（只有模板的括号说明）：${empty.join("、")}`, file);
+  if (!missing.length && !empty.length) r.pass("母稿结构完整", file);
+}
+
+/** 按 ## 切小节；去掉空行和整行括号说明（模板占位）后还有字，才算写了 */
+export function draftSections(md) {
+  return md.split(/^(?=##\s)/m).filter((b) => /^##\s/.test(b)).map((block) => {
+    const [first, ...body] = block.split("\n");
+    const text = body.map((l) => l.trim()).filter((l) => l && !/^[（(].*[）)]$/.test(l));
+    return { heading: first.replace(/^##\s+/, "").trim(), written: text.length > 0 };
+  });
 }
 
 const isPlaceholder = (cell) => !cell || cell.startsWith("（") || cell.startsWith("(");

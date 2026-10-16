@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkCues, checkFrame, qaTimes, stillWindows, summarize } from "../scripts/lib/douyin-qa.mjs";
+import { checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "../scripts/lib/douyin-qa.mjs";
 
 const built = {
   cues: { 钩子: 1, 小票: 5.5, "小票#2": 9 },
@@ -96,4 +96,16 @@ test("stillWindows：时间不连续（中间跳过没构建的段）就断开�
 test("checkCues：data-vd-cue 写成 constructor 这类词也报不存在", () => {
   const frames = [{ t: 1, label: "@x", cue: "x", data: { cueMarks: [{ cue: "constructor", sel: "#k", visible: true }] } }];
   assert.deepEqual(checkCues(frames, { x: 0.2 }).map((i) => i.kind), ["cue-unknown"]);
+});
+
+test("emptyWindows：连续 2 秒以上一个内容元素都没有 → 报出时间段", () => {
+  const g = (t, n) => ({ t, sig: "", n });
+  const grid = [g(11.5, 3), g(12, 0), g(12.5, 0), g(13, 0), g(13.5, 0), g(14, 0), g(14.5, 2)];
+  assert.deepEqual(emptyWindows(grid), [{ from: 12, to: 14 }]);
+});
+
+test("emptyWindows：空不到 2 秒、或中间断开（没构建的段）→ 不报", () => {
+  const g = (t, n) => ({ t, sig: "", n });
+  assert.deepEqual(emptyWindows([g(1, 0), g(1.5, 0), g(2, 0), g(2.5, 1)]), []);
+  assert.deepEqual(emptyWindows([g(1, 0), g(1.5, 0), g(5, 0), g(5.5, 0)]), []);
 });

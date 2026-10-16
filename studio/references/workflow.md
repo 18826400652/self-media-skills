@@ -152,8 +152,8 @@ kv status 04-作品/<系列>/NN-<简称>
      ```bash
      sc bench <关键词…> --platform all --out 实测/对标-选题关.json --top 10
      ```
-     每个关键词输出点赞最高的几条和点赞中位数
-  2. 挑和这期最像的 **≥ 5 条**填进对标表：平台、标题、点赞、收藏、角度（结果 / 合集 / 实测对比 / 情绪 / 教程）、**评论区在要什么**（求模板、求教程、问工具名）
+     每个关键词输出点赞最高的几条和点赞中位数。抖音只抓搜索结果页，页面上没有收藏数，抖音行的「收藏」是空的（填「—」，看点赞）；结果按点赞排、不按相关度，儿歌合集、无关工具这类跑题的要人工挑掉
+  2. 挑和这期最像的 **≥ 5 条**填进对标表：平台、标题、点赞、收藏、角度（结果 / 合集 / 实测对比 / 情绪 / 教程）、**评论区在要什么**（求模板、求教程、问工具名）。评论 `sc bench` 不抓：挑 2–3 条最像的，在自动化浏览器里打开帖子看前面的评论（小红书帖子页要已登录，没登录就停下请用户登录）；没看的写「未看」，不编
   3. 写 3 个标题候选、封面大字（≤ 12 字）、开头三秒口播原话（先给结果、反差或情绪，不先讲方法）
   4. 回答四条硬标准：看完能拿走什么、新手当天能用吗、开头三秒亮什么成品、能领的东西 + 在哪领；再写我亲手跑过的证据、和对标比多什么
   5. 自问「我自己会点开吗」，说不出来就换角度
@@ -234,7 +234,7 @@ kv status 04-作品/<系列>/NN-<简称>
   | 标题、口播超长（公众号标题 ≤ 30 字、小红书标题 ≤ 20 字、抖音标题 ≤ 30 字、抖音口播每句 ≤ 28 字） | ⚠ |
   | 抖音口播有书面词、阿拉伯数字，或整段没有语气词 | ⚠ |
 
-- **kv 判定**：整个 `sc check` 没有 ✗（「选题关没确认」这一条不算，它由确认 ① 单独管）。⚠ 要逐条判断，确实要保留的说明理由
+- **kv 判定**：内容阶段的文件（场景卡、选题关、实测记录、母稿、费曼检查）和全局项在 `sc check` 里没有 ✗（「选题关没确认」这一条不算，它由确认 ① 单独管）。平台文件（抖音 SCRIPT、公众号、小红书、抖音发布文案）的 ✗ 不挡这一步，到各自那一步再拦。⚠ 要逐条判断，确实要保留的说明理由
 - **注意**：第 7 步和三个平台版本写完后，再跑一次 `sc check`
 
 ### 第 7 步：抖音脚本 + 配音稿 ②（两种做法相同）
@@ -275,7 +275,7 @@ kv status 04-作品/<系列>/NN-<简称>
      ```bash
      nv hf-audio 抖音 --pause 0.3
      ```
-     qwenaudio（千问 qwen-audio-3.1-tts-next）+ 参考音色（配置 `tts.reference`） + 配置里的 `tts.style` 人设，按 VOICE.md **整段生成**，再用 fun-asr 识别拿到时间、按字对齐回原文，最后切回每帧。生成 `audio_meta.json`，每帧时长自动写回 STORYBOARD。换一种演法：改 `tts.seed`；换回豆包：`tts.provider` 改成 `seedaudio`
+     qwenaudio（千问 qwen-audio-3.1-tts-next）+ 参考音色（配置 `tts.reference`） + 配置里的 `tts.style` 人设，按 VOICE.md **整段生成**，再用 fun-asr 识别拿到时间、按字对齐回原文，最后切回每帧。生成 `audio_meta.json` 和字幕分组 `caption_groups.json`，每帧时长自动写回 STORYBOARD。换一种演法：改 `tts.seed`；换回豆包：`tts.provider` 改成 `seedaudio`
   2. 写 `抖音/STORYBOARD.md`：每帧一行 `- build: {…}`（帧模板 JSON），时间写 `"@词"`（说到这个词时），不手写秒数。可以组合的部分：
      - `rec`：录屏（`mediaStart`、`rate` 倍速、`dim`、`chip` 标签）
      - `timer`：计时
@@ -318,7 +318,7 @@ kv status 04-作品/<系列>/NN-<简称>
      ```
   2. 看过程，而不只看结尾那一张：
      ```bash
-     nv hf-build 抖音 --motion   # 每帧截入场 / 中段 / 落定前 / 落定四张，落定后完全静止会警告
+     nv hf-build 抖音 --motion   # 每帧截入场 / 中段 / 落定前 / 落定四张（snapshots/motion-sheet.jpg），落定后完全静止会警告
      ffmpeg -ss <秒> -i 抖音/renders/<成片>.mp4 -frames:v 1 x.png   # 成片抽帧
      ```
   3. 写作品目录下的 `qa.json`，`checked` 必须写全这 7 项：
@@ -329,7 +329,7 @@ kv status 04-作品/<系列>/NN-<简称>
      | `text-size` | 手机上要读的字 ≥ 37px |
      | `density` | 一屏一个主体；表格最多 2～3 行 |
      | `typo` | 错别字、标点、术语前后一致 |
-     | `fact-on-screen` | 画面上的数字、说法和实测记录一致 |
+     | `fact-on-screen` | 画面上的数字、说法和实测记录一致；说到「点哪里、在哪个位置」的，对照实测录屏或截图核对 |
      | `rhythm` | 画面跟着口播出现；不连续三帧同一种画面、同一边构图 |
      | `motion` | 每帧落定后都还在动 |
 
@@ -347,7 +347,7 @@ kv status 04-作品/<系列>/NN-<简称>
 
 - **skill**：narrated-video（配音）→ video-director（导演脚本）
 - **做什么**：
-  1. 配音（同 template）：`nv hf-audio 抖音 --pause 0.3`
+  1. 配音（同 template）：`nv hf-audio 抖音 --pause 0.3`（同时生成下面要复制的 `caption_groups.json`）
   2. 新建导演工程：
      ```bash
      cd 04-作品/<系列>/NN-<简称>
@@ -355,7 +355,6 @@ kv status 04-作品/<系列>/NN-<简称>
      cp 抖音/{SCRIPT.md,audio_meta.json,caption_groups.json,package.json,hyperframes.json,meta.json} 抖音-director/
      cp -r 抖音/assets/voice 抖音-director/assets/
      cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-director/
-     # package.json 里的 hyperframes@X.Y.Z 改成 video-director.config.json 的 hfVersion
      ```
   3. 写 `抖音-director/DIRECTOR.md`（口播原文和事实一字不改）：
      - 1 视觉方案：一句话概念（视觉世界从内容哪里来）、贯穿元素、配色（每个颜色写含义）、字体（只用 Noto Sans SC / Noto Serif SC / JetBrains Mono）、情绪曲线
@@ -379,7 +378,7 @@ kv status 04-作品/<系列>/NN-<简称>
      ```bash
      vd build 抖音-director --sample      # 只装样片的段，到 sample.end 为止
      vd qa 抖音-director                  # 抖音专用检查，结果 qa-douyin-sample.json，总览 snapshots/cues-sheet.jpg
-     cd 抖音-director && npx hyperframes render -o renders/sample.mp4
+     nv render 抖音-director --sample      # 出 抖音-director/renders/sample.mp4
      ```
      `vd qa` 在每个 @词 落定时刻（@词后 0.8 秒）和每段结尾截图，查：安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；2 秒不动（⚠）
 - **确认 ③b**：样片给用户看。通过后 `kv gate <作品> sample "用户原话"`
@@ -447,7 +446,7 @@ kv status 04-作品/<系列>/NN-<简称>
 - **做什么**：
   1. 出封面：
      ```bash
-     ic render 抖音/封面.md          # douyin-cover 预设，9:16；≤ 15 字，<br> 断行，加粗一个关键词，大字放上半部分
+     ic render 抖音/封面.md          # douyin-cover 预设，9:16；≤ 12 字，<br> 断行，加粗一个关键词，大字放上半部分
      ```
      看 `抖音/out/01.png` 确认
   2. 写 `抖音/发布文案.md`（新建一期时已放好模板；格式同小红书：`## 标题`（≤ 30 字，`sc check` 会查）/ `## 正文` / `## 话题`）：一句话说清价值，结尾写领取方式，再加 2–4 个话题
@@ -554,7 +553,7 @@ kv status 04-作品/<系列>/NN-<简称>
   |---|---|---|---|
   | 形式 | 长文 | 同抖音成片 + 文案 | 竖屏视频（成品教程 90–120 秒） |
   | 篇幅 | 1500–3000 字 | 文案 ≤ 1000 字（建议 300–600） | 口播每句 ≤ 28 字 |
-  | 标题 | ≤ 30 字 | ≤ 20 字 | 封面字 ≤ 12–15 字，文案标题 ≤ 30 字 |
+  | 标题 | ≤ 30 字 | ≤ 20 字 | 封面字 ≤ 12 字，文案标题 ≤ 30 字 |
   | 封面 | 2.35:1（`公众号/封面/`） | 用抖音封面，网页裁 3:4 | 9:16（`抖音/封面.md`），网页再裁 4:3 / 3:4 |
   | 留存点 | 结尾行动清单、模板全文 | 正文步骤清单（收藏） | 完播 + 评论 |
 
@@ -600,7 +599,7 @@ kv status 04-作品/<系列>/NN-<简称>
 - 组件候选：DIRECTOR.md 第 8 节记录「换文字就能复用」的画面，④ 时交给用户决定是否提交到组件库
 - 重新配音：在 `抖音/` 里 `nv hf-audio`，再把 `audio_meta.json`、`caption_groups.json`、`assets/voice/` 复制到 `抖音-director/`，`vd build`
 - 导演规则：`references/director-rules.md`（视觉方案、节奏、版面、HyperFrames 的坑、组件）
-- 配置 `video-director.config.json`：`brandDir`、`sfxDir`、`hfVersion`；选填 `fontsDir`、`gsap`（默认用 vd 自带的 fontsource 字体包和 GSAP，`npm ci` 装好）
+- 配置 `video-director.config.json`：`brandDir`、`sfxDir`（`hfVersion` 不用写，hyperframes 统一用 narrated-video 那一份）；选填 `fontsDir`、`gsap`（默认用 vd 自带的 fontsource 字体包和 GSAP，`npm ci` 装好）
 
 ### 4.6 wechat-article（`wa`）：公众号
 

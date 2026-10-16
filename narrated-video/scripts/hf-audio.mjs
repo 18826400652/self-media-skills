@@ -17,16 +17,18 @@
 // 一帧的缩进块可以写好几句，画面不换、口播接着说（聊天式的慢节奏）。
 // --pause（或配置 tts.pause）：每帧说完后留几秒停顿再切下一帧，默认 0。
 //
-// 导演稿模式：工程里有 VOICE.md、且服务商支持（seedaudio）时，按段整段生成再切回每帧（scripts/lib/voice-direction.mjs）。
+// 导演稿模式：工程里有 VOICE.md、且服务商支持（seedaudio、qwenaudio）时，按段整段生成再切回每帧（scripts/lib/voice-direction.mjs）。
 // 段内帧与帧之间保留说话本身的停顿，--pause 只加在段与段之间；Emotion 不再单独生效（写进导演稿）。
 // --check：只检查 VOICE.md 和 SCRIPT.md 对不对得上，不生成。
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { buildCaptions } from "./lib/captions-step.mjs";
 import { loadConfig } from "./lib/config.mjs";
 import { writeCues } from "./lib/cues.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { loadDotEnv, probeDuration, synthesizeClean, synthesizeSegment } from "./lib/speech.mjs";
+import { adoptLegacyCache, voiceCacheDir } from "./lib/voice-cache.mjs";
 import { checkDirection, parseVoiceDirection } from "./lib/voice-direction.mjs";
 import { getProvider } from "../tts/index.mjs";
 
@@ -204,7 +206,8 @@ async function main() {
     return;
   }
 
-  const cacheDir = join(dir, ".media", "voice-cache");
+  const cacheDir = voiceCacheDir(dir, config);
+  adoptLegacyCache(join(dir, ".media", "voice-cache"), cacheDir);
   const voiceDir = join(dir, "assets", "voice");
   mkdirSync(cacheDir, { recursive: true });
   mkdirSync(voiceDir, { recursive: true });
@@ -255,6 +258,7 @@ async function main() {
   writeFileSync(join(dir, "audio_meta.json"), `${JSON.stringify(frameKeyed, null, 2)}\n`);
   console.log(`✓ 配音完成：${voices.length} 帧，共 ${total} 秒 → audio_meta.json`);
   if (existsSync(join(dir, "compositions"))) console.log(`✓ 逐字时间 → compositions/kit/cues.js（${writeCues(dir)} 帧）`);
+  if (buildCaptions(dir, { quietFontFallback: true }).built) console.log("✓ 帧时长写回 STORYBOARD、字幕分组 → caption_groups.json");
 }
 
 if (isMain(import.meta.url)) {

@@ -3,7 +3,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
-import { DEFAULT_TEMPLATES, loadProject, MARKER, satisfies, TOOLKIT_DIR, toolkitVersion } from "./project.mjs";
+import { hasAudio, mediaUseSfx } from "./init.mjs";
+import { DEFAULT_TEMPLATES, loadProject, MARKER, NV_PY, satisfies, TOOLKIT_DIR, toolkitVersion } from "./project.mjs";
 
 /** 各 skill 的项目配置里，哪些字段是要存在的路径（点号表示嵌套） */
 export const CONFIG_PATHS = {
@@ -106,6 +107,18 @@ function checkBrand(p, out) {
   }
 }
 
+/** 会进成品（配音人设、发草稿核对的账号名）的字段：还是占位就报 ✗；其余占位报 ⚠ */
+const PLACEHOLDER_FAIL = { "narrated-video.config.json": ["tts.style"], "wechat-article.config.json": ["account"] };
+
+/** 配置里还是 skeleton 的括号说明「（…）」的字符串字段：[[路径, 值]] */
+export function placeholders(cfg, prefix = "") {
+  return Object.entries(cfg ?? {}).flatMap(([k, v]) => {
+    const path = prefix ? `${prefix}.${k}` : k;
+    if (v && typeof v === "object" && !Array.isArray(v)) return placeholders(v, path);
+    return typeof v === "string" && /^（.*）$/.test(v.trim()) ? [[path, v]] : [];
+  });
+}
+
 function checkConfigs(p, out) {
   for (const [file, paths] of Object.entries(CONFIG_PATHS)) {
     const f = join(p.root, file);
@@ -113,7 +126,15 @@ function checkConfigs(p, out) {
     let cfg;
     try { cfg = JSON.parse(readFileSync(f, "utf8")); } catch (e) { out.fail(`${file} 不是合法 JSON：${e.message}`); continue; }
     const missing = paths.filter((k) => get(cfg, k) && !existsSync(resolve(p.root, get(cfg, k)))).map((k) => `${k}=${get(cfg, k)}`);
-    if (missing.length) out.fail(`${file} 里的路径不存在：${missing.join("；")}`);
+    for (const [k, v] of placeholders(cfg)) {
+      const msg = `${file} 的 ${k} 还是模板占位：${v}`;
+      if ((PLACEHOLDER_FAIL[file] ?? []).includes(k)) out.fail(msg);
+      else out.warn(msg);
+    }
+    const sfx = file === "video-director.config.json" && cfg.sfxDir && resolve(p.root, cfg.sfxDir);
+    const refHint = missing.some((m) => m.startsWith("tts.reference=")) ? "（参考音色怎么录、多长、什么格式：narrated-video/references/setup.md「参考音色」）" : "";
+    if (missing.length) out.fail(`${file} 里的路径不存在：${missing.join("；")}${refHint}`);
+    else if (sfx && !hasAudio(sfx)) out.fail(`${file} 的 sfxDir 音效目录是空的（${cfg.sfxDir}）：DIRECTOR.md 写的音效会找不到。放几个音效进去，或指向 media-use 的音效库 ${mediaUseSfx("~")}`);
     else out.ok(file);
   }
   // 只看在不在，不读内容（里面是密钥）
@@ -152,26 +173,56 @@ function checkToolkit(out, home = homedir()) {
   if (!missing.length && !elsewhere.length && !unregistered.length && !linkedElsewhere.length) out.ok(`${skills.length} 个 skill 和命令都指向这个工具包`);
 }
 
-function checkDeps(out) {
-  for (const s of toolkitSkills()) {
-    const dir = join(TOOLKIT_DIR, s);
-    const pkg = join(dir, "package.json");
-    if (existsSync(pkg)) {
-      const j = JSON.parse(readFileSync(pkg, "utf8"));
-      const n = Object.keys({ ...j.dependencies, ...j.devDependencies }).length;
-      if (n && !existsSync(join(dir, "node_modules"))) out.fail(`${s} 没装 Node 依赖：cd ${dir} && npm ci`);
+/** pip 包名 → import 名（不一样的才写） */
+const IMPORT_NAME = { "websocket-client": "websocket", "edge-tts": "edge_tts", "kokoro-onnx": "kokoro_onnx", fonttools: "fontTools", pillow: "PIL" };
+const pipName = (line) => line.split(/[=<>~!;\s[]/)[0].trim();
+const requirements = (dir) => readFileSync(join(dir, "requirements.txt"), "utf8").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map(pipName);
+
+/** .venv 里导入不了的包；没有 .venv 就是全部 */
+function missingPython(dir, pkgs) {
+  const py = join(dir, ".venv/bin/python");
+  if (!existsSync(py)) return pkgs;
+  return pkgs.filter((p) => spawnSync(py, ["-c", `import ${IMPORT_NAME[p.toLowerCase()] ?? p.replace(/-/g, "_")}`]).status !== 0);
+}
+
+/** node_modules 里没有的包（装到一半失败时目录在、包不全） */
+function missingNode(dir) {
+  const j = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+  return Object.keys({ ...j.dependencies, ...j.devDependencies }).filter((n) => !existsSync(join(dir, "node_modules", n, "package.json")));
+}
+
+export function checkDeps(out, toolkit = TOOLKIT_DIR) {
+  let bad = 0;
+  const fail = (m) => { bad++; out.fail(m); };
+  for (const s of toolkitSkills(toolkit)) {
+    const dir = join(toolkit, s);
+    if (existsSync(join(dir, "package.json"))) {
+      const miss = missingNode(dir);
+      if (miss.length) fail(`${s} 缺 Node 依赖：${miss.join("、")}（cd ${dir} && npm ci）`);
     }
-    if (existsSync(join(dir, "requirements.txt")) && !existsSync(join(dir, ".venv"))) out.fail(`${s} 没装 Python 依赖：见 ${s}/SKILL.md`);
+    if (existsSync(join(dir, "requirements.txt"))) {
+      const miss = missingPython(dir, requirements(dir));
+      if (miss.length) fail(`${s} 缺 Python 依赖：${miss.join("、")}（cd ${dir} && uv pip install --python .venv/bin/python -r requirements.txt，或 st install --deps）`);
+    }
   }
-  if (!existsSync(join(TOOLKIT_DIR, "narrated-video/.venv"))) out.warn("narrated-video 没有 .venv（TTS、字体子集要用）：见 narrated-video/references/setup.md");
-  const vendor = join(TOOLKIT_DIR, "phone-draft/vendor");
-  if (!existsSync(vendor) || !readdirSync(vendor).some((n) => n.startsWith("scrcpy"))) out.warn("phone-draft 没有 scrcpy（只影响手机录实测）：phone-draft/scripts/setup-scrcpy.sh");
+  const nv = join(toolkit, "narrated-video");
+  if (existsSync(nv)) {
+    if (!existsSync(join(nv, ".venv"))) out.warn("narrated-video 没有 .venv（TTS、字体子集要用）：见 narrated-video/references/setup.md");
+    else {
+      const miss = missingPython(nv, NV_PY);
+      if (miss.length) out.warn(`narrated-video 的 .venv 缺：${miss.join("、")}（TTS、字体子集要用；st install --deps 重装）`);
+    }
+    const vendor = join(toolkit, "phone-draft/vendor");
+    if (!existsSync(vendor) || !readdirSync(vendor).some((n) => n.startsWith("scrcpy"))) out.warn("phone-draft 没有 scrcpy（只影响手机录实测）：phone-draft/scripts/setup-scrcpy.sh");
+  }
   for (const [cmd, use, required] of EXTERNAL) {
     if (which(cmd)) continue;
-    (required ? out.fail : out.warn)(`缺外部程序 ${cmd}（${use}）`);
+    if (required) fail(`缺外部程序 ${cmd}（${use}）`);
+    else out.warn(`缺外部程序 ${cmd}（${use}）`);
   }
   const major = Number(process.versions.node.split(".")[0]);
-  if (major < 22) out.fail(`Node ${process.versions.node}，要 22 以上`);
+  if (major < 22) fail(`Node ${process.versions.node}，要 22 以上`);
+  if (!bad) out.ok("依赖都装好了（Node 包、Python 包、外部程序）");
 }
 
 /** 工具包用到、但由 HyperFrames 发布的 skill：[名字, 要有的文件, 用途, 改位置的环境变量] */

@@ -82,8 +82,37 @@ function scSteps(dir, runSc) {
     out[key] = mine.length ? no(mine.map((i) => i.msg).join("；")) : ok();
   }
   if (out.test.ok && !latest(dir, "实测", /\.mp4$/)) out.test = no("实测/ 里没有录屏 mp4（nv rec）");
-  out.selfcheck = fails.length ? no(`sc check 还有 ${fails.length} 项 ✗`) : ok();
+  // 第 6 步只管内容阶段（第 1–5 步的文件和全局项）；平台文件的 ✗ 到各自那一步再拦
+  const own = fails.filter((i) => !platformStep(i.file));
+  out.selfcheck = own.length ? no(`sc check 还有 ${own.length} 项 ✗：${own.map((i) => i.msg).join("；")}`) : ok();
+  out.platform = {};
+  for (const i of fails) {
+    const k = platformStep(i.file);
+    if (k) out.platform[k] = [...(out.platform[k] ?? []), i.msg];
+  }
   return out;
+}
+
+/** 平台文件归到哪一步：抖音脚本 → 第 7 步，公众号 / 小红书 / 抖音发布文案和封面 → 各自存草稿那一步 */
+export function platformStep(file) {
+  if (!file) return null;
+  if (file === "抖音/SCRIPT.md" || file === "抖音/VOICE.md") return "script";
+  if (file.startsWith("公众号/")) return "wechat";
+  if (file.startsWith("小红书/")) return "xiaohongshu";
+  if (file.startsWith("抖音/")) return "douyin";
+  return null;
+}
+
+// knowledge-video/references/qa.md 规定的检查项：checked 必须全部写上
+export const QA_CHECKS = ["safe-area", "text-size", "density", "typo", "fact-on-screen", "rhythm", "motion"];
+
+/** qa.json 不合格的原因；合格返回 null */
+export function qaProblem(qa) {
+  const missing = QA_CHECKS.filter((c) => !(qa.checked ?? []).includes(c));
+  if (missing.length) return `qa.json 的 checked 少了：${missing.join("、")}（见 knowledge-video references/qa.md）`;
+  if (qa.passed !== true) return "qa.json 有没修的问题";
+  if ((qa.issues ?? []).some((i) => i.severity === "high")) return "qa.json 写了通过，但还有 high 级问题（high 必须修好才能通过）";
+  return null;
 }
 
 function videoSteps(dir, run, runVoiceCheck) {
@@ -104,7 +133,7 @@ function videoSteps(dir, run, runVoiceCheck) {
   try { qa = JSON.parse(readFileSync(join(dir, "qa.json"), "utf8")); } catch { qa = null; }
   const render = !mp4 ? no("还没渲染") : mtime(mp4) < mtime(sheet) ? no("分镜改过，要重新 nv render")
     : !qa ? no("还没写 qa.json") : mtime(join(dir, "qa.json")) < mtime(mp4) ? no("渲染后还没重新 QA（重写 qa.json）")
-      : qa.passed !== true ? no("qa.json 有没修的问题") : ok();
+      : qaProblem(qa) ? no(qaProblem(qa)) : ok();
   return { script: s, storyboard: board, render };
 }
 
@@ -126,6 +155,14 @@ function readJsonOrNull(p) {
   try { return JSON.parse(readFileSync(p, "utf8")); } catch { return null; }
 }
 
+/** 导演工程里 vd build 要读的配音产物：caption_groups.json 和 audio_meta.json 引用的每个音频 */
+function missingVoiceFiles(root) {
+  if (!existsSync(join(root, "caption_groups.json"))) return no(`${DIRECTOR_DIR}/ 里没有 caption_groups.json，从 抖音/ 复制过来`);
+  const voices = readJsonOrNull(join(root, "audio_meta.json"))?.voices ?? [];
+  const missing = voices.map((v) => v.path).filter((p) => p && !existsSync(join(root, p)));
+  return missing.length ? no(`${DIRECTOR_DIR}/ 里缺配音文件：${missing.join("、")}（从 抖音/ 复制 assets/voice/）`) : ok();
+}
+
 function directorSteps(dir, runVdCues) {
   const root = join(dir, DIRECTOR_DIR);
   const md = join(root, "DIRECTOR.md");
@@ -134,7 +171,7 @@ function directorSteps(dir, runVdCues) {
     : !existsSync(md) ? no(`还没有 ${DIRECTOR_DIR}/DIRECTOR.md`)
     : !existsSync(join(root, "audio_meta.json")) ? no(`还没把配音复制到 ${DIRECTOR_DIR}/（audio_meta.json、caption_groups.json、assets/voice/）`)
     : mtime(join(root, "audio_meta.json")) < mtime(voice) ? no(`抖音/ 重新配过音，把 audio_meta.json、caption_groups.json、assets/voice/ 复制到 ${DIRECTOR_DIR}/`)
-    : ok();
+    : missingVoiceFiles(root);
   if (director.ok) {
     const v = runVdCues(root);
     if (!v.ok) director = no(v.msg);
@@ -156,7 +193,7 @@ function directorSteps(dir, runVdCues) {
     : vdQa.passed !== true ? no("vd qa 还有 ✗")
     : mtime(vdQaPath) < newestHtml(root) ? no("画面改过，要重跑 vd qa")
     : !qa ? no("还没写 qa.json") : mtime(qaPath) < mtime(mp4) ? no("渲染后还没重新 QA（重写 qa.json）")
-      : qa.passed !== true ? no("qa.json 有没修的问题") : ok();
+      : qaProblem(qa) ? no(qaProblem(qa)) : ok();
   return { director, sample, render };
 }
 
@@ -196,17 +233,18 @@ function gateFacts(dir, run, video) {
 export function collectPracticalFacts(dir, run, { runSc, runVoiceCheck, runVdCues, experienceDir }) {
   const video = videoMode(run);
   const v = videoSteps(dir, run, runVoiceCheck);
-  return {
-    video,
-    steps: {
-      ...scSteps(dir, runSc),
-      ...(video === "director" ? { script: v.script, ...directorSteps(dir, runVdCues) } : v),
-      ...draftSteps(dir, run),
-      record: recordStep(dir),
-      retro: retroStep(dir, experienceDir),
-    },
-    gates: gateFacts(dir, run, video),
+  const { platform, ...sc } = scSteps(dir, runSc);
+  const steps = {
+    ...sc,
+    ...(video === "director" ? { script: v.script, ...directorSteps(dir, runVdCues) } : v),
+    ...draftSteps(dir, run),
+    record: recordStep(dir),
+    retro: retroStep(dir, experienceDir),
   };
+  for (const [k, msgs] of Object.entries(platform ?? {})) {
+    if (steps[k]?.ok || steps[k]?.content === true) steps[k] = no(`sc check：${msgs.join("；")}`, k === "script" ? {} : { content: false });
+  }
+  return { video, steps, gates: gateFacts(dir, run, video) };
 }
 
 function runCmd(cmd, args) {

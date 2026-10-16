@@ -10,13 +10,14 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
-import { REPO, ensureLock, fetchArchive, installComponent, writeLock } from "./lib/components.mjs";
+import { REPO, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, recordingProblem, writeLock } from "./lib/components.mjs";
 import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
-import { addMusic, alignMusic, carve, ensureCore, resolveMusic } from "./lib/music.mjs";
-import { douyinQa, presentSegments, staleBuild } from "./lib/qa-run.mjs";
+import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
+import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
+import { hfBin } from "./lib/hyperframes.mjs";
 import { run } from "./lib/run.mjs";
 import { staleCopies } from "./lib/stale.mjs";
 
@@ -24,7 +25,8 @@ const USAGE = "用法：vd build|cues|check|qa <视频工程目录> [--sample] [
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
 /** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
-export function installAll(dir, built, { update = false, only = null } = {}, deps = { ensureLock, fetchArchive, installComponent, writeLock }) {
+export function installAll(dir, built, { update = false, only = null } = {}, overrides = {}) {
+  const deps = { ensureLock, fetchArchive, installComponent, writeLock, componentInfo, probeLen, ...overrides };
   const segs = built.segments.filter((s) => s.component && (!only || only.includes(s.id)));
   const names = [...new Set(segs.map((s) => s.component))];
   if (!names.length) {
@@ -34,6 +36,12 @@ export function installAll(dir, built, { update = false, only = null } = {}, dep
   const { sha, changed } = deps.ensureLock(dir, { update });
   const repo = deps.fetchArchive(sha, CACHE);
   const files = [...new Set(names.flatMap((n) => deps.installComponent(repo, n, dir)))];
+  const unfit = segs.filter((s) => typeof s.duration === "number").map((s) => fitProblem({ name: s.component, segId: s.id, segDuration: s.duration, ...deps.componentInfo(repo, s.component, dir) })).filter(Boolean);
+  if (unfit.length) throw new Error(`有 ${unfit.length} 个组件段撑不满：\n  - ${unfit.join("\n  - ")}`);
+  for (const s of segs.filter((x) => x.component === "dy-rec-phone" && x.vars?.src && typeof x.duration === "number")) {
+    const w = recordingProblem({ segId: s.id, src: s.vars.src, recLen: deps.probeLen(join(dir, s.vars.src)), segDuration: s.duration, html: deps.componentInfo(repo, s.component, dir).html });
+    if (w) console.warn(`⚠ ${w}`);
+  }
   // 下载、安装都成功才写锁文件：失败时还停在旧版本
   if (changed) {
     deps.writeLock(dir, sha);
@@ -85,14 +93,16 @@ const COMMANDS = {
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {
       addMusic(vd.music, {
-        resolveMusic: () => resolveMusic(dir, vd.music.intent, config.hfVersion),
-        alignMusic: (src) => alignMusic(dir, { src, drop: built.cues[vd.music.drop.slice(1)], duration }, config.hfVersion),
+        resolveMusic: () => resolveMusic(dir, vd.music.intent, undefined, { duration }),
+        alignMusic: (src) => alignMusic(dir, { src, drop: built.cues[vd.music.drop.slice(1)], duration }),
         carve: () => carve(dir, config.hfVersion),
         assemble: (music) => assemble(dir, built, config, { only, duration, music }),
       });
     }
     console.log(`✓ 总装完成：${sample ? `样片 ${only.join("、")}` : "整片"}，${duration}s`);
-    return COMMANDS.check(dir, [], config);
+    const status = COMMANDS.check(dir, [], config);
+    writeBuildStatus(dir, status === 0);
+    return status;
   },
   async qa(dir) {
     // 动态 import：没装 puppeteer-core 时其他子命令照常能用
@@ -102,7 +112,7 @@ const COMMANDS = {
     chromePath(); // 先确认有 Chrome，再读工程、装依赖
     const config = loadConfig(findProjectRoot(dir));
     const { built } = load(dir);
-    const stale = staleBuild(dir, built);
+    const stale = staleBuild(dir, built) ?? buildProblem(dir);
     if (stale) throw new Error(stale);
     const segments = presentSegments(readFileSync(join(dir, "index.html"), "utf8"), built.segments);
     const sample = segments.length < built.segments.length;
@@ -122,7 +132,7 @@ const COMMANDS = {
   check(dir, _rest, config = loadConfig(findProjectRoot(dir))) {
     const { parsed } = load(dir);
     console.log(candidatesText(parsed.candidates));
-    const r = run("npx", ["--yes", `hyperframes@${config.hfVersion}`, "check", "."], { cwd: dir });
+    const r = run(hfBin(), ["check", "."], { cwd: dir });
     process.stdout.write(r.stdout);
     if (r.status !== 0) { console.error(r.stderr); return 1; }
     return 0;

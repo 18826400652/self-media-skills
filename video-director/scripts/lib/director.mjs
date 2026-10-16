@@ -1,8 +1,8 @@
 // 解析 DIRECTOR.md：给人看的正文 + 一个 ```json vd 机器块
 export const SECTIONS = ["## 1. 视觉方案", "## 2. 分段", "## 3. 导演规则自检", "## 4. 音乐", "## 5. 账号固定元素", "## 6. 新增内容", "## 7. 样片范围", "## 8. 组件候选"];
 const BLOCK = /```json vd\s*\n([\s\S]*?)\n```/g;
-// @词：遇到空白、@、#、中英文标点、引号、括号即结束；可带 #序号
-const TOKEN = /@([^\s@#，。、：；！？,.;:!?"'`「」『』“”‘’（）()\[\]【】<>]+)(?:#(\d+))?/g;
+// @词：遇到空白、@、#、|、中英文标点、引号、括号即结束；可带 #序号（| 用来隔开组件 cues 里的几个 @词）
+const TOKEN = /@([^\s@#，。、：；！？,.;:!?"'`「」『』“”‘’（）()\[\]【】<>|]+)(?:#(\d+))?/g;
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 const COMPONENT = /^dy-[a-z0-9-]+$/;
 
@@ -50,6 +50,7 @@ function checkVd(vd) {
   const e = [];
   for (const k of ["bg", "ink", "muted", "accent", "alert"]) if (!HEX.test(vd.palette?.[k] ?? "")) e.push(`palette.${k} 必须是 #RRGGBB`);
   if (!vd.kicker) e.push("缺少 kicker（栏目标签文字）");
+  else if (/^（.*）$/.test(vd.kicker.trim())) e.push(`kicker（栏目标签）还没填：${vd.kicker}`);
   if (!Array.isArray(vd.segments) || !vd.segments.length) e.push("segments 不能为空");
   (Array.isArray(vd.segments) ? vd.segments : []).forEach((s, i) => {
     if (s.component !== undefined && !COMPONENT.test(s.component)) e.push(`segments[${i}].component 必须是 dykit 组件名（dy-开头）`);

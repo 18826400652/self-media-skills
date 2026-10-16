@@ -8,16 +8,16 @@
 // --snap：再按每帧结尾截图，拼成 snapshots/sheet.jpg，用来看图检查；并量每帧内容铺开多少，偏空的帧给出警告。
 // --motion：每帧截入场、中段、落定三张（动画过程），检查元素是否按时出现、过程中有没有穿帮。
 // 官方脚本来自 faceless-explainer skill（默认 ~/.claude/skills/faceless-explainer，可用 FACELESS_DIR 指定）。
-import { execFileSync } from "node:child_process";
+import { CAPTION_ARGS, FACELESS_SCRIPTS, SYNC_ARGS, keepMtimeIfUnchanged } from "./lib/captions-step.mjs";
+import { execFileSync, spawnSync } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { basename, join, relative, resolve } from "node:path";
 import { SKILL_DIR } from "./lib/config.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { parseStoryboardFrames } from "./lib/frame-build.mjs";
 import { localizeGsap } from "./lib/localize.mjs";
 
-const FE = join(process.env.FACELESS_DIR || join(homedir(), ".claude", "skills", "faceless-explainer"), "scripts");
+const FE = FACELESS_SCRIPTS;
 const HF = join(SKILL_DIR, "node_modules", ".bin", "hyperframes");
 const ASSET_SOURCES = ["capture/assets", "public"];
 const SNAP_BEFORE_END = 0.3; // 截每帧结尾前 0.3 秒：动画已落定
@@ -44,6 +44,22 @@ function run(label, cmd, args, cwd) {
 }
 
 const node = (label, script, args, cwd) => run(label, process.execPath, [script, ...args], cwd);
+
+/** hyperframes check 只在一个采样点上看到的遮挡会降成 ℹ；文字被盖住就是看不见，一律当错误 */
+export function occludedText(output) {
+  return output.split("\n").filter((l) => /\btext_occluded\b/.test(l)).map((l) => l.trim());
+}
+
+/** 跑 check：输出照常打印，同时收下来查遮挡 */
+function runCheck(label, args, cwd) {
+  console.log(`\n▸ ${label}`);
+  const r = spawnSync(HF, args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  process.stdout.write(r.stdout ?? "");
+  process.stderr.write(r.stderr ?? "");
+  if (r.status !== 0) throw new Error(`「${label}」失败（hyperframes ${args.join(" ")}），修好后重跑 nv hf-build`);
+  const hidden = occludedText(`${r.stdout}\n${r.stderr}`);
+  if (hidden.length) throw new Error(`有文字被别的元素盖住（check 只给了提示级别，但画面上看不见）：\n  ${hidden.join("\n  ")}`);
+}
 
 /** 画面引用的 assets/<文件> 缺失时，从 capture/assets 或 public 补齐；哪里都没有就报错 */
 function stageAssets(dir) {
@@ -186,20 +202,36 @@ export function stillFrames(results) {
   return results.filter((r) => r.diff < MIN_HOLD_DIFF);
 }
 
+const KEEP_MOVING = "加一个持续的小动作（数字在数、线在画、圈在抖）；光晕呼吸太轻，不算在动";
+
+/** 纯函数：落定后静止的帧怎么改，按这一帧 STORYBOARD 的 build 写法给（截图、录屏帧默认就不缓推） */
+export function stillHint(build) {
+  const b = build ?? {};
+  if (b.camera === false) return `去掉 "camera": false 用默认缓推，或${KEEP_MOVING}`;
+  if (b.rec && b.camera === undefined) return `录屏这一段画面没在动：换一段有操作的录屏（改 mediaStart），或写 "camera": "push" 让整帧缓推`;
+  if (b.kit?.name === "shot" && b.camera === undefined) return `截图帧默认不缓推：写 "camera": "push" 让整帧缓推，或${KEEP_MOVING}`;
+  return KEEP_MOVING;
+}
+
 /** 纯函数：occupancy.py 的结果 → 内容铺得太少的帧 */
 export function sparseFrames(results) {
   return results.filter((r) => r.spanY < MIN_SPAN_Y || r.occupancy < MIN_OCCUPANCY);
 }
 
 /** 截图按序号排（frame-07-at-…），不按文件名字母顺序 */
-function snapshotFiles(dir) {
+/** 截图放哪：每帧结尾一张（③ 看的总览图）和 --motion 的过程图分开存，kv 只看 sheet.jpg */
+export function snapshotPaths(motion) {
+  return motion ? { dir: "snapshots/motion", sheet: "snapshots/motion-sheet.jpg" } : { dir: "snapshots", sheet: "snapshots/sheet.jpg" };
+}
+
+function snapshotFiles(dir, sub = "snapshots") {
   const idx = (f) => Number(f.match(/^frame-(\d+)/)[1]);
-  return readdirSync(join(dir, "snapshots")).filter((f) => /^frame-\d+.*\.png$/.test(f)).sort((a, b) => idx(a) - idx(b)).map((f) => join("snapshots", f));
+  return readdirSync(join(dir, sub)).filter((f) => /^frame-\d+.*\.png$/.test(f)).sort((a, b) => idx(a) - idx(b)).map((f) => join(sub, f));
 }
 
 function checkStillness(dir) {
   if (!existsSync(PYTHON)) return console.log("  ⚠ 跳过落定后动静检查：没有 .venv（见 references/setup.md）");
-  const files = snapshotFiles(dir);
+  const files = snapshotFiles(dir, snapshotPaths(true).dir);
   const pairs = files.filter((_, i) => i % 4 >= 2); // 每帧四张里的后两张：落定前、落定
   let out;
   try {
@@ -209,7 +241,8 @@ function checkStillness(dir) {
   }
   const still = stillFrames(out.trim().split("\n").map((l) => JSON.parse(l)));
   if (!still.length) return console.log("  ✓ 每帧落定后都还在动（缓推、录屏或持续的小动作）");
-  for (const r of still) console.log(`  ⚠ 第 ${r.frame} 帧落定后完全静止：去掉 "camera": false 用默认缓推，或加一个持续的小动作（数字在数、线在画、圈在抖）；光晕呼吸太轻，不算在动`);
+  const sb = parseStoryboardFrames(readFileSync(join(dir, "STORYBOARD.md"), "utf8")).frames;
+  for (const r of still) console.log(`  ⚠ 第 ${r.frame} 帧落定后完全静止：${stillHint(sb[r.frame - 1]?.build)}`);
 }
 
 function checkOccupancy(dir) {
@@ -252,14 +285,16 @@ export function localizeProject(dir, gsapVersion) {
 function snapshotSheet(dir, motion) {
   const times = motion ? frameMotionTimes(dir) : frameEndTimes(dir);
   if (!times.length) throw new Error("index.html 里没找到帧，无法截图");
-  rmSync(join(dir, "snapshots"), { recursive: true, force: true });
-  run(`截图（${times.length} 帧）`, HF, ["snapshot", ".", "--at", times.join(","), "--no-end"], dir);
+  const out = snapshotPaths(motion);
+  // 每帧结尾那套重拍时整个 snapshots/ 连过程图一起清掉；--motion 只清自己的目录，不动 ③ 看的 sheet.jpg
+  rmSync(join(dir, out.dir), { recursive: true, force: true });
+  run(`截图（${times.length} 帧）`, HF, ["snapshot", ".", "--at", times.join(","), "--no-end", "-o", out.dir], dir);
   const cols = motion ? 8 : Math.min(7, times.length); // 动画过程：每行两帧，每帧「入场 / 中段 / 落定前 / 落定」
-  execFileSync("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", "snapshots/frame-*.png",
-    "-vf", `scale=300:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=6:color=0x444444`, "-frames:v", "1", "snapshots/sheet.jpg"], { cwd: dir });
+  execFileSync("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", `${out.dir}/frame-*.png`,
+    "-vf", `scale=300:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=6:color=0x444444`, "-frames:v", "1", out.sheet], { cwd: dir });
   console.log(motion
-    ? "  ✓ snapshots/sheet.jpg（每帧四张：入场 / 中段 / 落定前 / 落定，看元素是否按时出现、过程中有没有穿帮）"
-    : "  ✓ snapshots/sheet.jpg（每帧结尾一张，看图检查断行、遮挡、安全区）");
+    ? `  ✓ ${out.sheet}（每帧四张：入场 / 中段 / 落定前 / 落定，看元素是否按时出现、过程中有没有穿帮）`
+    : `  ✓ ${out.sheet}（每帧结尾一张，看图检查断行、遮挡、安全区）`);
   if (motion) checkStillness(dir);
   else checkOccupancy(dir);
 }
@@ -276,13 +311,13 @@ function main() {
   const self = (name) => join(SKILL_DIR, "scripts", `${name}.mjs`);
 
   node("组件库 + 逐字时间", self("hf-kit"), [dir], dir);
-  node("同步帧时长", join(FE, "audio.mjs"), ["sync-durations", "--audio-meta", "./audio_meta.json", ...sb], dir);
+  keepMtimeIfUnchanged(join(dir, "STORYBOARD.md"), () => node("同步帧时长", join(FE, "audio.mjs"), SYNC_ARGS, dir));
   node("帧模板（STORYBOARD 的 build）", self("hf-frames"), [dir], dir);
-  node("音效", self("hf-sfx"), [dir], dir);
+  keepMtimeIfUnchanged(join(dir, "audio_meta.json"), () => node("音效", self("hf-sfx"), [dir], dir));
   console.log("\n▸ 素材");
   stageAssets(dir);
   node("中文字体", self("hf-fonts"), [dir], dir);
-  node("字幕", join(FE, "captions.mjs"), ["build", ...sb, "--audio-meta", "./audio_meta.json", "--hyperframes", ".", "--out", "./caption_groups.json"], dir);
+  node("字幕", join(FE, "captions.mjs"), CAPTION_ARGS, dir);
   node("组装 index.html", join(FE, "assemble-index.mjs"), [...sb, "--hyperframes", "."], dir);
   node("转场", join(FE, "transitions.mjs"), ["inject", ...sb, "--hyperframes", "."], dir);
   node("转场校验", join(FE, "transitions.mjs"), ["verify", ...sb, "--index", "./index.html"], dir);
@@ -294,7 +329,7 @@ function main() {
     run("lint", HF, ["lint", "."], dir);
     // 两项检查都跑完再报错，一次看到所有问题
     const errors = [];
-    for (const step of [() => run("check（含字幕带：内容不能伸出四角框压到字幕）", HF, ["check", ".", ...captionZoneArgs(dir)], dir), () => checkBounds(dir)]) {
+    for (const step of [() => runCheck("check（含字幕带：内容不能伸出四角框压到字幕）", ["check", ".", ...captionZoneArgs(dir)], dir), () => checkBounds(dir)]) {
       try {
         step();
       } catch (err) {

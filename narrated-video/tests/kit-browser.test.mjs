@@ -92,6 +92,7 @@ function glowStrokeExtent() {
     left: r.left + (Math.min(...xs) - cap) * sx - blur - host.left,
     right: host.right - (r.left + (Math.max(...xs) + cap) * sx + blur),
     size: parseFloat(document.querySelector(".kit-line").style.fontSize),
+    blur,
   };
 }
 
@@ -112,6 +113,24 @@ for (const [where, key] of [["句尾", "挑三页"], ["句首", "资料太长"]]
     }
   });
 }
+
+test("marker：glow 笔触往关键词两边只伸出一点，不盖住前后的字（「自己读一遍」的「己」）", opt, async () => {
+  const k = await openKitPage({ files: ["kit.js", "kit-glow.js"] });
+  try {
+    const r = await k.page.evaluate(`(() => {
+      const tl = gsap.timeline({ paused: true });
+      Kit.marker(tl, "#host", { text: "发之前，自己读一遍", key: "读一遍", size: 92, at: 0.2 });
+      tl.seek(3);
+      const e = (${glowStrokeExtent})();
+      const host = document.querySelector("#host").getBoundingClientRect();
+      const key = document.querySelector(".kit-key").getBoundingClientRect();
+      return { overhang: key.left - (host.left + e.left + e.blur), size: e.size };
+    })()`);
+    assert.ok(r.overhang <= r.size * 0.25, `笔触伸到前一个字里 ${r.overhang.toFixed(1)}px（字号 ${r.size}，最多 1/4 个字）`);
+  } finally {
+    await k.close();
+  }
+});
 
 test("marker：关键词在句中时字号不额外缩小（只按字数）", opt, async () => {
   const k = await openKitPage({ files: ["kit.js", "kit-glow.js"] });

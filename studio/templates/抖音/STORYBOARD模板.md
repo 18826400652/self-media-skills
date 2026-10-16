@@ -1,6 +1,6 @@
 ---
 format: 1080x1920
-duration: 0s
+duration: 100s
 message: ""
 arc: story-explainer
 audience: 想做自媒体的新手
@@ -14,7 +14,7 @@ kicker: {{角标}}
 - **recipe** — 按 narrated-video 的 references/douyin-recipe.md「成品教程」：成品亮相 → 准备 → 三步（每步两帧：说做什么 → 看真实操作）→ 一个坑 → 回到成品 → 领模板。不讲原理；每一步都要让观众看得见点哪里、复制什么。帧间停 0.3 秒。
 - **palette system** — frame.md 的墨黑底（`ink-black`）+ 纸白字（`cream`），荧光黄（`fire-orange`）是唯一强调色。整片最多一帧整屏翻成强调色（`build.ground: "accent"`），留给「一个坑」。
 - **identity chrome** — 每一帧左上角固定角标（frontmatter 的 `kicker`），帧模板自动加；第 1 帧不显示。
-- **frames** — 每帧写 `- build: {…}`，`nv hf-build` 自动生成画面；时间写 `"@词"`（说到这个词时，词必须在这一帧的口播里）。表里放不下的画面删掉 build 行手写。duration 先写 1s，`nv hf-audio` 后自动改成配音时长。
+- **frames** — 每帧写 `- build: {…}`，`nv hf-build` 自动生成画面；时间写 `"@词"`（说到这个词时，词必须在这一帧的口播里）。表里放不下的画面删掉 build 行手写。duration 先写 1s，`nv hf-audio` 后自动改成配音时长。开头 frontmatter 的 `duration` 是预计总长（成品教程 90–120 秒），不会自动改：组装时实际总长偏差超过 10% 会提醒，按需改它或调节奏。
 - **layout** — 标题每行 ≤ 9 个字；`prompt` 要在这一帧结束前打完（不够就调高 `cps`）；内容待在四角框里（y 330–1160）。
 - **safe zones (hard)** — 内容在 x 60–1020、y 230–1150；y 1180–1440 是字幕带；右侧 160px、底部 480px 有平台界面。
 - **negative list** — 不要紫蓝「AI 感」光效、粒子、和口播无关的装饰；不要连着三帧以上纯文字；画面、口播里不出现微信号、二维码、「加微信」。
@@ -28,7 +28,7 @@ kicker: {{角标}}
 - status: animated
 - src: compositions/frames/01-hook.html
 - sfx: impact-bass-1 @（词）
-- build: {"kicker": false, "kit": {"name": "shot", "top": 330, "opts": {"src": "assets/result.png", "size": [1080, 1920], "caption": "（成品是什么）", "height": 720}}, "lead": {"text": "（用时 · 花费）", "top": 1090, "at": "@（词）"}}
+- build: {"kicker": false, "kit": {"name": "shot", "top": 330, "opts": {"src": "assets/result.png", "size": [1080, 1920], "caption": "（成品是什么）", "height": 600}}, "lead": {"text": "（用时 · 花费）", "top": 1020, "at": "@（词）"}}
 
 ## Frame 2 — 你能拿到什么
 
@@ -149,7 +149,7 @@ kicker: {{角标}}
 - status: animated
 - src: compositions/frames/12-back.html
 - sfx: sparkle @（词）
-- build: {"kit": {"name": "shot", "top": 330, "opts": {"src": "assets/result.png", "size": [1080, 1920], "caption": "（成品）", "height": 720}}, "lead": {"text": "就这三步，**你也能做出来**", "top": 1090, "at": "@（词）"}}
+- build: {"kit": {"name": "shot", "top": 330, "opts": {"src": "assets/result.png", "size": [1080, 1920], "caption": "（成品）", "height": 600}}, "lead": {"text": "就这三步，**你也能做出来**", "top": 1020, "at": "@（词）"}}
 
 ## Frame 13 — 领模板
 
