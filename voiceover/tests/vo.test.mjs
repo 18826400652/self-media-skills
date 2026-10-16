@@ -4,6 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { configGate } from "../scripts/lib/config.mjs";
 import { parseHfScript, restoreCase, toCaptionWords, writeOutputs } from "../scripts/vo.mjs";
 
 const chars = (s, t0 = 0, step = 0.1) => [...s].map((ch, i) => ({ text: ch, start: t0 + i * step, end: t0 + (i + 1) * step }));
@@ -54,4 +55,24 @@ test("writeOutputs：重新配音时保留 audio_meta.json 里原有的 sfx（vd
   writeFileSync(join(dir, "audio_meta.json"), JSON.stringify({ bgm: null, bgm_pending: false, voices: [], sfx }));
   writeOutputs(dir, [v(1, 1)]);
   assert.deepEqual(JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8")).sfx, sfx);
+});
+
+test("configGate：有配置文件 → 放行，没有提示", () => {
+  assert.deepEqual(configGate({ configPath: "/p/voiceover.config.json" }, "/p/ep"), { refuse: null, warn: null });
+});
+
+test("configGate：没配置、上层有 studio.json → 拒绝并指向 README", () => {
+  const root = mkdtempSync(join(tmpdir(), "vo-gate-"));
+  writeFileSync(join(root, "studio.json"), "{}");
+  const { refuse, warn } = configGate({ configPath: null }, join(root, "ep"));
+  assert.equal(warn, null);
+  assert.match(refuse, new RegExp(`找到 ${join(root, "studio.json").replace(/[.]/g, "\\.")}`));
+  assert.match(refuse, /voiceover\/README\.md/);
+});
+
+test("configGate：没配置、也不在作品项目里 → 不拒绝，警告用默认值", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vo-gate-"));
+  const { refuse, warn } = configGate({ configPath: null }, dir);
+  assert.equal(refuse, null);
+  assert.match(warn, /^⚠ 没找到 voiceover\.config\.json，用默认配音设置/);
 });

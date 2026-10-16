@@ -57,3 +57,9 @@ test("真跑 hyperframes init：产出完整骨架（hyperframes.json、package.
   assert.ok(existsSync(join(dir, "compositions/frames")));
   assert.ok(existsSync(join(dir, "assets")));
 });
+
+test("initProject：hyperframes 没跑起来（spawn 的 error）→ 报错里带上原因，不是一片空白", () => {
+  const dir = join(mkdtempSync(join(tmpdir(), "vd-init-")), "抖音");
+  const runHf = () => ({ status: null, error: new Error("spawnSync /x/hyperframes ENOENT") });
+  assert.throws(() => initProject(dir, { runHf }), /hyperframes init 失败：.*spawnSync \/x\/hyperframes ENOENT/);
+});

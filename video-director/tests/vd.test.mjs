@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { candidatesText, installAll, main } from "../scripts/vd.mjs";
+import { candidatesText, installAll, main, runHyperframes } from "../scripts/vd.mjs";
 import { project } from "./helpers.mjs";
 
 test("vd cues：DIRECTOR.md 有错时全部列出并返回 1，不写 cues.js", async () => {
@@ -146,4 +146,16 @@ test("installAll：dy-rec-phone 的录屏比段短 → 打 ⚠，不中断构建
   try { installAll(project({}), { segments: segs }, {}, deps); } finally { console.warn = orig; }
   assert.equal(warns.length, 1);
   assert.match(warns[0], /⚠ seg-03/);
+});
+
+test("透传：hyperframes 没装时打印安装提示并返回 1，不是静默退出", async () => {
+  const errs = [];
+  const orig = console.error;
+  console.error = (m) => errs.push(m);
+  try {
+    const missing = () => { throw new Error("video-director 还没装 hyperframes：cd /x && npm ci（或 st install --deps）"); };
+    const code = await main(["lint", "抖音"], { passthrough: (args) => runHyperframes(args, { requireBin: missing }) });
+    assert.equal(code, 1);
+  } finally { console.error = orig; }
+  assert.match(errs.join("\n"), /还没装 hyperframes.*npm ci/);
 });

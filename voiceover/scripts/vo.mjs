@@ -12,13 +12,14 @@ import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { buildCaptionGroups } from "./lib/caption-groups.mjs";
-import { loadConfig } from "./lib/config.mjs";
+import { configGate, loadConfig } from "./lib/config.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { loadDotEnv, probeDuration, synthesizeClean, synthesizeSegment } from "./lib/speech.mjs";
 import { adoptLegacyCache, voiceCacheDir } from "./lib/voice-cache.mjs";
 import { checkDirection, parseVoiceDirection } from "./lib/voice-direction.mjs";
 import { getProvider } from "../tts/index.mjs";
 
+const USAGE = "用法：vo <工程目录> [--voice x] [--speed 1.1] [--provider x] [--model x] [--pause 0.4] [--check]";
 const OPTION_KEYS = ["voice", "speed", "provider", "model", "pause"];
 const PUNCTUATION = /^[\p{P}\p{S}\s]+$/u;
 const TAIL_SECONDS = 0.8; // 最后一帧结尾留白：口播说完后画面停一下再结束
@@ -26,8 +27,12 @@ const pad2 = (n) => String(n).padStart(2, "0");
 
 function parseArgs(argv) {
   let [dir, ...rest] = argv;
-  if (!dir) {
-    console.error("用法：vo <工程目录> [--voice x] [--speed 1.1] [--provider x] [--model x]");
+  if (dir === "--help" || dir === "-h") {
+    console.log(USAGE);
+    process.exit(0);
+  }
+  if (!dir || dir.startsWith("--")) {
+    console.error(USAGE);
     process.exit(1);
   }
   const overrides = {};
@@ -193,6 +198,9 @@ async function main() {
   const scriptPath = join(dir, "SCRIPT.md");
   if (!existsSync(scriptPath)) throw new Error(`找不到 ${scriptPath}`);
   const config = loadConfig(dir);
+  const gate = configGate(config, dir);
+  if (gate.refuse && !check) throw new Error(gate.refuse);
+  if (gate.warn && !check) console.warn(gate.warn);
   loadDotEnv(config.root);
   // 停顿不参与合成，也不影响配音缓存
   const { pause: pauseRaw = 0, ...tts } = { ...config.tts, ...overrides };

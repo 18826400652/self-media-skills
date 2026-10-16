@@ -177,10 +177,14 @@ test("install：清掉指向本工具包、已经失效的旧软链接（skill �
   symlinkSync(join(toolkit, "narrated-video"), join(home, ".claude/skills/narrated-video"));
   symlinkSync(join(toolkit, "narrated-video/bin/nv"), join(home, ".local/bin/nv"));
   symlinkSync("/nowhere", join(home, ".local/bin/other"));
+  symlinkSync(`${toolkit}-old/x`, join(home, ".local/bin/sibling"));
+  symlinkSync("../nowhere/x", join(home, ".local/bin/relative"));
   install({ home, toolkit, log: () => {} });
   assert.equal(isLink(join(home, ".claude/skills/narrated-video")), false);
   assert.equal(isLink(join(home, ".local/bin/nv")), false);
   assert.equal(readlinkSync(join(home, ".local/bin/other")), "/nowhere");
+  assert.equal(readlinkSync(join(home, ".local/bin/sibling")), `${toolkit}-old/x`, "只共享路径前缀的同级目录不算本工具包");
+  assert.equal(readlinkSync(join(home, ".local/bin/relative")), "../nowhere/x", "相对路径的失效链接不动");
   assert.equal(readlinkSync(join(home, ".local/bin/vo")), join(toolkit, "voiceover/bin/vo"));
   assert.equal(readlinkSync(join(home, ".local/bin/vdraft")), join(toolkit, "video-draft/bin/vdraft"));
 });

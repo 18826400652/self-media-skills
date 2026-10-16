@@ -36,3 +36,25 @@ export function loadConfig(startDir = process.cwd()) {
     configPath,
   };
 }
+
+/** 向上找 studio.json（作品项目的标志）；没有返回 null */
+function findStudioJson(startDir) {
+  for (let dir = resolve(startDir); ; dir = dirname(dir)) {
+    if (existsSync(join(dir, "studio.json"))) return join(dir, "studio.json");
+    if (dirname(dir) === dir) return null;
+  }
+}
+
+/**
+ * 没找到 voiceover.config.json 时怎么办：在作品项目里 = 还没迁移配置，拒绝（不能悄悄换成默认音色）；
+ * 不在作品项目里 = 单独用，提醒一句用的是默认值。
+ * @returns {{ refuse: string | null, warn: string | null }}
+ */
+export function configGate(config, startDir) {
+  if (config.configPath) return { refuse: null, warn: null };
+  const studio = findStudioJson(startDir);
+  if (studio) {
+    return { refuse: `这是作品项目（找到 ${studio}），但没有 ${CONFIG_NAME}：把旧配音配置里的 tts 搬过来（见 voiceover/README.md）`, warn: null };
+  }
+  return { refuse: null, warn: `⚠ 没找到 ${CONFIG_NAME}，用默认配音设置（${DEFAULT_TTS.provider}，${DEFAULT_TTS.speed}x）` };
+}

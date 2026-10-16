@@ -13,3 +13,9 @@ export function hfVersion() {
   if (!existsSync(p)) throw new Error(`video-director 还没装 hyperframes：cd ${SKILL_DIR} && npm ci`);
   return JSON.parse(readFileSync(p, "utf8")).version;
 }
+
+/** 取 hyperframes 可执行文件；没装就抛带安装办法的错（spawnSync 找不到文件时只会返回空的 status，不会自己说话） */
+export function requireHf({ bin = hfBin(), skillDir = SKILL_DIR } = {}) {
+  if (!existsSync(bin)) throw new Error(`video-director 还没装 hyperframes：cd ${skillDir} && npm ci（或 st install --deps）`);
+  return bin;
+}

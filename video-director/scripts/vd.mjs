@@ -21,7 +21,7 @@ import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
-import { hfBin } from "./lib/hyperframes.mjs";
+import { hfBin, requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
 
@@ -73,7 +73,7 @@ function load(dir) {
 
 const COMMANDS = {
   init(dir) {
-    initProject(dir, { runHf: (args) => spawnSync(hfBin(), args, { stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: { ...process.env, HYPERFRAMES_SKIP_SKILLS: "1" } }) });
+    initProject(dir, { runHf: (args) => spawnSync(requireHf(), args, { stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: { ...process.env, HYPERFRAMES_SKIP_SKILLS: "1" } }) });
     console.log(`✓ 导演工程：${dir}（写 SCRIPT.md、VOICE.md → vo 配音 → 写 DIRECTOR.md）`);
   },
   render(dir, rest = []) {
@@ -153,7 +153,10 @@ const COMMANDS = {
   },
 };
 
-const runHyperframes = (args) => spawnSync(hfBin(), args, { stdio: "inherit" }).status ?? 1;
+export function runHyperframes(args, { requireBin = requireHf } = {}) {
+  try { return spawnSync(requireBin(), args, { stdio: "inherit" }).status ?? 1; }
+  catch (err) { console.error(`✗ ${err.message}`); return 1; }
+}
 
 export async function main(argv, { passthrough = runHyperframes } = {}) {
   const [cmd, dir, ...rest] = argv;

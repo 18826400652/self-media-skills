@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { hfBin } from "./lib/hyperframes.mjs";
+import { requireHf } from "./lib/hyperframes.mjs";
 import { isMain } from "./lib/is-main.mjs";
 
 const SKILL_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,17 +17,19 @@ export function renderTarget(dir, { sample = false } = {}) {
   return join(dir, "renders", `${name}.mp4`);
 }
 
-function main(argv) {
+export function main(argv, { requireBin = requireHf } = {}) {
   if (!argv[0] || argv[0].startsWith("--")) {
     console.error("用法：vd render <视频目录> [--sample] [参数]");
     return 2;
   }
+  let hf;
+  try { hf = requireBin(); } catch (err) { console.error(`✗ ${err.message}`); return 1; }
   const dir = resolve(argv[0]);
   const rest = argv.slice(1);
   const sample = rest.includes("--sample");
   const out = renderTarget(dir, { sample });
   mkdirSync(join(dir, "renders"), { recursive: true });
-  const r = spawnSync(hfBin(), ["render", dir, "-o", out, ...rest.filter((a) => a !== "--sample")], { stdio: "inherit" });
+  const r = spawnSync(hf, ["render", dir, "-o", out, ...rest.filter((a) => a !== "--sample")], { stdio: "inherit" });
   if (r.status !== 0) return r.status ?? 1;
   return spawnSync(process.execPath, [join(SKILL_DIR, "scripts/verify.mjs"), out, "--project", dir], { stdio: "inherit" }).status ?? 1;
 }
