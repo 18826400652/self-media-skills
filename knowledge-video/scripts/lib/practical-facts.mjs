@@ -196,7 +196,7 @@ function directorSteps(dir, runVdCues) {
     : !vdQa ? no("还没跑 vd qa")
     : vdQa.passed !== true ? no("vd qa 还有 ✗")
     : mtime(vdQaPath) < newestHtml(root) ? no("画面改过，要重跑 vd qa")
-    : !qa ? no("还没写 qa.json") : mtime(qaPath) < mtime(mp4) ? no("渲染后还没重新 QA（重写 qa.json）")
+    : !qa ? no("还没写 qa.json") : mtime(qaPath) < mtime(mp4) ? no("渲染后还没重新 QA：qa.json 比成片旧（成片是写 qa.json 之后渲染的），看过新成片再更新 qa.json")
       : qaProblem(qa) ? no(qaProblem(qa)) : ok();
   return { director, sample, render };
 }

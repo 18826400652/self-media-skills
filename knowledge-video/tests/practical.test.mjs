@@ -50,6 +50,33 @@ test("全部做完 → 下一步「这期做完了」、waitingFor null", () => 
   assert.equal(s.next, "这期做完了");
 });
 
+test("④ 通过后，草稿、发布记录、复盘各算各的：内容写好没存草稿显示「待存草稿」，发布记录写好就 ✓", () => {
+  const saved = (key) => ({ ok: false, why: "还没存草稿", content: true });
+  const s = practicalStatus(facts({ steps: { wechat: saved(), xiaohongshu: saved(), douyin: saved() } }));
+  const row = (n) => s.rows.find((r) => r.n === n);
+  assert.equal(row(14).done, true, "发布记录写好了");
+  assert.equal(row(15).done, true);
+  for (const n of [11, 12, 13]) { assert.equal(row(n).done, false); assert.equal(row(n).note, "内容已写好，待存草稿"); }
+  assert.match(s.next, /^11 公众号：内容已写好，只差存草稿：wa draft 公众号\/文章\.md/);
+  assert.match(s.next, /用户自己存的.*kv done <作品> wechat/);
+  assert.doesNotMatch(s.next, /写 公众号\/文章\.md/);
+});
+
+test("④ 通过后内容还没写：下一步照旧是写内容", () => {
+  const s = practicalStatus(facts({ steps: { wechat: { ok: false, why: "公众号/文章.md 还是空模板", content: false } } }));
+  assert.match(s.next, /^11 公众号：写 公众号\/文章\.md/);
+});
+
+test("④ 没通过：后面的步骤都不显示 ✓（草稿要等成片确认）", () => {
+  const s = practicalStatus(facts({ gates: { final: unpassed } }));
+  assert.ok(s.rows.filter((r) => r.n > 10).every((r) => !r.done));
+});
+
+test("第 10 步的做法写清顺序：先渲染、看成片，再写 qa.json", () => {
+  const s = practicalStatus(facts({ steps: { render: notOk("x") } }));
+  assert.match(s.next, /vd render 抖音 → 看成片 → .*写 qa\.json（qa\.json 要比成片新/);
+});
+
 test("gateBlocker：前置步骤和前一个节点", () => {
   assert.equal(gateBlocker(facts({ gates: { topic: unpassed } }), "topic"), null);
   assert.match(gateBlocker(facts({ steps: { topic: notOk("对标只有 2 条") }, gates: { topic: unpassed } }), "topic"), /第 2 步 选题关.*对标只有 2 条/);

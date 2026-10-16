@@ -238,6 +238,7 @@ test("渲染后还没重新 QA：qa.json 比成片旧不算做完", () => {
   const f = collect(dir);
   assert.equal(f.steps.render.ok, false);
   assert.match(f.steps.render.why, /重新 QA/);
+  assert.match(f.steps.render.why, /qa\.json 比成片旧.*看过新成片再更新 qa\.json/);
 });
 
 test("自检只看内容阶段：公众号文章残留占位 → 第 6 步通过，公众号那一步不通过并写出文件", () => {

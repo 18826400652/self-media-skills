@@ -264,7 +264,7 @@ function printPracticalStatus(dir, run) {
   const s = practicalStatus(practicalFacts(dir, run));
   console.log(`类型：实用技巧`);
   for (const r of s.rows) {
-    console.log(` ${r.done ? "✓" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}`);
+    console.log(` ${r.done ? "✓" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}${r.note ? `  ${r.note}` : ""}`);
   }
   console.log(`下一步：${s.next}`);
   return 0;
