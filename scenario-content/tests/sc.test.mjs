@@ -117,6 +117,12 @@ test("抖音 SCRIPT.md 写了内容但一句口播都没读到（如旧的分镜
   assert.ok(items.some((i) => i.level === "⚠" && /没读到口播.*\(Frame N\).*缩进/.test(i.msg)));
 });
 
+test("抖音口播检查：一帧写了两个情感、情感没写在行首 → ⚠ 说配音实际用哪个", async () => {
+  const items = await scriptItems("## 一 (Frame 1)\n**Emotion:** 惊讶\n**Emotion:** 开心\n    第一句。\n## 二 (Frame 2)\n    第二句。 **Emotion:** 平静\n");
+  assert.ok(items.some((i) => i.level === "⚠" && /第 1 帧写了 2 个情感（惊讶、开心），配音用最后一个「开心」/.test(i.msg)));
+  assert.ok(items.some((i) => i.level === "⚠" && /第 2 帧.*情感「平静」不在行首.*不生效/.test(i.msg)));
+});
+
 // st new 之后的母稿：{{…}} 已替换，小节下面还是模板的括号说明
 const DRAFT_TEMPLATE = (await import("node:fs")).readFileSync(new URL("../../studio/templates/母稿模板.md", import.meta.url), "utf8").replace(/\{\{[^}]+\}\}/g, "X");
 const SECTIONS = { requiredSections: ["成品", "场景", "步骤", "坑", "领"] };

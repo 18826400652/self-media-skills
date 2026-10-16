@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { parseScript } from "../node/script-md.mjs";
+import { emotionIssues, parseScript } from "../node/script-md.mjs";
 
 const fixture = (f) => readFileSync(new URL(`./fixtures/${f}`, import.meta.url), "utf8");
 
@@ -44,4 +44,20 @@ test("flow-check 02 的真实 SCRIPT.md：frame、text、emotion、keywords 和 
   const want = JSON.parse(fixture("flow-check-02-vo-expected.json"));
   const got = parseScript(fixture("flow-check-02-SCRIPT.md")).map(({ frame, text, emotion, keywords }) => ({ frame, text, emotion, keywords }));
   assert.deepEqual(got, want);
+});
+
+test("emotionIssues：同一帧写了好几个情感 → 列出全部，配音用最后一个", () => {
+  const md = "## 钩子 (Frame 1)\n**Emotion:** 惊讶\n    第一句。\n**情感：** 开心\n    第二句。\n## 二 (Frame 2)\n**Emotion:** 平静\n    第三句。\n";
+  assert.deepEqual(emotionIssues(md), [{ frame: 1, kind: "multiple", values: ["惊讶", "开心"] }]);
+  assert.equal(parseScript(md)[0].emotion, "开心");
+});
+
+test("emotionIssues：**Emotion:** 不在行首（写在口播或别的文字后面）→ 不生效，报出来", () => {
+  const md = "## 钩子 (Frame 3)\n    第一句。 **Emotion:** 惊讶\n说明文字 **情感：** 开心\n";
+  assert.deepEqual(emotionIssues(md), [{ frame: 3, kind: "inline", values: ["惊讶", "开心"] }]);
+  assert.equal(parseScript(md)[0].emotion, "");
+});
+
+test("emotionIssues：flow-check 02 真实稿没有问题", () => {
+  assert.deepEqual(emotionIssues(fixture("flow-check-02-SCRIPT.md")), []);
 });
