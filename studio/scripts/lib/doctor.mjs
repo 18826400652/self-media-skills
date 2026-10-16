@@ -4,7 +4,7 @@ import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpat
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { hasAudio, mediaUseSfx } from "./init.mjs";
-import { syncShared } from "./shared-sync.mjs";
+import { hasShared, syncShared } from "./shared-sync.mjs";
 import { DEFAULT_TEMPLATES, loadProject, MARKER, satisfies, TOOLKIT_DIR, toolkitVersion, VO_PY } from "./project.mjs";
 
 /** 各 skill 的项目配置里，哪些字段是要存在的路径（点号表示嵌套） */
@@ -148,6 +148,7 @@ function checkConfigs(p, out) {
 
 /** 各 skill 里的共用代码拷贝和 shared/ 正本一致 */
 export function checkShared(out, toolkit = TOOLKIT_DIR) {
+  if (!hasShared(toolkit)) return out.warn("共用代码：工具包里没有 shared/（studio 单独拷走时正常），跳过检查");
   let problems;
   try { ({ problems } = syncShared({ toolkit, check: true })); } catch (e) { return out.fail(`共用代码：${e.message}`); }
   if (!problems.length) return out.ok("共用代码和 shared/ 正本一致");

@@ -14,6 +14,7 @@ export function takeVia(argv) {
   const i = argv.indexOf("--via");
   if (i < 0) return ["browser", argv];
   const via = argv[i + 1];
+  if (via === undefined) throw new Error("--via 后面要写 browser 或 phone");
   if (!BIN[via]) throw new Error(`--via 只能是 browser 或 phone，收到：${via}`);
   return [via, [...argv.slice(0, i), ...argv.slice(i + 2)]];
 }

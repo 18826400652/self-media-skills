@@ -57,3 +57,7 @@ test("runDraft：这个平台没有该方式的步骤 → 报错，不调命令"
   assert.throws(() => withPath(fakePath(dir), () => runDraft("phone", { browser: "/s/x.py" }, {})), /这个平台没有 --via phone 的步骤（可用：browser）/);
   assert.equal(calls(dir), "");
 });
+
+test("takeVia：--via 后面没写值 → 说要写什么，不报「收到：undefined」", () => {
+  assert.throws(() => takeVia(["a.md", "--via"]), (e) => /--via 后面要写 browser 或 phone/.test(e.message) && !/undefined/.test(e.message));
+});

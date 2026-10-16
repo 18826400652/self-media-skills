@@ -136,3 +136,13 @@ test("checkShared：拷贝和正本不一致 → ✗，提示改正本后跑 st 
   checkShared(out, tk);
   assert.match(lines.join("\n"), /✗ .*a\/lib\/x\.mjs.*改正本后跑 st sync-shared/);
 });
+
+test("checkShared：没有 shared/（studio 单独拷走）→ ⚠ 跳过，不算要修，不报原始 ENOENT", () => {
+  const tk = mkdtempSync(join(tmpdir(), "st-doc-noshared-"));
+  const lines = [];
+  const out = { ok: (m) => lines.push(`✓ ${m}`), warn: (m) => lines.push(`⚠ ${m}`), fail: (m) => lines.push(`✗ ${m}`) };
+  checkShared(out, tk);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /^⚠ .*没有 shared\/.*跳过/);
+  assert.doesNotMatch(lines[0], /ENOENT/);
+});

@@ -10,7 +10,12 @@ export function copyHeader(src) {
 }
 
 /** 读 manifest，先把所有正本读进来、检查 skill 目录都在：有问题直接抛错，一个文件都不写 */
+export function hasShared(toolkit) {
+  return existsSync(join(toolkit, "shared/manifest.json"));
+}
+
 function plan(toolkit) {
+  if (!hasShared(toolkit)) throw new Error(`没找到 shared/manifest.json：st sync-shared 要在完整的工具包里跑（这里是 ${toolkit}）`);
   const manifest = JSON.parse(readFileSync(join(toolkit, "shared/manifest.json"), "utf8"));
   const items = [];
   for (const [src, copies] of Object.entries(manifest)) {
