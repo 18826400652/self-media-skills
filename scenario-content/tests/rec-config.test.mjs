@@ -30,3 +30,11 @@ test("loadRecConfig：配置不是合法 JSON → 报中文错误", () => {
   writeFileSync(join(root, "scenario-content.config.json"), "{");
   assert.throws(() => loadRecConfig(root), /scenario-content\.config\.json 不是合法的 JSON/);
 });
+
+test("loadRecConfig：配置文件内容不是对象（null、数组、数字）→ 报中文错误", () => {
+  for (const body of ["null", "[]", "3"]) {
+    const root = mkdtempSync(join(tmpdir(), "sc-rec-"));
+    writeFileSync(join(root, "scenario-content.config.json"), body);
+    assert.throws(() => loadRecConfig(root), /scenario-content\.config\.json 的内容要是一个对象/, body);
+  }
+});
