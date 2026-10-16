@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { candidatesText, installAll, main, runHyperframes } from "../scripts/vd.mjs";
+import { COMMANDS, candidatesText, installAll, main, runHyperframes } from "../scripts/vd.mjs";
 import { project } from "./helpers.mjs";
 
 test("vd cues：DIRECTOR.md 有错时全部列出并返回 1，不写 cues.js", async () => {
@@ -158,4 +158,10 @@ test("透传：hyperframes 没装时打印安装提示并返回 1，不是静默
     assert.equal(code, 1);
   } finally { console.error = orig; }
   assert.match(errs.join("\n"), /还没装 hyperframes.*npm ci/);
+});
+
+test("vd check：没装 hyperframes → 报安装办法，先于读工程（空目录也一样）", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vd-check-"));
+  const noHf = () => { throw new Error("video-director 还没装 hyperframes：cd /x && npm ci（或 st install --deps）"); };
+  assert.throws(() => COMMANDS.check(dir, [], {}, { requireBin: noHf }), /还没装 hyperframes.*npm ci/);
 });

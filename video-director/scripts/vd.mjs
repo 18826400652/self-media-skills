@@ -21,7 +21,7 @@ import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
-import { hfBin, requireHf } from "./lib/hyperframes.mjs";
+import { requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
 
@@ -143,10 +143,11 @@ const COMMANDS = {
     console.log(`${r.passed ? "✓" : "✗"} 抖音专用检查（${sample ? `样片 ${segments.map((s) => s.id).join("、")}` : "整片"}，结果 ${out}）：${r.shots.length} 个时间点，${r.issues.filter((i) => i.level === "error").length} 个 ✗（截图总览 snapshots/cues-sheet.jpg，按 DIRECTOR.md 逐条看）`);
     return r.passed ? 0 : 1;
   },
-  check(dir, _rest, config = loadConfig(findProjectRoot(dir))) {
+  check(dir, _rest, config = loadConfig(findProjectRoot(dir)), { requireBin = requireHf } = {}) {
+    const bin = requireBin();
     const { parsed } = load(dir);
     console.log(candidatesText(parsed.candidates));
-    const r = run(hfBin(), ["check", "."], { cwd: dir });
+    const r = run(bin, ["check", "."], { cwd: dir });
     process.stdout.write(r.stdout);
     if (r.status !== 0) { console.error(r.stderr); return 1; }
     return 0;
