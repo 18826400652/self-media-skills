@@ -1,10 +1,8 @@
 {
   "type": "practical",
-  "video": "template",
   "gates": {
     "topic": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] },
     "script": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] },
-    "storyboard": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] },
     "director": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] },
     "sample": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] },
     "final": { "passed": false, "at": null, "quote": null, "fingerprint": null, "edits": [] }

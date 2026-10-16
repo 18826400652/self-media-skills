@@ -10,7 +10,7 @@ const ALL_CHECKS = ["safe-area", "text-size", "density", "typo", "fact-on-screen
 const scOk = () => ({ items: [] });
 const voiceOk = () => ({ ok: true, msg: "" });
 const run = (o = {}) => ({ type: "practical", gates: {}, done: {}, templates: {}, ...o });
-const collect = (dir, r = run(), o = {}) => collectPracticalFacts(dir, r, { runSc: scOk, runVoiceCheck: voiceOk, experienceDir: join(dir, "经验库"), ...o });
+const collect = (dir, r = run(), o = {}) => collectPracticalFacts(dir, r, { runSc: scOk, runVoiceCheck: voiceOk, runVdCues: () => ({ ok: true, msg: "" }), experienceDir: join(dir, "经验库"), ...o });
 const touch = (dir, rel, sec) => utimesSync(join(dir, rel), sec, sec);
 
 test("sc 的问题按文件归到第 1–6 步；topic-unconfirmed 不算", () => {
@@ -40,28 +40,13 @@ test("实测要有录屏；脚本要写过且 VOICE 检查通过", () => {
   const r = run({ templates: templateHashes(dir, ["抖音/SCRIPT.md"]) });
   let f = collect(dir, r);
   assert.equal(f.steps.test.ok, false);
-  assert.match(f.steps.test.why, /录屏/);
+  assert.match(f.steps.test.why, /录屏.*sc rec/);
   assert.equal(f.steps.script.ok, false);
   assert.match(f.steps.script.why, /空模板/);
   const dir2 = episode({ "抖音/SCRIPT.md": "## a (Frame 1)\n\n    写了。\n" });
   f = collect(dir2, run(), { runVoiceCheck: () => ({ ok: false, msg: "VOICE.md 和 SCRIPT.md 对不上" }) });
   assert.equal(f.steps.script.ok, false);
   assert.match(f.steps.script.why, /对不上/);
-});
-
-test("newer：sheet 比 STORYBOARD 旧、mp4 比 sheet 旧都不算做完；qa 要 passed", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true,"checked":["safe-area","text-size","density","typo","fact-on-screen","rhythm","motion"]}' });
-  touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000); touch(dir, "抖音/renders/a.mp4", 3000);
-  let f = collect(dir);
-  assert.equal(f.steps.storyboard.ok, true);
-  assert.equal(f.steps.render.ok, true);
-  touch(dir, "抖音/STORYBOARD.md", 2500);
-  f = collect(dir);
-  assert.equal(f.steps.storyboard.ok, false);
-  assert.match(f.steps.storyboard.why, /重新 nv hf-build/);
-  touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/renders/a.mp4", 1500);
-  f = collect(dir);
-  assert.equal(f.steps.render.ok, false);
 });
 
 test("确认节点：指纹一致 passed，不一致 stale", () => {
@@ -123,61 +108,23 @@ test("发布记录看置顶评论；复盘看经验库里有没有带简称的�
   assert.equal(f.steps.retro.ok, true);
 });
 
-test("渲染后还没重新 QA：qa.json 比成片旧不算做完", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true,"checked":["safe-area","text-size","density","typo","fact-on-screen","rhythm","motion"]}' });
-  touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000);
-  touch(dir, "qa.json", 2500); touch(dir, "抖音/renders/a.mp4", 3000);
-  const f = collect(dir);
-  assert.equal(f.steps.render.ok, false);
-  assert.match(f.steps.render.why, /重新 QA/);
-});
-
-test("重新配音（audio_meta 比 sheet 新）：第 8 步不算做完", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x" });
-  touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000); touch(dir, "抖音/audio_meta.json", 3000);
-  const f = collect(dir);
-  assert.equal(f.steps.storyboard.ok, false);
-  assert.match(f.steps.storyboard.why, /重新 nv hf-build/);
-});
-
-test("预览-压缩.mp4 不算成片：第 9 步和 ④ 指纹只看正式渲染", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/01.mp4": "old", "抖音/renders/预览-压缩.mp4": "p", "qa.json": '{"passed":true,"checked":["safe-area","text-size","density","typo","fact-on-screen","rhythm","motion"]}' });
-  touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000);
-  touch(dir, "抖音/renders/01.mp4", 1500); touch(dir, "抖音/renders/预览-压缩.mp4", 3000); touch(dir, "qa.json", 3500);
-  assert.equal(collect(dir).steps.render.ok, false);
-  const fp = fingerprint(dir, "final");
-  writeFileSync(join(dir, "抖音/renders/预览-压缩.mp4"), "p2");
-  assert.equal(fingerprint(dir, "final"), fp);
-});
-
 const vdOk = () => ({ ok: true, msg: "" });
-const D = "抖音-director";
-const dRun = (o = {}) => run({ video: "director", ...o });
-const dCollect = (dir, r = dRun(), o = {}) => collect(dir, r, { runVdCues: vdOk, ...o });
+const D = "抖音";
+const dCollect = (dir, r = run(), o = {}) => collect(dir, r, { runVdCues: vdOk, ...o });
 
-test("director：第 8 步要配音、DIRECTOR.md、vd cues 通过；导演工程里的配音旧了不算", () => {
-  let f = dCollect(episode({}));
-  assert.equal(f.video, "director");
-  assert.match(f.steps.director.why, /还没配音/);
-  f = dCollect(episode({ "抖音/audio_meta.json": "{}" }));
-  assert.match(f.steps.director.why, /还没有 抖音-director\/DIRECTOR\.md/);
-  const dir = episode({ "抖音/audio_meta.json": "{}", [`${D}/DIRECTOR.md`]: "x", [`${D}/audio_meta.json`]: "{}", [`${D}/caption_groups.json`]: "{}" });
-  assert.match(dCollect(dir, dRun(), { runVdCues: () => ({ ok: false, msg: "第 3 句没有分到任何段" }) }).steps.director.why, /第 3 句/);
-  assert.equal(dCollect(dir).steps.director.ok, true);
-  touch(dir, `${D}/audio_meta.json`, 1000);
-  touch(dir, "抖音/audio_meta.json", 2000);
-  assert.match(dCollect(dir).steps.director.why, /重新配过音/);
+test("第 8 步：没配音、没 DIRECTOR.md 时说清楚缺什么", () => {
+  assert.match(dCollect(episode({})).steps.director.why, /还没配音（vo 抖音）/);
+  assert.match(dCollect(episode({ "抖音/audio_meta.json": "{}" })).steps.director.why, /还没有 抖音\/DIRECTOR\.md/);
 });
 
-test("director：导演工程里缺 caption_groups.json 或 assets/voice/ 的配音文件 → 第 8 步不通过，说缺哪个", () => {
+test("director：缺 caption_groups.json 或 assets/voice/ 的配音文件 → 第 8 步不通过，说缺哪个", () => {
   const meta = JSON.stringify({ voices: [{ frame: 1, path: "assets/voice/01.wav" }, { frame: 2, path: "assets/voice/02.wav" }] });
-  const dir = episode({ "抖音/audio_meta.json": meta, [`${D}/DIRECTOR.md`]: "x", [`${D}/audio_meta.json`]: meta });
-  touch(dir, "抖音/audio_meta.json", 1000);
-  assert.match(dCollect(dir).steps.director.why, /caption_groups\.json/);
+  const dir = episode({ [`${D}/audio_meta.json`]: meta, [`${D}/DIRECTOR.md`]: "x" });
+  assert.match(dCollect(dir).steps.director.why, /没有 caption_groups\.json.*vo 抖音/);
   writeFileSync(join(dir, D, "caption_groups.json"), "{}");
   mkdirSync(join(dir, D, "assets/voice"), { recursive: true });
   writeFileSync(join(dir, D, "assets/voice/01.wav"), "a");
-  assert.match(dCollect(dir).steps.director.why, /assets\/voice\/02\.wav/);
+  assert.match(dCollect(dir).steps.director.why, /缺配音文件：assets\/voice\/02\.wav.*vo 抖音/);
   writeFileSync(join(dir, D, "assets/voice/02.wav"), "a");
   assert.equal(dCollect(dir).steps.director.ok, true);
 });
@@ -194,11 +141,6 @@ test("director：样片要有 renders/sample.mp4 且样片 vd qa 通过；只改
   touch(dir, `${D}/DIRECTOR.md`, 2000);
   touch(dir, `${D}/renders/sample.mp4`, 1000);
   assert.equal(dCollect(dir).steps.sample.ok, true);
-});
-
-test("director：DIRECTOR.md 写了但配音还没复制进导演工程 → 说「还没复制」，不说重新配过音", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", [`${D}/DIRECTOR.md`]: "x" });
-  assert.match(dCollect(dir).steps.director.why, /还没把配音复制到 抖音-director\//);
 });
 
 test("director：成片比工程里的 HTML 旧 → 要重新渲染；只改 DIRECTOR.md（如补组件候选）不用重渲染", () => {
@@ -232,26 +174,42 @@ test("director：渲染步骤看正式成片（不算 sample / compare / 预览�
 
 test("director 指纹：③a 看 DIRECTOR.md 和配音，③b 看样片，④ 看正式成片", () => {
   const dir = episode({ "抖音/audio_meta.json": "{}", [`${D}/DIRECTOR.md`]: "x", [`${D}/renders/sample.mp4`]: "s", [`${D}/renders/01.mp4`]: "f" });
-  const before = ["director", "sample", "final"].map((g) => fingerprint(dir, g, "director"));
+  const before = ["director", "sample", "final"].map((g) => fingerprint(dir, g));
   writeFileSync(join(dir, D, "DIRECTOR.md"), "y");
   writeFileSync(join(dir, D, "renders/sample.mp4"), "s2");
   writeFileSync(join(dir, D, "renders/compare.mp4"), "c");
-  const after = ["director", "sample", "final"].map((g) => fingerprint(dir, g, "director"));
+  const after = ["director", "sample", "final"].map((g) => fingerprint(dir, g));
   assert.notEqual(after[0], before[0]);
   assert.notEqual(after[1], before[1]);
   assert.equal(after[2], before[2], "compare.mp4 不影响 ④");
   const md = "# 导演脚本\n## 7. 样片范围\n前两段\n## 8. 组件候选\n| 画面 | 名 |\n";
   writeFileSync(join(dir, D, "DIRECTOR.md"), md);
-  const fp = fingerprint(dir, "director", "director");
+  const fp = fingerprint(dir, "director");
   writeFileSync(join(dir, D, "DIRECTOR.md"), md + "| 小票 | dy-receipt |\n");
-  assert.equal(fingerprint(dir, "director", "director"), fp, "只补第 8 节组件候选，③a 不失效");
+  assert.equal(fingerprint(dir, "director"), fp, "只补第 8 节组件候选，③a 不失效");
   writeFileSync(join(dir, D, "DIRECTOR.md"), md.replace("前两段", "前三段"));
-  assert.notEqual(fingerprint(dir, "director", "director"), fp);
-  const f = dCollect(dir, dRun({ gates: { director: { passed: true, fingerprint: before[0] } } }));
+  assert.notEqual(fingerprint(dir, "director"), fp);
+  const f = dCollect(dir, run({ gates: { director: { passed: true, fingerprint: before[0] } } }));
   assert.deepEqual(Object.keys(f.gates), ["topic", "script", "director", "sample", "final"]);
   assert.equal(f.gates.director.stale, true);
 });
 
+
+test("第 8 步：配音、字幕分组、DIRECTOR.md 齐了才跑 vd cues；vd cues 不过（如还是模板）→ 不通过，原因来自 vd", () => {
+  const dir = episode({ "抖音/SCRIPT.md": "x", "抖音/DIRECTOR.md": "模板", "抖音/audio_meta.json": { voices: [] }, "抖音/caption_groups.json": { groups: [] } });
+  const bad = dCollect(dir, run(), { runVdCues: () => ({ ok: false, msg: "DIRECTOR.md 有 13 处问题" }) });
+  assert.equal(bad.steps.director.ok, false);
+  assert.match(bad.steps.director.why, /13 处问题/);
+  assert.equal(dCollect(dir).steps.director.ok, true);
+  assert.equal("video" in dCollect(dir), false);
+});
+
+test("旧 run.json（video: template、有 storyboard 节点）照常判断，不崩（Review Focus 3）", () => {
+  const dir = episode({ "抖音/SCRIPT.md": "x" });
+  const f = dCollect(dir, run({ video: "template", gates: { storyboard: { passed: true, fingerprint: "x" } } }));
+  assert.deepEqual(Object.keys(f.gates).sort(), ["director", "final", "sample", "script", "topic"]);
+  assert.equal(f.steps.director.ok, false);
+});
 
 test("qaProblem：checked 缺 qa.md 七项之一 → 列出缺的", () => {
   assert.match(qaProblem({ passed: true, checked: ["typo"], issues: [] }), /safe-area.*motion/);
@@ -266,12 +224,20 @@ test("qaProblem：passed:false → 有没修的问题；七项齐全、只有 me
   assert.equal(qaProblem({ passed: true, checked: ALL_CHECKS, issues: [{ severity: "medium" }] }), null);
 });
 
-test("第 9 步用 qaProblem 判定：checked 不全不算做完", () => {
-  const dir = episode({ "抖音/audio_meta.json": "{}", "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/a.mp4": "x", "qa.json": '{"passed":true,"checked":["typo"]}' });
-  touch(dir, "抖音/STORYBOARD.md", 1000); touch(dir, "抖音/audio_meta.json", 1000); touch(dir, "抖音/snapshots/sheet.jpg", 2000); touch(dir, "抖音/renders/a.mp4", 3000); touch(dir, "qa.json", 4000);
+test("第 10 步用 qaProblem 判定：checked 不全不算做完", () => {
+  const dir = episode({ [`${D}/index.html`]: "<html>", [`${D}/renders/a.mp4`]: "x", [`${D}/qa-douyin.json`]: { passed: true }, "qa.json": '{"passed":true,"checked":["typo"]}' });
+  touch(dir, `${D}/index.html`, 1000); touch(dir, `${D}/qa-douyin.json`, 2000); touch(dir, `${D}/renders/a.mp4`, 3000); touch(dir, "qa.json", 4000);
   const f = collect(dir);
   assert.equal(f.steps.render.ok, false);
   assert.match(f.steps.render.why, /safe-area/);
+});
+
+test("渲染后还没重新 QA：qa.json 比成片旧不算做完", () => {
+  const dir = episode({ [`${D}/index.html`]: "<html>", [`${D}/renders/a.mp4`]: "x", [`${D}/qa-douyin.json`]: { passed: true }, "qa.json": { passed: true, checked: ALL_CHECKS } });
+  touch(dir, `${D}/index.html`, 1000); touch(dir, `${D}/qa-douyin.json`, 2000); touch(dir, "qa.json", 2500); touch(dir, `${D}/renders/a.mp4`, 3000);
+  const f = collect(dir);
+  assert.equal(f.steps.render.ok, false);
+  assert.match(f.steps.render.why, /重新 QA/);
 });
 
 test("自检只看内容阶段：公众号文章残留占位 → 第 6 步通过，公众号那一步不通过并写出文件", () => {

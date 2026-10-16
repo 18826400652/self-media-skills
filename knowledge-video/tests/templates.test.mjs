@@ -13,8 +13,8 @@ test("templates/research.json 是合格的示例", () => {
 test("templates/run.json 的阶段和确认节点齐全", () => {
   const run = JSON.parse(read("templates/run.json"));
   assert.equal(run.stage, "brief");
-  assert.equal(run.video, "director", "概念科普新作品默认用导演流程");
-  assert.deepEqual(Object.keys(run.gates), ["script", "storyboard", "director", "sample", "final"]);
+  assert.equal("video" in run, false);
+  assert.deepEqual(Object.keys(run.gates), ["script", "director", "sample", "final"]);
   for (const g of Object.values(run.gates)) assert.deepEqual(g, { passed: false, at: null, edits: [] });
 });
 

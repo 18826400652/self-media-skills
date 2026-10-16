@@ -7,10 +7,12 @@ import { episode } from "./helpers.mjs";
 
 const KV = fileURLToPath(new URL("../scripts/kv.mjs", import.meta.url));
 const claim = (id) => ({ id, text: "事实", kind: "fact", confidence: "high", sources: [{ title: "T", url: "https://a.com", type: "official", quote: "原文", accessed: "2026-10-07" }] });
+const VD_OK = { KV_VD_CMD: "true" }; // vd cues --check 通过
+const VD_BAD = { KV_VD_CMD: "false" }; // vd cues --check 不过
 const SCRIPT = "## Line 1 — 钩子 (Frame 1)\n\n**依据:** c01\n\n    它先翻资料再回答。\n";
 
 export { episode };
-const kv = (...args) => spawnSync(process.execPath, [KV, ...args], { encoding: "utf8" });
+const kv = (cmd, target, env = {}) => spawnSync(process.execPath, [KV, ...[cmd, target].filter(Boolean)], { encoding: "utf8", env: { ...process.env, ...env } });
 
 test("kv check：研究和脚本都合格 → 退出码 0", () => {
   const r = kv("check", episode({ "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT }));
@@ -90,7 +92,7 @@ test("kv check / status：claims 写成对象时给中文错误，不报内部�
 
 test("kv status：st new 生成的空模板不算做完（实用技巧仍在实测，概念科普仍要写脚本）", () => {
   const tplScript = "## Line 1 — 钩子 (Frame 1)\n\n**重点词:** \n\n    （一句话抛出冲突）\n";
-  // 实用类走完整一期的 14 步（详见 kv-practical.test.mjs）；这里只确认空模板的实测、脚本不算 ✓
+  // 实用类走完整一期的 15 步（详见 kv-practical.test.mjs）；这里只确认空模板的实测、脚本不算 ✓
   const practical = spawnSync(process.execPath, [KV, "status", episode({ "brief.md": "x", "run.json": { type: "practical" }, "实测记录.md": "- 状态：待实测\n", "抖音/SCRIPT.md": tplScript })], { encoding: "utf8", env: { ...process.env, KV_SC_CMD: "false" } });
   assert.match(practical.stdout, /· +3 实测/);
   assert.match(practical.stdout, /· +7 抖音脚本/);
@@ -100,7 +102,7 @@ test("kv status：st new 生成的空模板不算做完（实用技巧仍在实�
 });
 
 test("kv status 概念科普 director：没有 DIRECTOR.md 时下一步写导演脚本，确认节点列 ②a ②b", () => {
-  const r = kv("status", episode({ "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, "run.json": { type: "concept", video: "director", gates: { script: { passed: true } } } }));
+  const r = kv("status", episode({ "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, "run.json": { type: "concept", gates: { script: { passed: true } } } }));
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /阶段：director/);
   assert.match(r.stdout, /②a 导演脚本 ·/);
@@ -110,29 +112,30 @@ test("kv status 概念科普 director：没有 DIRECTOR.md 时下一步写导演
 
 test("kv status 概念科普 director：qa-douyin.json 比工程里的 HTML 旧（样片时跑的）不算通过", async () => {
   const { utimesSync } = await import("node:fs");
-  const D = "抖音-director";
+  const D = "抖音";
   const dir = episode({
-    "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT,
-    "run.json": { type: "concept", video: "director", gates: { script: { passed: true }, director: { passed: true }, sample: { passed: true } } },
+    "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, "抖音/audio_meta.json": { voices: [] },
+    "run.json": { type: "concept", gates: { script: { passed: true }, director: { passed: true }, sample: { passed: true } } },
     [`${D}/DIRECTOR.md`]: "x", [`${D}/renders/sample.mp4`]: "s", [`${D}/renders/01.mp4`]: "f",
     [`${D}/index.html`]: "<html>", [`${D}/qa-douyin.json`]: { passed: true }, [`${D}/qa-douyin-sample.json`]: { passed: true },
   });
   utimesSync(join(dir, D, "qa-douyin.json"), 1000, 1000);
   utimesSync(join(dir, D, "index.html"), 2000, 2000);
-  const r = kv("status", dir);
+  const r = kv("status", dir, VD_OK);
   assert.match(r.stdout, /下一步：.*vd qa/);
   utimesSync(join(dir, D, "qa-douyin.json"), 3000, 3000);
-  assert.match(kv("status", dir).stdout, /下一步：.*qa\.json/);
-});
-
-test("kv status 概念科普 template：抖音/renders 里只有预览、对比视频不算渲染过", () => {
-  const files = { "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, "抖音/STORYBOARD.md": "x", "抖音/snapshots/sheet.jpg": "x", "抖音/renders/预览-1.mp4": "v", "抖音/renders/compare.mp4": "v", "run.json": { type: "concept", video: "template", gates: { script: { passed: true }, storyboard: { passed: true } } } };
-  assert.match(kv("status", episode(files)).stdout, /阶段：render/);
+  assert.match(kv("status", dir, VD_OK).stdout, /下一步：.*qa\.json/);
 });
 
 test("kv status 概念科普 director：样片要有 vd qa 结果（qa-douyin-sample.json）才请用户看", () => {
-  const D = "抖音-director";
-  const files = { "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, [`${D}/DIRECTOR.md`]: "x", [`${D}/renders/sample.mp4`]: "s", "run.json": { type: "concept", video: "director", gates: { script: { passed: true }, director: { passed: true } } } };
-  assert.match(kv("status", episode(files)).stdout, /下一步：.*样片.*vd qa/);
-  assert.match(kv("status", episode({ ...files, [`${D}/qa-douyin-sample.json`]: { passed: true } })).stdout, /等用户确认：②b 风格样片/);
+  const D = "抖音";
+  const files = { "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, [`${D}/DIRECTOR.md`]: "x", [`${D}/audio_meta.json`]: { voices: [] }, [`${D}/renders/sample.mp4`]: "s", "run.json": { type: "concept", gates: { script: { passed: true }, director: { passed: true } } } };
+  assert.match(kv("status", episode(files), VD_OK).stdout, /下一步：.*样片.*vd qa/);
+  assert.match(kv("status", episode({ ...files, [`${D}/qa-douyin-sample.json`]: { passed: true } }), VD_OK).stdout, /等用户确认：②b 风格样片/);
+});
+
+test("kv status 概念科普：DIRECTOR.md 还是模板（vd cues 不过）→ 阶段还是 director", () => {
+  const dir = episode({ "brief.md": "x", "research.json": { claims: [claim("c01")] }, "抖音/SCRIPT.md": SCRIPT, "抖音/DIRECTOR.md": "模板", "抖音/audio_meta.json": { voices: [] }, "run.json": { type: "concept", gates: { script: { passed: true } } } });
+  const r = kv("status", dir, VD_BAD);
+  assert.match(r.stdout, /阶段：director/);
 });
