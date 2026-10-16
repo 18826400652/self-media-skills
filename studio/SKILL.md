@@ -4,8 +4,8 @@ description: >
   自媒体工具包的总入口：一个选题做成抖音视频 + 小红书视频笔记 + 公众号长文，三个平台存草稿。
   提供 st 命令：st doctor（检查作品项目和工具包）、st new（新建一期）、st init（建新的作品项目）、st install（注册 skill、装依赖）。
   在作品项目里（根目录有 studio.json）做任何事之前先读这一份；用户说「做一期 XX」「新建一期」「检查环境」「初始化项目」时使用。
-  各步骤具体交给 knowledge-video（kv，进度和确认节点）、scenario-content（sc）、content-repurpose、narrated-video（nv）、
-  video-director（vd）、wechat-article（wa）、image-cards（ic）、browser-draft（bd）、phone-draft（pd）。
+  各步骤具体交给 knowledge-video（kv，进度和确认节点）、scenario-content（sc）、content-repurpose、voiceover（vo）、
+  video-director（vd）、video-draft（vdraft）、wechat-article（wa）、image-cards（ic）、browser-draft（bd）、phone-draft（pd）。
 ---
 
 # studio：工具包总入口
@@ -27,7 +27,7 @@ skill 里不写死任何作品目录名：目录约定读 `studio.json`，其余
 
 ```bash
 cd <工具包>/studio && bin/st install --deps   # 注册 skill、命令放进 ~/.local/bin、装 Node / Python 依赖
-cd <工具包>/narrated-video && npx hyperframes skills update faceless-explainer hyperframes-audio   # HyperFrames 官方 skill，渲染、配乐要用
+cd <工具包>/video-director && npx hyperframes skills update hyperframes-audio   # HyperFrames 官方 skill，配乐要用
 st init ~/my-media --account 账号名 --audience "目标观众"   # 没有作品项目时：建一个
 cd <作品项目> && st doctor                     # 逐项打勾，按提示补齐；--online 再查浏览器
 ```
@@ -35,12 +35,12 @@ cd <作品项目> && st doctor                     # 逐项打勾，按提示补
 ## 做一期内容
 
 1. **先读**项目的 `CLAUDE.md`、`00-规划/本项目设置.md`（如果有）、`00-规划/语气指南.md`、`00-规划/经验库/规律.md`
-2. `st new <系列> <简称>`（导演做法加 `--video director`）
+2. `st new <系列> <简称>`（会用 `vd init 抖音` 建好抖音的导演工程）
 3. **每一步开始前先跑 `kv status <作品目录>`，只做它说的那一步**
 4. 确认节点：用户明确说通过后才 `kv gate <作品> <节点> "用户原话"`；提修改意见用 `--edit`
-5. 三个草稿（`wa draft`、`nv draft --to xiaohongshu`、`nv draft`）成功后 `kv done <作品> wechat|xiaohongshu|douyin`
+5. 三个草稿（`wa draft`、`vdraft --to xiaohongshu`、`vdraft`）成功后 `kv done <作品> wechat|xiaohongshu|douyin`
 
-完整流程（14 / 15 步，每步调哪个 skill、哪条命令、kv 怎么判定）：**`references/workflow.md`**。
+完整流程（15 步、5 个确认节点，每步调哪个 skill、哪条命令、kv 怎么判定）：**`references/workflow.md`**。
 
 铁律：**实测绝不编造；只存草稿，永远不点发布；登录、扫码、验证由用户做。**
 
@@ -49,7 +49,7 @@ cd <作品项目> && st doctor                     # 逐项打勾，按提示补
 | 命令 | 用途 |
 |---|---|
 | `st doctor [--online]` | 检查作品项目和工具包，✗ 要修、⚠ 提醒；有 ✗ 退出码 1 |
-| `st new <系列> <简称> [--编号 N] [--video director\|template]` | 新建一期；`st new 单篇 <简称> [--栏目 名称] [--日期 YYYY-MM-DD]`；`--只建抖音` 给已有作品补建抖音工程 |
+| `st new <系列> <简称> [--编号 N]` | 新建一期；`st new 单篇 <简称> [--栏目 名称] [--日期 YYYY-MM-DD]`；`--只建抖音` 给已有作品补建抖音工程 |
 | `st init <目录> [--account …] [--audience …]` | 建新的作品项目；已有的文件不覆盖 |
 | `st install [--deps]` | 软链 skill 和命令到这个工具包；同名的真实目录不动 |
 | `st version` | 工具包版本（项目 `studio.json` 的 `toolkit` 可以写 `">=1.0.0"`） |
@@ -70,7 +70,7 @@ cd <作品项目> && st doctor                     # 逐项打勾，按提示补
 ```
 
 - `registry` 系列登记表：`{"系列名": {"label": "显示名", "unit": "期", "type": "practical|concept", "paused": "暂停原因"}}`
-- `brand` 目录里 `st new` 要用 `frame.md`、`caption-skin.html`；`brand-*.html` 只能用 `var(--vd-*)` 字体变量（`st doctor` 会查）
+- `brand` 目录放账号固定元素 `brand-captions.html`、`brand-ending.html`、`brand-kicker.html`（video-director 用）；`brand-*.html` 只能用 `var(--vd-*)` 字体变量（`st doctor` 会查）
 
 ## 模板
 

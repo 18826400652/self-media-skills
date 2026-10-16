@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
-import { candidatesText, installAll, main } from "../scripts/vd.mjs";
+import { candidatesText, installAll, main, runHyperframes } from "../scripts/vd.mjs";
 import { project } from "./helpers.mjs";
 
 test("vd cues：DIRECTOR.md 有错时全部列出并返回 1，不写 cues.js", async () => {
@@ -17,8 +20,34 @@ test("vd cues：DIRECTOR.md 有错时全部列出并返回 1，不写 cues.js", 
   assert.match(errs.join("\n"), /缺少章节「## 1. 视觉方案」/);
 });
 
-test("vd：未知子命令打印用法并返回 2", async () => {
-  assert.equal(await main(["nope", "x"]), 2);
+test("vd：没有子命令打印用法并返回 2", async () => {
+  assert.equal(await main([]), 2);
+});
+
+test("main：不认识的子命令原样透传给 hyperframes，返回它的退出码", async () => {
+  const seen = [];
+  const code = await main(["lint", "抖音", "--json"], { passthrough: (args) => (seen.push(args), 7) });
+  assert.equal(code, 7);
+  assert.deepEqual(seen, [["lint", "抖音", "--json"]]);
+});
+
+test("main：init 建工程；目录不空时退出码 1", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "vd-main-"));
+  writeFileSync(join(dir, "x"), "");
+  assert.equal(await main(["init", dir]), 1);
+});
+
+test("vd build：工程里没有 caption_groups.json → 报错，提示先跑 vo", async () => {
+  const dir = project({ "video-director.config.json": { brandDir: "b", sfxDir: "s" }, "抖音/DIRECTOR.md": "x", "抖音/audio_meta.json": { voices: [] } });
+  const err = [];
+  const orig = console.error;
+  console.error = (m) => err.push(m);
+  try {
+    assert.equal(await main(["build", join(dir, "抖音")]), 1);
+  } finally {
+    console.error = orig;
+  }
+  assert.match(err.join("\n"), /没有 caption_groups\.json.*先跑 vo/);
 });
 
 test("installAll：没有组件段时不联网、不建锁文件", () => {
@@ -117,4 +146,16 @@ test("installAll：dy-rec-phone 的录屏比段短 → 打 ⚠，不中断构建
   try { installAll(project({}), { segments: segs }, {}, deps); } finally { console.warn = orig; }
   assert.equal(warns.length, 1);
   assert.match(warns[0], /⚠ seg-03/);
+});
+
+test("透传：hyperframes 没装时打印安装提示并返回 1，不是静默退出", async () => {
+  const errs = [];
+  const orig = console.error;
+  console.error = (m) => errs.push(m);
+  try {
+    const missing = () => { throw new Error("video-director 还没装 hyperframes：cd /x && npm ci（或 st install --deps）"); };
+    const code = await main(["lint", "抖音"], { passthrough: (args) => runHyperframes(args, { requireBin: missing }) });
+    assert.equal(code, 1);
+  } finally { console.error = orig; }
+  assert.match(errs.join("\n"), /还没装 hyperframes.*npm ci/);
 });

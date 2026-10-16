@@ -1,4 +1,4 @@
-// st new：按系列类型放模板。在临时项目里跑，nv、kv 用假命令代替（不真的初始化 HyperFrames 工程）。
+// st new：按系列类型放模板。在临时项目里跑，vd、kv 用假命令代替（不真的初始化 HyperFrames 工程）。
 // 运行：node --test tests/
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -24,14 +24,12 @@ function sandbox(studio = {}) {
   const root = mkdtempSync(join(tmpdir(), "st-new-"));
   write(root, "studio.json", { account: "测试账号", audience: "测试观众", ...studio });
   write(root, "00-规划/系列/系列.json", REGISTRY);
-  write(root, "06-品牌资产/hyperframes/frame.md", "# frame");
-  write(root, "06-品牌资产/hyperframes/caption-skin.html", "<style></style>");
-  // 假 nv：init 只建目录，hf-kit 什么都不做；假 kv：记下参数
+  // 假 vd：init 建目录并放 DIRECTOR.md（真的 vd init 会放模板），记下参数；假 kv：记下参数
   const bin = join(root, "bin");
   mkdirSync(bin);
-  writeFileSync(join(bin, "nv"), '#!/usr/bin/env bash\n[[ "$1" == init ]] && mkdir -p "$2"\nexit 0\n');
+  writeFileSync(join(bin, "vd"), `#!/usr/bin/env bash\nif [[ "$1" == init ]]; then mkdir -p "$2" && echo 模板 > "$2/DIRECTOR.md"; fi\necho "$@" >> "${join(root, "vd.log")}"\n`);
   writeFileSync(join(bin, "kv"), `#!/usr/bin/env bash\necho "$@" >> "${join(root, "kv.log")}"\n`);
-  for (const f of ["nv", "kv"]) chmodSync(join(bin, f), 0o755);
+  for (const f of ["vd", "kv"]) chmodSync(join(bin, f), 0o755);
   return { root, env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } };
 }
 
@@ -42,9 +40,12 @@ test("实用技巧系列（没写 type）放场景卡、实测记录、母稿、
   const r = run(sb, "普通人的AI课", "周报");
   assert.equal(r.status, 0, r.stderr);
   const ep = join(sb.root, "04-作品/普通人的AI课/01-周报");
-  for (const f of ["场景卡.md", "实测记录.md", "实测", "母稿.md", "费曼检查.md", "发布记录.md", "公众号/文章.md", "公众号/封面/封面.md", "小红书/文案.md", "抖音/SCRIPT.md", "抖音/发布文案.md", "抖音/frame.md", "抖音/.hyperframes/caption-skin.html"]) {
+  for (const f of ["场景卡.md", "实测记录.md", "实测", "母稿.md", "费曼检查.md", "发布记录.md", "公众号/文章.md", "公众号/封面/封面.md", "小红书/文案.md", "抖音/SCRIPT.md", "抖音/发布文案.md"]) {
     assert.ok(existsSync(join(ep, f)), `缺 ${f}`);
   }
+  assert.equal(readFileSync(join(sb.root, "vd.log"), "utf8").trim(), `init ${join(ep, "抖音")}`);
+  for (const f of ["抖音/SCRIPT.md", "抖音/封面.md", "抖音/发布文案.md", "抖音/DIRECTOR.md"]) assert.ok(existsSync(join(ep, f)), f);
+  for (const f of ["抖音/STORYBOARD.md", "抖音/BRIEF.md", "抖音/frame.md", "抖音/.hyperframes/caption-skin.html"]) assert.equal(existsSync(join(ep, f)), false, f);
   assert.ok(!existsSync(join(ep, "小红书/卡片.md")), "小红书发视频，不该再放卡片");
   assert.match(readFileSync(join(ep, "抖音/SCRIPT.md"), "utf8"), /实测记录\.md/);
   assert.equal(readFileSync(join(sb.root, "kv.log"), "utf8").trim(), `init ${ep} --fresh`);
@@ -57,10 +58,9 @@ test("账号、观众、账号定位从 studio.json 填进模板；角标带系�
   const ep = join(sb.root, "04-作品/普通人的AI课/03-周报");
   assert.match(readFileSync(join(ep, "公众号/文章.md"), "utf8"), /author: 测试账号/);
   assert.match(readFileSync(join(ep, "母稿.md"), "utf8"), /测试观众（见 00-规划\/账号定位\.md）/);
-  assert.match(readFileSync(join(ep, "抖音/STORYBOARD.md"), "utf8"), /关注「测试账号」/);
   assert.match(readFileSync(join(ep, "抖音/SCRIPT.md"), "utf8"), /普通人的 AI 课 · 第 3 课/);
   assert.match(readFileSync(join(ep, "选题关.md"), "utf8"), /`00-规划\/系列\/普通人的AI课\.md` 里写的/);
-  for (const f of ["母稿.md", "选题关.md", "公众号/文章.md", "抖音/SCRIPT.md", "抖音/STORYBOARD.md"]) {
+  for (const f of ["母稿.md", "选题关.md", "公众号/文章.md", "抖音/SCRIPT.md"]) {
     assert.doesNotMatch(readFileSync(join(ep, f), "utf8"), /\{\{(账号|观众|账号定位|系列说明|标题|角标|系列|编号)\}\}/, f);
   }
 });
@@ -81,14 +81,14 @@ test("系列说明不存在时用模板建一份并提醒去填；已有的不�
   assert.doesNotMatch(r2.stdout, /系列说明/);
 });
 
-test("编号自动递增；--video director 传给 kv init", () => {
+test("编号自动递增；kv init 只带 --fresh", () => {
   const sb = sandbox();
-  mkdirSync(join(sb.root, "04-作品/普通人的AI课/07-旧的"), { recursive: true });
-  const r = run(sb, "普通人的AI课", "新的", "--video", "director");
+  run(sb, "普通人的AI课", "旧的");
+  const r = run(sb, "普通人的AI课", "新的");
   assert.equal(r.status, 0, r.stderr);
-  const ep = join(sb.root, "04-作品/普通人的AI课/08-新的");
+  const ep = join(sb.root, "04-作品/普通人的AI课/02-新的");
   assert.ok(existsSync(ep));
-  assert.equal(readFileSync(join(sb.root, "kv.log"), "utf8").trim(), `init ${ep} --fresh --video director`);
+  assert.equal(readFileSync(join(sb.root, "kv.log"), "utf8").trim().split("\n").pop(), `init ${ep} --fresh`);
 });
 
 test("项目 05-模板 里有同名模板就用项目的，其余用默认的", () => {
@@ -166,12 +166,12 @@ test("暂停的系列不能新建一期", () => {
   assert.match(r.stderr, /已暂停/);
 });
 
-test("没登记的系列、简称带 /、编号不是数字、--video 写错，都报错", () => {
+test("没登记的系列、简称带 /、编号不是数字、用已删除的 --video，都报错", () => {
   const sb = sandbox();
   assert.match(run(sb, "没这个", "X").stderr, /未登记.*普通人的AI课/);
   assert.match(run(sb, "普通人的AI课", "a/b").stderr, /不能有 \//);
   assert.match(run(sb, "普通人的AI课", "X", "--编号", "abc").stderr, /编号应为数字/);
-  assert.match(run(sb, "普通人的AI课", "X", "--video", "fancy").stderr, /--video/);
+  assert.match(run(sb, "普通人的AI课", "X", "--video", "director").stderr, /未知参数：--video/);
 });
 
 test("不在作品项目里时提示先 st init", () => {

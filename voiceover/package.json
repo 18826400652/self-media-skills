@@ -1,0 +1,8 @@
+{
+  "name": "voiceover",
+  "private": true,
+  "type": "module",
+  "description": "口播稿配音：SCRIPT.md + VOICE.md → 每帧配音、逐字时间、字幕分组",
+  "bin": { "vo": "bin/vo" },
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}

@@ -1,5 +1,5 @@
-/* 品牌主题「荧光笔学习笔记」：视频（narrated-video）和图文卡片（image-cards）共用。规范说明见 视觉规范.md。
-   变量约定见 skills/narrated-video/templates/base/theme.css。 */
+/* 品牌主题「荧光笔学习笔记」：图文卡片（image-cards）用。规范说明见 视觉规范.md。
+   变量约定见 skills/image-cards/themes/default.css。 */
 
 :root {
   --bg: #101114; /* 墨黑 */

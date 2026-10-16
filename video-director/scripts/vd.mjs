@@ -1,14 +1,18 @@
 #!/usr/bin/env node
-// 用法：vd build|cues|check|qa <视频工程目录>
+// 用法：vd init|cues|build|check|qa|render|verify <视频工程目录>；其他子命令透传给 hyperframes
+//   init   建空的导演工程（hyperframes blank + vd 模板）；目录不为空时拒绝
+//   render 渲染到 <工程>/renders/（--sample 出 sample.mp4），完成后自动 verify
+//   verify <成片.mp4> [--project <工程>]：帧数、时长、声音、尺寸、黑屏
 //   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）；--check 只校验不写文件
 //   build  cues → 音轨 → dykit 组件 → index.html 标记块 → 配乐对位与避让 → hyperframes check
 //          [--sample] [--no-music] [--update-components]（组件库换成 GitHub 上的最新提交）
 //   check  校验 DIRECTOR.md + 列出组件候选 + hyperframes check
 //   qa     抖音专用检查：@词 落定时刻查安全区、字幕带、栏目标签、@词元素可见，2 秒不动；写 qa-douyin.json（样片 qa-douyin-sample.json）和 snapshots/cues-sheet.jpg
+import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
 import { REPO, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, recordingProblem, writeLock } from "./lib/components.mjs";
 import { buildAudio } from "./lib/audio.mjs";
@@ -17,11 +21,12 @@ import { buildCues } from "./lib/cues.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
-import { hfBin } from "./lib/hyperframes.mjs";
+import { hfBin, requireHf } from "./lib/hyperframes.mjs";
+import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
-import { staleCopies } from "./lib/stale.mjs";
 
-const USAGE = "用法：vd build|cues|check|qa <视频工程目录> [--sample] [--no-music] [--update-components] [--check]";
+const USAGE = "用法：vd init|cues|build|check|qa|render|verify <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
+const SCRIPTS = fileURLToPath(new URL(".", import.meta.url));
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
 /** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
@@ -56,9 +61,7 @@ export function candidatesText(c) {
   return `◇ 组件候选 ${c.length} 个（交成片时请用户决定要不要提交到 hyperframes）：\n${c.map((x) => `  - ${x.name}：${x.scene}（来自 ${x.from}）`).join("\n")}`;
 }
 function load(dir) {
-  for (const f of ["DIRECTOR.md", "audio_meta.json"]) if (!existsSync(join(dir, f))) throw new Error(`${dir} 里没有 ${f}`);
-  const stale = staleCopies(dir);
-  if (stale.length) console.warn(`⚠ ../抖音/ 里重新配过音，这里的 ${stale.join("、")} 还是旧的：把 audio_meta.json、caption_groups.json、assets/voice/ 重新复制过来再 vd build`);
+  for (const f of ["DIRECTOR.md", "audio_meta.json"]) if (!existsSync(join(dir, f))) throw new Error(`${dir} 里没有 ${f}${f === "audio_meta.json" ? `：先跑 vo ${dir}` : ""}`);
   const meta = JSON.parse(readFileSync(join(dir, "audio_meta.json"), "utf8"));
   const parsed = parseDirector(readFileSync(join(dir, "DIRECTOR.md"), "utf8"));
   const errors = validateDirector(parsed, meta.voices.length);
@@ -69,6 +72,16 @@ function load(dir) {
 }
 
 const COMMANDS = {
+  init(dir) {
+    initProject(dir, { runHf: (args) => spawnSync(requireHf(), args, { stdio: ["ignore", "inherit", "pipe"], encoding: "utf8", env: { ...process.env, HYPERFRAMES_SKIP_SKILLS: "1" } }) });
+    console.log(`✓ 导演工程：${dir}（写 SCRIPT.md、VOICE.md → vo 配音 → 写 DIRECTOR.md）`);
+  },
+  render(dir, rest = []) {
+    return spawnSync(process.execPath, [join(SCRIPTS, "render.mjs"), dir, ...rest], { stdio: "inherit" }).status ?? 1;
+  },
+  verify(file, rest = []) {
+    return spawnSync(process.execPath, [join(SCRIPTS, "verify.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;
+  },
   cues(dir, rest = []) {
     const { built } = load(dir);
     if (rest.includes("--check")) {
@@ -80,6 +93,7 @@ const COMMANDS = {
     console.log(`✓ cues.js（${Object.keys(built.cues).length} 个词，${built.segments.length} 段，口播 ${built.total}s）`);
   },
   build(dir, rest = []) {
+    if (!existsSync(join(dir, "caption_groups.json"))) throw new Error(`${dir} 里没有 caption_groups.json：先跑 vo ${dir}（配音时一起生成）`);
     const config = loadConfig(findProjectRoot(dir));
     const { built } = load(dir);
     const vd = built.vd;
@@ -139,9 +153,16 @@ const COMMANDS = {
   },
 };
 
-export async function main(argv) {
+export function runHyperframes(args, { requireBin = requireHf } = {}) {
+  try { return spawnSync(requireBin(), args, { stdio: "inherit" }).status ?? 1; }
+  catch (err) { console.error(`✗ ${err.message}`); return 1; }
+}
+
+export async function main(argv, { passthrough = runHyperframes } = {}) {
   const [cmd, dir, ...rest] = argv;
-  if (!COMMANDS[cmd] || !dir) { console.error(USAGE); return 2; }
+  if (!cmd || cmd === "help" || cmd === "--help" || cmd === "-h") { console.error(USAGE); return 2; }
+  if (!COMMANDS[cmd]) return passthrough(argv);
+  if (!dir) { console.error(USAGE); return 2; }
   try { return (await COMMANDS[cmd](resolve(dir), rest)) ?? 0; }
   catch (err) { console.error(`✗ ${err.message}`); return 1; }
 }

@@ -2,7 +2,8 @@
 name: scenario-content
 description: >
   从真实场景出发写实用类内容（教程、技巧、经验分享）的生产流程：选题 → 场景卡 → 选题关（有没有人想看，对标）→ 真实实测 → 母稿 → 费曼检查（讲没讲明白）→ 自检，
-  并提供 sc check 命令（检查场景卡、选题关、实测、AI 腔用语、各平台标题和口播长度）和 sc bench 命令（在已登录的浏览器里抓抖音、小红书对标内容的标题和点赞）。
+  并提供 sc check 命令（检查场景卡、选题关、实测、AI 腔用语、各平台标题和口播长度）、sc bench 命令（在已登录的浏览器里抓抖音、小红书对标内容的标题和点赞）、
+  sc rec / sc rec-flow 命令（实测录屏：手机或浏览器里的 AI 对话、电脑上的网页操作）。
   当用户要写一期内容、写母稿、从选题开始做内容、检查内容质量，或项目里有 scenario-content.config.json 时使用。
   改编成各平台版本时接着用 content-repurpose。
 ---
@@ -50,9 +51,11 @@ AI 先写好要用的提问。然后在真实的 AI 产品里运行（人来操�
 - **翻车的地方**：答错、数错、答非所问、需要追问。这是最有说服力的素材
 - 用时（「不到 1 分钟」要是真的）
 
-**要做视频时，实测同时录屏**（有视频模块 narrated-video 时用 `nv rec`）：
+**要做视频时，实测同时录屏**（用 `sc rec`）：
 - 录之前确认：已登录、新对话、模型开关（深度思考、联网搜索等）和实测记录写的一致、侧边栏收起；改过的开关录完恢复成用户原来的设置
-- `nv rec 实测/录屏-第N轮.mp4 --prompt 提问.txt --app deepseek`（或 `doubao`）：在真手机的 AI App 里自动打字、发送，回答结束自动停；同时输出用时（`.json`）和界面文字（`.txt`），用时和原文直接写进实测记录。DeepSeek 默认关深度思考 / 智能搜索（要开加 `--think` / `--search`），录完自动恢复原来的开关；手机要解锁、开勿扰。没有手机时用 `--url <AI 网址>` 走浏览器
+- `sc rec 实测/录屏-第N轮.mp4 --prompt 提问.txt --app deepseek`（或 `doubao`）：在真手机的 AI App 里自动打字、发送，回答结束自动停；同时输出用时（`.json`）和界面文字（`.txt`），用时和原文直接写进实测记录。DeepSeek 默认关深度思考 / 智能搜索（要开加 `--think` / `--search`），录完自动恢复原来的开关；手机要解锁、开勿扰。没有手机时用 `--url <AI 网址>` 走浏览器
+- 录电脑上的网页操作（软件演示、多步表单，`sc rec` 只能录 AI 对话）：`sc rec-flow 实测/操作.mp4 --steps 步骤.py --url <网址> [--size 1280x720] [--fps 15] [--timeout 分钟] [--downloads 目录]`，步骤脚本是 Python，在浏览器里真实执行（可用的函数见 `scripts/rec/flow.py` 开头）；输出 `.mp4`、`.json`（每个 mark 的秒数、操作日志）、`.txt`
+- 浏览器录屏连接：环境变量 `BU_CDP_WS`，或配置 `rec.cdpPort`（推荐：自动化专用浏览器用 `--remote-debugging-port` 启动，不弹「允许」）/ `rec.devtoolsActivePort`；手机录屏调用 phone-draft 的 `pd rec`
 - **同一个提问至少跑两轮**：两次结果不同（一次错一次对、分类不一样）本身就是最好的内容素材
 - 每一轮都写进实测记录（条件、用时、文件、结果要点），视频里用到哪一轮的截图就注明是第几次
 
@@ -112,6 +115,7 @@ sc check <作品目录>
 - `topicGate`：选题关文件名，默认 `选题关.md`；设为 `null` 关闭这一关。`minBenchmarks`：对标至少几条，默认 5
 - `benchCdpPort`：`sc bench` 连接的浏览器远程调试端口，默认 9333。浏览器要先登录抖音、小红书（小红书不登录看不到搜索结果）。依赖 `browser-harness` 命令
 - `feynmanCheck`：费曼检查文件名，默认 `费曼检查.md`；设为 `null` 关闭这一关
+- `rec`：`sc rec` / `sc rec-flow` 的配置，从 `scenario-content.config.json` 往上找：`cdpPort`、`devtoolsActivePort`（浏览器连接）、`hide`（录屏时隐藏的页面元素选择器，如沉浸式翻译的弹窗）、`theme`（`sc rec` 的页面主题，如 `dark`）、`flowTheme`（`sc rec-flow` 的页面主题）
 - `platformFiles`：各平台文件相对作品目录的路径，用于长度检查；不存在的文件会跳过。抖音口播支持两种写法：分镜表（含「口播」「情感」列）和 HyperFrames 的 SCRIPT.md（`## … (Frame N)` + 缩进口播 + `**Emotion:**`）。
 
 ## 文件

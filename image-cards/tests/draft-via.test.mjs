@@ -42,11 +42,11 @@ test("--via browser 调用 bd run draft_xiaohongshu.py", () => {
   assert.match(calls(dir), /^bd run .*draft_xiaohongshu\.py /);
 });
 
-test("--via phone 报错，指向 nv draft --to xiaohongshu（小红书手机端发视频）", () => {
+test("--via phone 报错，指向 vdraft --to xiaohongshu（小红书手机端发视频）", () => {
   const { dir, env } = setup();
   const r = run([join(dir, "文案.md"), "--via", "phone"], env);
   assert.equal(r.status, 1);
-  assert.match(r.stderr, /nv draft .*--to xiaohongshu/);
+  assert.match(r.stderr, /vdraft .*--to xiaohongshu/);
   assert.equal(calls(dir), "");
 });
 

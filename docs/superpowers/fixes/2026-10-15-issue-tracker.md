@@ -84,3 +84,7 @@
 - 清理：组件库临时工作目录 ~/hyperframes-cues、~/hyperframes-base 和已合并的本地分支已删；vd 组件缓存里手动解包的 23c9649、6ed2f81 已删
 - 组件库已合并，已有作品项目要跑一次 `vd build . --update-components` 才换成新版组件
 
+## 视频流水线重组（2026-10-16）
+
+- 视频流水线重组验收（分支 refactor/video-pipeline，flow-check 里跑了一遍，没动 self-media）：配置迁移、`st new`、`vo` 付费配音一次（49 组字幕）、`vd build/qa/render`（样片 + 整片，`--no-music`，`vd verify` 全通过）、`vdraft` / `sc rec` 参数检查都通过，没存真实草稿。要说明的：① 字幕检查是对本次 audio_meta 的自检，没有和 02 比；② `st install` 完成，但 `st doctor` 还有 1 个 ✗，原因是 worktree 里没有 phone-draft/.venv（环境问题）；③ nv / narrated-video 链接仍指向主仓库的 narrated-video，合并前是对的，合并后要在主仓库再跑一次 `st install`；④ 第 6 步构建要从 02 补拷两个 PNG 素材（计划的缺口）；⑤ `kv` 逐阶段「下一步」没有端到端核对，因为 03 里没有内容文件；⑥ 样片构建有 `clip_ends_past_root_duration` 警告，指向 host-seg-02-prep（9.02–26.14 s，根时长 25.42 s）；整片构建有 1 条 lint 警告，没记下是哪一条
+

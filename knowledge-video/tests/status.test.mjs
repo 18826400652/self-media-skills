@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { detectStatus } from "../scripts/lib/status.mjs";
 
-const base = { type: "concept", hasBrief: true, hasEvidence: true, hasScript: true, checkOk: true, hasStoryboard: true, hasSheet: true, hasRender: true, qa: { passed: true }, gates: { script: true, storyboard: true, final: true } };
+const base = { type: "concept", hasBrief: true, hasEvidence: true, hasScript: true, checkOk: true, hasDirector: true, hasSample: true, sampleQa: { passed: true }, hasRender: true, vdQa: { passed: true }, qa: { passed: true }, gates: { script: true, director: true, sample: true, final: true } };
 const at = (o) => detectStatus({ ...base, ...o, gates: { ...base.gates, ...(o.gates ?? {}) } });
 
 test("按顺序找到第一个没完成的阶段", () => {
@@ -18,9 +18,7 @@ test("脚本写好：kv check 不过先修；过了等确认节点 ①", () => {
   assert.deepEqual(at({ gates: { script: false } }), { stage: "script", next: "kv brief 生成研究简报，请用户确认研究简报和脚本（确认节点 ①）", waitingFor: "script" });
 });
 
-test("分镜、渲染、QA、成片确认", () => {
-  assert.equal(at({ hasStoryboard: false, hasSheet: false, gates: { storyboard: false } }).stage, "storyboard");
-  assert.equal(at({ gates: { storyboard: false } }).waitingFor, "storyboard");
+test("渲染、QA、成片确认", () => {
   assert.equal(at({ hasRender: false }).stage, "render");
   assert.equal(at({ qa: null }).stage, "review");
   assert.match(at({ qa: { passed: false } }).next, /qa\.json 有未修的问题/);
@@ -40,19 +38,20 @@ test("空模板不算完成：实测记录要「已实测」，SCRIPT 不能还�
   assert.equal(isScriptFilled("## Line 1 — 钩子 (Frame 1)\n\n    它先翻资料再回答。\n"), true);
 });
 
-test("director 做法：脚本确认后 → 导演脚本 → 等 ②a → 样片 → 等 ②b → 渲染 → vd qa → qa → ③", () => {
-  const d = (o) => at({ video: "director", hasDirector: true, hasSample: true, sampleQa: { passed: true }, vdQa: { passed: true }, ...o, gates: { director: true, sample: true, ...(o.gates ?? {}) } });
+test("脚本确认后 → 导演脚本 → 等 ②a → 样片 → 等 ②b → 渲染 → vd qa → qa → ③", () => {
+  const d = (o) => at(o);
   assert.equal(d({ hasDirector: false }).stage, "director");
-  assert.match(d({ hasDirector: false }).next, /DIRECTOR\.md/);
+  assert.match(d({ hasDirector: false }).next, /^vo 抖音 配音 → 写 抖音\/DIRECTOR\.md（vd cues 抖音 --check 通过）/);
   assert.equal(d({ gates: { director: false } }).waitingFor, "director");
   assert.equal(d({ hasSample: false }).stage, "sample");
-  assert.match(d({ hasSample: false }).next, /vd build .*--sample/);
+  assert.match(d({ hasSample: false }).next, /vd build 抖音 --sample/);
   assert.match(d({ sampleQa: null, gates: { sample: false } }).next, /样片.*vd qa/);
   assert.equal(d({ sampleQa: null, gates: { sample: false } }).waitingFor, null);
   assert.equal(d({ gates: { sample: false } }).waitingFor, "sample");
   assert.equal(d({ hasRender: false }).stage, "render");
+  assert.match(d({ hasRender: false }).next, /vd render 抖音/);
   assert.match(d({ vdQa: null }).next, /vd qa/);
   assert.match(d({ vdQa: { passed: false } }).next, /vd qa/);
   assert.equal(d({}).stage, "done");
-  assert.equal(at({ hasStoryboard: false, hasSheet: false, gates: { storyboard: false } }).stage, "storyboard", "没有 video 字段照旧");
+  assert.doesNotMatch(JSON.stringify([d({ hasDirector: false }), d({ hasSample: false }), d({ hasRender: false })]), /nv |抖音-director/);
 });

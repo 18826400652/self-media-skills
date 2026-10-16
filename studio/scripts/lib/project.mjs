@@ -61,5 +61,5 @@ export function satisfies(version, want) {
   return true;
 }
 
-/** narrated-video 的 Python 依赖（见它的 references/setup.md） */
-export const NV_PY = ["dashscope", "edge-tts", "kokoro-onnx", "soundfile", "fonttools", "brotli", "pillow"];
+/** voiceover 的 Python 依赖（只有 tts.provider 用 cosyvoice 时要，见 voiceover/references/setup.md） */
+export const VO_PY = ["dashscope"];

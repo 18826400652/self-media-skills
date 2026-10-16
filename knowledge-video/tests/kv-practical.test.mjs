@@ -11,8 +11,8 @@ const KV = fileURLToPath(new URL("../scripts/kv.mjs", import.meta.url));
 const bin = mkdtempSync(join(tmpdir(), "kvbin-"));
 const fake = (name, body) => { const p = join(bin, name); writeFileSync(p, `#!/bin/sh\n${body}\n`); chmodSync(p, 0o755); return p; };
 const SC_OK = fake("sc-ok", `echo '{"items":[]}'`);
-const NV_OK = fake("nv-ok", "exit 0");
-const kv = (env, ...args) => spawnSync(process.execPath, [KV, ...args], { encoding: "utf8", env: { ...process.env, KV_SC_CMD: SC_OK, KV_NV_CMD: NV_OK, ...env } });
+const VO_OK = fake("vo-ok", "exit 0");
+const kv = (env, ...args) => spawnSync(process.execPath, [KV, ...args], { encoding: "utf8", env: { ...process.env, KV_SC_CMD: SC_OK, KV_VO_CMD: VO_OK, ...env } });
 const readRun = (dir) => JSON.parse(readFileSync(join(dir, "run.json"), "utf8"));
 const practical = (files = {}) => episode({ "场景卡.md": "x", "选题关.md": "- 用户确认：（）\n", "实测/r.mp4": "x", ...files });
 
@@ -116,16 +116,15 @@ test("已通过的节点再提修改意见 → 变回没通过", () => {
 
 const VD_OK = fake("vd-ok", "exit 0");
 
-test("kv init --video director：写进 run.json；参数打错报错", () => {
+test("kv init：run.json 里没有 video 字段，也没有 storyboard 节点", () => {
   const dir = practical();
-  assert.equal(kv({}, "init", dir, "--video", "director").status, 0);
-  assert.equal(readRun(dir).video, "director");
-  const bad = kv({}, "init", practical(), "--video", "fancy");
-  assert.equal(bad.status, 1);
-  assert.match(bad.stderr, /--video 只能是 director 或 template/);
+  assert.equal(kv({}, "init", dir).status, 0);
+  const run = readRun(dir);
+  assert.equal("video" in run, false);
+  assert.deepEqual(Object.keys(run.gates), ["topic", "script", "director", "sample", "final"]);
 });
 
-test("老 run.json 改成 director：status 显示 15 步；kv gate director 前面没做完时拒绝，不报没有这个节点", () => {
+test("老 run.json（带 video: director）：status 显示 15 步；kv gate director 前面没做完时拒绝，不报没有这个节点", () => {
   const dir = practical();
   writeFileSync(join(dir, "run.json"), JSON.stringify({ type: "practical", video: "director", gates: { topic: { passed: false } }, done: {}, templates: {} }));
   const s = kv({ KV_VD_CMD: VD_OK }, "status", dir);

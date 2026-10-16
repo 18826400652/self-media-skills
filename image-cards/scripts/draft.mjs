@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ic draft <文案.md> [--images 目录]：把卡片图片 + 文案存进小红书草稿箱（用 browser-draft 的 bd 操作已登录的浏览器）。
-// 小红书手机端发视频，用 nv draft <成片.mp4> --copy <文案.md> --to xiaohongshu。
+// 小红书手机端发视频，用 vdraft <成片.mp4> --copy <文案.md> --to xiaohongshu。
 // 文案格式由 browser-draft 的 read_copy 解析：「## 标题」「## 正文」「## 话题」三段。
 // 图片默认取文案同目录 out/ 下按文件名排序的 PNG / JPG / WebP（ic render 的输出）。
 import { execFileSync } from "node:child_process";
@@ -16,7 +16,7 @@ const VIA = { phone: "pd", browser: "bd" };
 const VIA_SKILL = { phone: "phone-draft", browser: "browser-draft" };
 const EXIT_NO_DEVICE = 3;
 
-/** 从参数里取出 --via phone|browser（默认 browser：小红书手机端发的是视频，见 nv draft --to xiaohongshu），返回 [via, 其余参数] */
+/** 从参数里取出 --via phone|browser（默认 browser：小红书手机端发的是视频，见 vdraft --to xiaohongshu），返回 [via, 其余参数] */
 function takeVia(argv) {
   const i = argv.indexOf("--via");
   if (i < 0) return ["browser", argv];
@@ -45,7 +45,7 @@ function parseArgs(argv) {
 
 function main() {
   const [via, rest] = takeVia(process.argv.slice(2));
-  if (via === "phone") throw new Error("小红书手机端改发视频：用 nv draft <成片.mp4> --copy <文案.md> --to xiaohongshu；图文笔记用浏览器（--via browser，默认）");
+  if (via === "phone") throw new Error("小红书手机端改发视频：用 vdraft <成片.mp4> --copy <文案.md> --to xiaohongshu；图文笔记用浏览器（--via browser，默认）");
   const opts = parseArgs(rest);
   if (!opts.file || !existsSync(opts.file)) throw new Error("用法：ic draft <文案.md> [--images 目录] [--via phone|browser]");
 

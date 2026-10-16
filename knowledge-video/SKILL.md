@@ -1,16 +1,16 @@
 ---
 name: knowledge-video
 description: >
-  AI 知识短视频的生产流程（导演手册）：输入一个主题，按阶段完成 理解任务 → 求真（研究或实测）→ 脚本 → 分镜 → 配音 → 渲染 → 视觉 QA → 复盘，
-  每个阶段有中间产物，三个节点停下来等人确认。内容类型做成可插拔的类型档案（概念科普、实用技巧…）。
+  AI 知识短视频的生产流程（导演手册）：输入一个主题，按阶段完成 理解任务 → 求真（研究或实测）→ 脚本 → 配音 + 导演脚本 → 样片 → 渲染 → 视觉 QA → 复盘，
+  每个阶段有中间产物，几个节点停下来等人确认（实用类 5 个）。内容类型做成可插拔的类型档案（概念科普、实用技巧…）。
   提供 kv 命令：kv status（进度；实用类管完整的一期）、kv gate（记用户确认）、kv done（记草稿）、kv check（研究来源和脚本依据）、kv brief（研究简报）。
   当用户说「做一期 XX」「做个讲 XX 的视频」、要做 AI 概念科普视频，或项目里有 knowledge-video.config.json 时使用。
-  配音、分镜、渲染交给 narrated-video（run.json 的 video: director 时抖音视频交给 video-director）；实用技巧类的实测交给 scenario-content。
+  配音交给 voiceover（vo），导演脚本、组装、渲染交给 video-director（vd），存草稿交给 video-draft（vdraft）；实用技巧类的实测交给 scenario-content。
 ---
 
 # knowledge-video：AI 知识短视频导演手册
 
-**原则：每条事实都能追溯到来源；每个阶段都有产物；不一次做完，三个节点停下来等人确认。**
+**原则：每条事实都能追溯到来源；每个阶段都有产物；不一次做完，几个节点停下来等人确认。**
 
 ## 安装（第一次用）
 
@@ -19,28 +19,34 @@ ln -s <skill 目录> ~/.claude/skills/knowledge-video   # 让 Claude 能加载�
 ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 kv
 ```
 
-没有第三方依赖，不用 npm install。下游的配音、分镜、渲染要先装好 narrated-video（`nv`）。
+没有第三方依赖，不用 npm install。下游要先装好 voiceover（`vo`）、video-director（`vd`）、video-draft（`vdraft`）。
 
 开始前：读项目配置 `knowledge-video.config.json`（系列、观众、语气指南、经验库目录），读经验库的 `规律.md`。
 
 ## 实用类（type: practical）：kv 管完整的一期
 
-新建作品时 `st new`（studio skill）已跑过 `kv init --fresh`（`st new --video director` 会带上视频做法）。之后每一步开始前 `kv status <作品目录>`，只做它说的那一步：
+新建作品时 `st new`（studio skill）已跑过 `kv init --fresh`，并用 `vd init 抖音` 建好 `抖音/` 导演工程。之后每一步开始前 `kv status <作品目录>`，只做它说的那一步：
 
 | 命令 | 什么时候用 |
 |---|---|
-| `kv status <作品>` | 每一步开始前；列出 14 步 ✓/·、确认节点、下一步 |
-| `kv gate <作品> <topic\|script\|storyboard\|director\|sample\|final> "用户原话"` | 用户明确说通过之后。前面没做完会被拒绝 |
+| `kv status <作品>` | 每一步开始前；列出 15 步 ✓/·、确认节点、下一步 |
+| `kv gate <作品> <topic\|script\|director\|sample\|final> "用户原话"` | 用户明确说通过之后。前面没做完会被拒绝 |
 | `kv gate <作品> <节点> --edit "用户原话"` | 用户提了修改意见（不算通过） |
-| `kv done <作品> <wechat\|xiaohongshu\|douyin>` | `wa draft` / `nv draft --to xiaohongshu` / `nv draft` 成功之后 |
-| `kv init <作品> [--video director\|template]` | 老作品补 run.json；新作品要用导演流程加 `--video director` |
+| `kv done <作品> <wechat\|xiaohongshu\|douyin>` | `wa draft` / `vdraft --to xiaohongshu` / `vdraft` 成功之后 |
+| `kv init <作品> [--fresh]` | 老作品补 run.json；`--fresh` 记下刚生成的模板，用来判断「还没写」 |
 
-14 步：场景卡 → 选题关 ① → 实测 → 母稿 → 费曼检查 → sc check → 抖音脚本 + 配音稿 ② → 配音 + 分镜 ③ → 渲染 + QA ④ → 公众号 → 小红书 → 抖音草稿 → 发布记录 → 复盘。确认之后又改了相关文件（选题关.md；SCRIPT.md / VOICE.md；STORYBOARD.md / 配音；成片），这个节点自动失效，要重新请用户确认。`kv status` 调用 `sc check --json` 和 `nv hf-audio --check`，命令名可用环境变量 `KV_SC_CMD`、`KV_NV_CMD` 换掉。
+15 步、5 个确认节点：
 
-**视频做法**（`run.json` 的 `video`，没写按 `template`）：
-- `template`：上面 14 步，第 8 步 `nv hf-build` 分镜 ③
-- `director`：第 8 步换成两步，共 15 步——8 配音 + 导演脚本（`抖音-director/DIRECTOR.md`，`vd cues --check` 通过）**③a**；9 风格样片（`抖音-director/renders/sample.mp4`，样片的 `vd qa` 无 ✗，结果在 `qa-douyin-sample.json`）**③b**；10 渲染 + QA 要 `vd qa` 无 ✗、`qa.json` 通过 **④**。改了 DIRECTOR.md（只补第 8 节组件候选不算）或配音 ③a 失效，换了样片 ③b 失效；工程里的 HTML 比成片新要重新渲染。`kv status` 调用 `vd cues --check`，命令名可用 `KV_VD_CMD` 换掉
-- 中途换做法：手改 `run.json` 的 `video`；已通过的节点按新做法重新算
+| # | 步骤 | 确认 |
+|---|---|---|
+| 1–6 | 场景卡、选题关、实测、母稿、费曼检查、自检（`sc check`） | ① 选题（第 2 步） |
+| 7 | 抖音脚本 + 配音稿（`vo 抖音 --check` 通过） | ② 脚本 |
+| 8 | 配音 + 导演脚本（`vo 抖音`；`抖音/DIRECTOR.md`，`vd cues 抖音 --check` 通过） | ③a 导演脚本 |
+| 9 | 风格样片（`抖音/renders/sample.mp4`，`qa-douyin-sample.json` 无 ✗） | ③b 样片 |
+| 10 | 渲染 + QA（`vd render 抖音`，`qa-douyin.json`、`qa.json` 通过） | ④ 成片 |
+| 11–15 | 公众号、小红书、抖音草稿、发布记录、复盘 | |
+
+确认之后又改了相关文件，这个节点自动失效，要重新请用户确认：② 改了 `SCRIPT.md` / `VOICE.md`；③a 改了 `DIRECTOR.md`（只补第 8 节组件候选不算）或 `audio_meta.json`（重新配音）；③b 换了样片；④ 换了成片。工程里的 HTML 比成片新要重新渲染。`kv status` 调用 `sc check --json`、`vo --check`、`vd cues --check`，命令名可用环境变量 `KV_SC_CMD`、`KV_VO_CMD`、`KV_VD_CMD` 换掉。视频只有导演做法一套，工程就是 `抖音/`，配音直接写在里面，没有复制步骤。
 
 下面「阶段」表是概念科普的流程。
 
@@ -50,9 +56,9 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 |---|---|---|---|
 | 0. 理解任务 | 按项目约定创建作品目录（项目说明里写的新建作品方式），判断内容类型（读 `types/`），复制 `templates/brief.md`、`templates/run.json` 到作品目录。新建时预放的空模板（未填的实测记录、占位口播的 SCRIPT）`kv status` 不算完成 | `brief.md`、`run.json` | — |
 | 1. 求真 | 按类型档案：概念科普查资料（`references/research.md`），实用技巧做实测 | `research.json` 或 `实测记录.md` | — |
-| 2. 脚本 | 按类型档案的结构配方写 `抖音/SCRIPT.md`（narrated-video 格式），每句标依据（`references/script.md`）；费曼检查写进 brief.md；`kv check` 无 ✗。配音服务商支持导演稿时，再按 narrated-video 的 `references/voice-direction.md` 写 `抖音/VOICE.md`，`nv hf-audio . --check` 通过 | `抖音/SCRIPT.md`、`抖音/VOICE.md` | **① `kv brief` 生成研究简报，请用户确认简报、脚本和配音导演稿** |
-| 3. 分镜 | 按 narrated-video 写 STORYBOARD 的 build 行 → `nv hf-audio` → `nv hf-build --snap` | `抖音/STORYBOARD.md`、`抖音/snapshots/sheet.jpg` | **② 请用户看总览图**（`video: director` 时换成 ②a 导演脚本 DIRECTOR.md → ②b 风格样片，见 video-director；概念科普新作品默认 director） |
-| 4. 渲染和 QA | `nv render`；逐帧看总览图和成片抽帧，写 `qa.json`（`references/qa.md`）；有 high 级问题先修 | `抖音/renders/*.mp4`、`qa.json` | **③ 请用户看成片** |
+| 2. 脚本 | 按类型档案的结构配方写 `抖音/SCRIPT.md`（格式见 voiceover），每句标依据（`references/script.md`）；费曼检查写进 brief.md；`kv check` 无 ✗。配音服务商支持导演稿时，再按 voiceover 的 `references/voice-direction.md` 写 `抖音/VOICE.md`，`vo 抖音 --check` 通过 | `抖音/SCRIPT.md`、`抖音/VOICE.md` | **① `kv brief` 生成研究简报，请用户确认简报、脚本和配音导演稿** |
+| 3. 导演脚本和样片 | `vo 抖音` 配音 → 按 video-director 写 `抖音/DIRECTOR.md`（`vd cues 抖音 --check`）→ 风格样片（`vd build 抖音 --sample`、`vd render 抖音 --sample`） | `抖音/DIRECTOR.md`、`抖音/renders/sample.mp4` | **②a 请用户审导演脚本 → ②b 请用户看风格样片** |
+| 4. 渲染和 QA | `vd qa 抖音` 无 ✗ → `vd render 抖音`；看 `snapshots/cues-sheet.jpg` 和成片抽帧，写 `qa.json`（`references/qa.md`）；有 high 级问题先修 | `抖音/renders/*.mp4`、`qa.json` | **③ 请用户看成片** |
 | 5. 复盘 | 写经验库记录；同类修改出现 2 次以上，提议改哪个文件（先问用户） | 经验库 | — |
 
 不确定做到哪了：`kv status <作品目录>`。

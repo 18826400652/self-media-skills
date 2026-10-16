@@ -1,6 +1,6 @@
 # 导演脚本 · （标题）
 
-> 输入：本目录的 SCRIPT.md + assets/voice/*.wav + audio_meta.json（`nv hf-audio` 生成）。口播原文和事实一字不改。
+> 输入：本目录的 SCRIPT.md + assets/voice/*.wav + audio_meta.json（`vo` 生成）。口播原文和事实一字不改。
 > 时间全部来自真实配音：跑 `vd cues .` 看每个 `@词` 的秒数。
 > 写法：动作锚定到词，写成 `@词`（后面跟空格或标点）；同一个词出现多次写 `@词#2`。规则见 references/director-rules.md。
 
@@ -41,7 +41,7 @@
 ## 5. 账号固定元素
 
 - 栏目标签：（待填）
-- 字幕：nv 生成的 caption_groups.json，重点词用强调色（不用写）
+- 字幕：vo 生成的 caption_groups.json，重点词用强调色（不用写）
 - 结尾：下一期预告（待填）；问题（待填）；评论引导（待填）
   （vd 按机器块 `ending` 在最后一段之后自动加结尾条：下一期、问题、评论引导。最后一段别再画「下一期」或同样的问题，会和结尾条叠在一起；要自己画就把 `ending` 里对应的项删掉）
 

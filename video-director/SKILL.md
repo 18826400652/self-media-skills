@@ -1,9 +1,9 @@
 ---
 name: video-director
 description: >
-  视频导演：已写好的口播稿 + nv hf-audio 的配音 → 导演脚本 DIRECTOR.md → 按内容设计风格的 HyperFrames 视频工程（每段一个子画面，
-  账号固定元素：栏目标签、字幕、结尾），带配乐重拍对位和人声避让。提供 vd 命令：vd cues、vd build [--sample] [--no-music]、vd qa（抖音专用检查）、vd check。
-  当用户要「按导演脚本做视频」、brief.md 里 video: director，或作品目录里有 DIRECTOR.md 时使用。配音用 narrated-video，渲染用 nv render。
+  视频导演：已写好的口播稿 + vo 的配音 → 导演脚本 DIRECTOR.md → 按内容设计风格的 HyperFrames 视频工程（每段一个子画面，
+  账号固定元素：栏目标签、字幕、结尾），带配乐重拍对位和人声避让。提供 vd 命令：vd init、vd cues、vd build [--sample] [--no-music]、vd qa（抖音专用检查）、vd render、vd verify、vd check；不认识的子命令透传给 hyperframes。
+  当用户要「按导演脚本做视频」「做抖音视频」「渲染」「验片」，或作品目录里有 DIRECTOR.md 时使用。配音用 voiceover（vo）。
 ---
 
 # video-director：先写导演脚本，再做视频
@@ -17,52 +17,54 @@ description: >
 ```bash
 ln -s <skill 目录> ~/.claude/skills/video-director
 ln -s <skill 目录>/bin/vd ~/.local/bin/vd
-cd <skill 目录> && npm i                             # vd qa 要用 puppeteer-core
+cd <skill 目录> && npm ci                            # hyperframes、字体、GSAP、puppeteer-core 都装在 vd 自己的 node_modules（st install --deps 会装）
 echo 'export NODE_USE_ENV_PROXY=1' >> ~/.bashrc       # 走代理时 Node 才能联网
 curl -fsSL https://static.heygen.ai/cli/install.sh | bash   # 配乐用的 heygen CLI（先看一遍脚本）
 HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免费额度（API Key 会扣钱包）
 ```
 
-项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）；`hfVersion` 不用写（hyperframes 统一用 narrated-video 装的那一份，写了且不一致会报错）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
+项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）；`hfVersion` 不用写（hyperframes 装在 vd 自己的 `node_modules`，写了且不一致会报错）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
 
 ## 流程（一期的抖音部分）
 
-**在 kv 里**：作品 `run.json` 写 `"video": "director"` 后，`kv status` 按下面的步骤指引（实用类的 ③a / ③b / ④，概念科普的 ②a / ②b / ③），用户确认后：实用类 `kv gate <作品> director|sample|final "原话"`；概念科普按 knowledge-video 的「确认节点怎么记」手改 `run.json` 的 `gates.director` / `gates.sample` / `gates.final`。样片固定输出到 `renders/sample.mp4`，对比视频 `renders/compare.mp4`——这两个名字 kv 不当正式成片。
+**在 kv 里**：`kv status` 按下面的步骤指引（实用类的 ③a / ③b / ④，概念科普的 ②a / ②b / ③），用户确认后：实用类 `kv gate <作品> director|sample|final "原话"`；概念科普按 knowledge-video 的「确认节点怎么记」手改 `run.json` 的 `gates.director` / `gates.sample` / `gates.final`。样片固定输出到 `renders/sample.mp4`，对比视频 `renders/compare.mp4`——这两个名字 kv 不当正式成片。
 
 | 步骤 | 做什么 | 停下来 |
 |---|---|---|
-| 0 | 口播稿、配音稿确认后，`nv hf-audio <抖音工程>` 生成配音和逐字时间轴 | — |
-| 1 | 新建导演工程（下面的命令），按 `templates/DIRECTOR.md` 写导演脚本；`vd cues .` 确认每个 @词都找得到 | **③a 请用户审 DIRECTOR.md** |
-| 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build . --sample`；`vd qa .` 无 ✗（看 `snapshots/cues-sheet.jpg`）；`nv render . --sample` 出样片（`renders/sample.mp4`） | **③b 请用户看样片** |
-| 3 | 写其余各段，每写一段 `vd build . --no-music` + 截图；全部写完 `vd build .` | — |
-| 4 | 全片 `vd qa .` 无 ✗，按总览图逐条对照 DIRECTOR.md，问题记进 `qa.json`；`nv render <工程>`；和旧版做对比视频（`renders/compare.mp4`）；`vd check` 列出组件候选 | **④ 请用户看成片 + 组件候选** |
+| 0 | 口播稿、配音稿确认后，`vo 抖音` 生成配音和逐字时间轴，直接写在工程里 | — |
+| 1 | 工程已建好（`st new` 调 `vd init 抖音`），按 `抖音/DIRECTOR.md` 里的模板写导演脚本；`vd cues 抖音` 确认每个 @词都找得到 | **③a 请用户审 DIRECTOR.md** |
+| 2 | 写样片的几段（`templates/segment.html`），贯穿元素写进 `index.html` 手写区；`vd build 抖音 --sample`；`vd qa 抖音` 无 ✗（看 `snapshots/cues-sheet.jpg`）；`vd render 抖音 --sample` 出样片（`renders/sample.mp4`） | **③b 请用户看样片** |
+| 3 | 写其余各段，每写一段 `vd build 抖音 --no-music` + 截图；全部写完 `vd build 抖音` | — |
+| 4 | 全片 `vd qa 抖音` 无 ✗，按总览图逐条对照 DIRECTOR.md，问题记进 `qa.json`；`vd render 抖音`；和旧版做对比视频（`renders/compare.mp4`）；`vd check` 列出组件候选 | **④ 请用户看成片 + 组件候选** |
 
 用户没明确说通过，不往下走。
 
 ## 新建导演工程
 
+`st new` 会跑 `vd init 抖音`，一般不用手动建。单独建（目录必须不存在或是空的，不为空时报错、不覆盖）：
+
 ```bash
-cd <作品目录>
-mkdir -p 抖音-director/{compositions/frames,assets}
-cp 抖音/{SCRIPT.md,audio_meta.json,caption_groups.json,package.json,hyperframes.json,meta.json} 抖音-director/
-cp -r 抖音/assets/voice 抖音-director/assets/
-cp ~/.claude/skills/video-director/templates/{index.html,DIRECTOR.md} 抖音-director/
+vd init 抖音
 ```
 
-`caption_groups.json` 由 `nv hf-audio` 配音时生成（同时把每帧时长写回 `抖音/STORYBOARD.md`），不用先跑 `nv hf-build`。
+它用 vd 自己的 hyperframes 建空工程（`init --example=blank`），放进 `index.html` 和 `DIRECTOR.md` 模板，建好 `compositions/frames/`、`assets/`。`SCRIPT.md`、`VOICE.md`、配音和 `caption_groups.json` 由 `vo 抖音` 写进同一个目录，不用复制。
 
 ## 命令
 
 | 命令 | 作用 |
 |---|---|
+| `vd init <目录>` | 建空的导演工程；目录不为空时报错 |
 | `vd cues <工程> [--check]` | 校验 DIRECTOR.md，把所有 @词 换算成秒数写进 `cues.js`，并打印出来；`--check` 只校验不写文件 |
 | `vd qa <工程>` | 抖音专用检查：在每个 @词 落定时刻（@词 后 0.8 秒）和每段结尾截图，查出画面、安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；每 0.5 秒比一次，连续 2 秒只有背景、没有文字或 `data-vd-key` 元素（✗，纯图形的关键画面要加 `data-vd-key`），2 秒不动（⚠）。被 overflow 裁掉的部分不算。结果 `qa-douyin.json`（样片构建时写 `qa-douyin-sample.json`，只查装了的段），总览 `snapshots/cues-sheet.jpg`。DIRECTOR.md 改了 @词或分段还没 `vd build` 时直接报错 |
 | `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲（说法里自动带上视频时长；vd 以前取的 `bgm.wav` 比视频短会重新取，还是短就循环补齐；自己放的 `bgm.mp3` 不替换、太短时循环成 `bgm-loop.wav`）、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
+| `vd render <工程> [--sample]` | 渲染到 `<工程>/renders/`（`--sample` 出 `sample.mp4`），完成后自动 `vd verify` |
+| `vd verify <成片.mp4> [--project <工程>]` | 成片自检：帧数、时长、声音、尺寸、黑屏 |
 | `vd check <工程>` | 校验 DIRECTOR.md + 列出组件候选 + `hyperframes check` |
+| `vd <其他子命令> …` | 不认识的子命令透传给 hyperframes：`vd lint`、`vd preview`、`vd snapshot`、`vd doctor` 等 |
 
 `index.html` 里标记块之外的内容（背景、贯穿元素）是手写的，`vd build` 不会动。
 
-**重新配音**：在 `抖音/` 里跑 `nv hf-audio`，然后把 `audio_meta.json`、`caption_groups.json`、`assets/voice/` 重新复制到 `抖音-director/`，再 `vd build`，所有时间自动更新。忘了复制时 `vd` 会警告「这里的 … 还是旧的」。
+**重新配音**：跑 `vo 抖音`（直接写进工程），再 `vd build 抖音`，所有时间自动更新。重配会让 kv 的 ③a 失效，要请用户重新确认。工程里缺 `audio_meta.json` 或 `caption_groups.json` 时 `vd` 报错，提示先跑 `vo`。
 
 ## 每段画面怎么写
 

@@ -1,16 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { STEPS, doneBlocker, gateBlocker, practicalStatus } from "../scripts/lib/practical.mjs";
+import { GATES, STEPS, doneBlocker, gateBlocker, practicalStatus } from "../scripts/lib/practical.mjs";
 
 const allOk = () => Object.fromEntries(STEPS.map((s) => [s.key, { ok: true, why: "" }]));
-const gatesPassed = () => Object.fromEntries(["topic", "script", "storyboard", "final"].map((g) => [g, { passed: true, at: "2026-10-12", quote: "通过", stale: false }]));
+const gatesPassed = () => Object.fromEntries(GATES.map((g) => [g, { passed: true, at: "2026-10-12", quote: "通过", stale: false }]));
 const facts = (o = {}) => ({ steps: { ...allOk(), ...(o.steps ?? {}) }, gates: { ...gatesPassed(), ...(o.gates ?? {}) } });
 const notOk = (why = "没做") => ({ ok: false, why });
 const unpassed = { passed: false, at: null, quote: null, stale: false };
 
-test("14 步，四个确认节点挂在 2、7、8、9", () => {
-  assert.equal(STEPS.length, 14);
-  assert.deepEqual(STEPS.filter((s) => s.gate).map((s) => [s.n, s.gate]), [[2, "topic"], [7, "script"], [8, "storyboard"], [9, "final"]]);
+test("15 步，五个确认节点挂在 2、7、8、9、10", () => {
+  assert.equal(STEPS.length, 15);
+  assert.deepEqual(STEPS.filter((s) => s.gate).map((s) => [s.n, s.gate]), [[2, "topic"], [7, "script"], [8, "director"], [9, "sample"], [10, "final"]]);
+  assert.deepEqual(GATES, ["topic", "script", "director", "sample", "final"]);
+  assert.deepEqual(STEPS.map((s) => s.key), ["scenario", "topic", "test", "draft", "feynman", "selfcheck", "script", "director", "sample", "render", "wechat", "xiaohongshu", "douyin", "record", "retro"]);
 });
 
 test("第一个没做完的步骤是下一步；后面的都不显示 ✓", () => {
@@ -48,7 +50,7 @@ test("gateBlocker：前置步骤和前一个节点", () => {
   assert.match(gateBlocker(facts({ steps: { topic: notOk("对标只有 2 条") }, gates: { topic: unpassed } }), "topic"), /第 2 步 选题关.*对标只有 2 条/);
   assert.match(gateBlocker(facts({ gates: { topic: unpassed, script: unpassed } }), "script"), /① 选题关/);
   assert.match(gateBlocker(facts({ steps: { selfcheck: notOk("sc check 有 ✗") }, gates: { script: unpassed } }), "script"), /第 6 步 自检/);
-  assert.match(gateBlocker(facts({ gates: { script: { passed: true, at: "x", quote: "y", stale: true }, storyboard: unpassed } }), "storyboard"), /② 脚本.*确认后改过/);
+  assert.match(gateBlocker(facts({ gates: { script: { passed: true, at: "x", quote: "y", stale: true }, director: unpassed } }), "director"), /② 脚本.*确认后改过/);
   assert.match(gateBlocker(facts(), "nope"), /没有这个确认节点/);
 });
 
@@ -59,22 +61,11 @@ test("doneBlocker：只接受三个草稿键；内容没写好或前面没走完
   assert.match(doneBlocker(facts({ gates: { final: unpassed }, steps: { wechat: notOk("还没存草稿") } }), "wechat"), /④ 成片/);
 });
 
-import { gatesFor, stepsFor } from "../scripts/lib/practical.mjs";
-
 const dirFacts = (o = {}) => {
-  const steps = Object.fromEntries(stepsFor("director").map((s) => [s.key, { ok: true, why: "" }]));
-  const gates = Object.fromEntries(gatesFor("director").map((g) => [g, { passed: true, at: "2026-10-15", quote: "通过", stale: false }]));
-  return { video: "director", steps: { ...steps, ...(o.steps ?? {}) }, gates: { ...gates, ...(o.gates ?? {}) } };
+  const steps = Object.fromEntries(STEPS.map((s) => [s.key, { ok: true, why: "" }]));
+  const gates = Object.fromEntries(GATES.map((g) => [g, { passed: true, at: "2026-10-15", quote: "通过", stale: false }]));
+  return { steps: { ...steps, ...(o.steps ?? {}) }, gates: { ...gates, ...(o.gates ?? {}) } };
 };
-
-test("director 做法：15 步，配音 + 分镜换成 导演脚本 ③a、风格样片 ③b", () => {
-  const s = stepsFor("director");
-  assert.equal(s.length, 15);
-  assert.deepEqual(s.filter((x) => x.gate).map((x) => [x.n, x.gate]), [[2, "topic"], [7, "script"], [8, "director"], [9, "sample"], [10, "final"]]);
-  assert.deepEqual(stepsFor("template").map((x) => x.key), STEPS.map((x) => x.key));
-  assert.deepEqual(gatesFor("director"), ["topic", "script", "director", "sample", "final"]);
-  assert.deepEqual(gatesFor("template"), ["topic", "script", "storyboard", "final"]);
-});
 
 test("director 做法：等 ③a、样片过期、按 director 做法拦 kv gate", () => {
   const unp = { passed: false, at: null, quote: null, stale: false };
@@ -89,6 +80,11 @@ test("director 做法：等 ③a、样片过期、按 director 做法拦 kv gate
   assert.match(doneBlocker(dirFacts({ gates: { final: unp }, steps: { wechat: { ok: false, why: "还没存草稿" } } }), "wechat"), /④ 成片/);
 });
 
-test("没有 video 字段的 facts 按 template 处理（老作品不变）", () => {
-  assert.equal(practicalStatus(facts()).rows.length, 14);
+test("下一步提示用新命令：第 8 步 vo + vd cues，第 10 步 vd render，不再提 nv", () => {
+  const f = dirFacts({ steps: { director: { ok: false, why: "还没配音（vo 抖音）" } } });
+  const s = practicalStatus(f);
+  assert.match(s.next, /^8 配音 \+ 导演脚本：vo 抖音.*vd cues 抖音 --check/);
+  assert.doesNotMatch(JSON.stringify(s), /nv |抖音-director|STORYBOARD/);
+  const r = practicalStatus(dirFacts({ steps: { render: { ok: false, why: "还没渲染" } } }));
+  assert.match(r.next, /^10 渲染 \+ QA：.*vd render 抖音/);
 });

@@ -1,0 +1,8 @@
+{
+  "name": "video-draft",
+  "private": true,
+  "type": "module",
+  "description": "把成片存进抖音、小红书草稿箱（不发布）",
+  "bin": { "vdraft": "bin/vdraft" },
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}

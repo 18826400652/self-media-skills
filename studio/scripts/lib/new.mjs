@@ -3,12 +3,12 @@
 //   concept（概念科普，走 knowledge-video）：发布记录 + 抖音（SCRIPT 用概念科普模板）
 // 模板先找项目 templates 目录，没有用工具包默认的；占位符：{{标题}} {{角标}} {{系列}} {{编号}} {{账号}} {{观众}} {{账号定位}} {{系列说明}}
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { loadProject, templatePath } from "./project.mjs";
 
 export const USAGE = `用法：
-  st new <系列> <简称> [--编号 N] [--video director|template]
+  st new <系列> <简称> [--编号 N]
       → <works>/<系列>/NN-<简称>/，编号默认自动递增；系列须登记在系列登记表
   st new 单篇 <简称> [--栏目 名称] [--日期 YYYY-MM-DD]
       → <works>/单篇/YYYY-MM-DD-<简称>/
@@ -32,7 +32,7 @@ const has = (cmd) => spawnSync("bash", ["-c", `command -v ${cmd}`], { stdio: "ig
 export function parseArgs(argv) {
   const [series, name, ...rest] = argv;
   if (!series || !name) throw new Error(USAGE);
-  const opts = { series, name, num: "", column: "", date: today(), douyinOnly: false, video: null };
+  const opts = { series, name, num: "", column: "", date: today(), douyinOnly: false };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     const val = () => {
@@ -43,11 +43,9 @@ export function parseArgs(argv) {
     else if (a === "--栏目") opts.column = val();
     else if (a === "--日期") opts.date = val();
     else if (a === "--只建抖音") opts.douyinOnly = true;
-    else if (a === "--video") opts.video = val();
     else throw new Error(`未知参数：${a}`);
   }
   if (name.includes("/") || name.includes("&")) throw new Error(`简称里不能有 / 或 &：${name}`);
-  if (opts.video && !["director", "template"].includes(opts.video)) throw new Error(`--video 只能是 director 或 template：${opts.video}`);
   return opts;
 }
 
@@ -87,14 +85,14 @@ export function substitute(text, vars) {
   return out.replace(/ · $/gm, "");
 }
 
-function run(cmd, args, env = {}) {
-  const r = spawnSync(cmd, args, { encoding: "utf8", env: { ...process.env, ...env } });
+function run(cmd, args) {
+  const r = spawnSync(cmd, args, { encoding: "utf8" });
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} 失败：${(r.stderr || r.stdout || "").trim()}`);
 }
 
 export function createEpisode(opts, cwd = process.cwd()) {
   const project = loadProject(cwd);
-  if (!has("nv")) throw new Error("找不到 nv 命令：先在工具包里跑 st install");
+  if (!has("vd")) throw new Error("找不到 vd 命令：先在工具包里跑 st install");
   const plan = planEpisode(project, opts);
   const { ep, type } = plan;
   if (opts.douyinOnly) {
@@ -125,23 +123,16 @@ export function createEpisode(opts, cwd = process.cwd()) {
     mkdirSync(join(ep, "实测"), { recursive: true });
   }
 
-  // 抖音：HyperFrames 工程 + 品牌 frame.md + 中文字幕样式 + 画面组件库（流程见 narrated-video）
+  // 抖音：导演工程（vd init：hyperframes blank + DIRECTOR.md 模板），再放口播稿、封面、发布文案的模板
   const dy = join(ep, "抖音");
-  run("nv", ["init", dy, "--non-interactive", "--example=blank", "--skill=faceless-explainer"], { HYPERFRAMES_SKIP_SKILLS: "1" });
-  for (const d of [".hyperframes", "capture/assets", "assets", "compositions/frames"]) mkdirSync(join(dy, d), { recursive: true });
-  copyFileSync(join(project.abs.brand, "frame.md"), join(dy, "frame.md"));
-  copyFileSync(join(project.abs.brand, "caption-skin.html"), join(dy, ".hyperframes/caption-skin.html"));
-  fill("抖音/BRIEF模板.md", "抖音/BRIEF.md");
-  // 实用类默认「成品教程」结构；概念科普沿用聊天版分镜（翻车讲方法那一版另存为 *-翻车.md，需要时手动换）
+  run("vd", ["init", dy]);
   const concept = type === "concept";
   fill(concept ? "抖音/SCRIPT模板-概念.md" : "抖音/SCRIPT模板.md", "抖音/SCRIPT.md");
-  fill(concept ? "抖音/STORYBOARD模板-翻车.md" : "抖音/STORYBOARD模板.md", "抖音/STORYBOARD.md");
   fill("抖音/封面模板.md", "抖音/封面.md");
   fill("抖音/发布文案模板.md", "抖音/发布文案.md");
-  run("nv", ["hf-kit", dy]);
   if (!opts.douyinOnly && type === "practical") {
     if (!has("kv")) throw new Error("找不到 kv 命令：先在工具包里跑 st install");
-    run("kv", ["init", ep, "--fresh", ...(opts.video ? ["--video", opts.video] : [])]); // 记下空模板，kv status 才分得清「还没写」
+    run("kv", ["init", ep, "--fresh"]); // 记下空模板，kv status 才分得清「还没写」
   }
 
   const rel = relative(project.root, ep);

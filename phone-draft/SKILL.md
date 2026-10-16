@@ -1,7 +1,7 @@
 ---
 name: phone-draft
 description: 通过 adb（uiautomator2）操作安卓手机：把做好的内容填进抖音、小红书、公众号助手存成草稿（不点发布，各平台命令的 --via phone 备用方案）；
-  在 DeepSeek、豆包 App 里自动提问并录屏做实测（pd rec，输出和 nv rec 同格式的 mp4 / json / txt）。
+  在 DeepSeek、豆包 App 里自动提问并录屏做实测（pd rec，输出和 sc rec 同格式的 mp4 / json / txt）。
   提供 pd 命令和一组公共函数（打开 App、按文字 / 描述点击、等待、输入中文、富文本粘贴、推相册、截图），
   各平台的发草稿步骤写成脚本放在各自的 skill 里（如 wechat-article 的 phone_wechat.py）。
   当用户要「用手机发草稿」「用手机录 AI 实测」、手机连不上要重连，或要给某个 App 新写脚本时使用。
@@ -15,7 +15,7 @@ pd connect [IP:端口]           # 无线重连并记住地址；不带参数用
 pd ui [名字]                   # 截图 + 列出界面上的文字 / 描述 / id（探索 App、写脚本时用）
 pd run <步骤.py> [载荷.json]   # 执行一个平台的手机发草稿步骤
 pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout 300]
-                               # 在 AI App 里提问并录屏，输出 .mp4 / .json / .txt（和 nv rec 同格式）
+                               # 在 AI App 里提问并录屏，输出 .mp4 / .json / .txt（和 sc rec 同格式）
 ```
 
 各平台命令默认走浏览器（browser-draft）；加 `--via phone` 时生成载荷后调用 `pd run`：
@@ -23,8 +23,8 @@ pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout
 | 平台 | 命令 | 手机步骤脚本 |
 |---|---|---|
 | 公众号 | `wa draft 文章.md --via phone` | `wechat-article/scripts/phone_wechat.py`（公众号助手） |
-| 抖音 | `nv draft 成片.mp4 --copy 发布文案.md --via phone` | `narrated-video/scripts/phone_douyin.py` |
-| 小红书（视频） | `nv draft 成片.mp4 --copy 小红书/文案.md --to xiaohongshu --via phone` | `narrated-video/scripts/phone_xiaohongshu.py` |
+| 抖音 | `vdraft 成片.mp4 --copy 发布文案.md --via phone` | `video-draft/scripts/phone_douyin.py` |
+| 小红书（视频） | `vdraft 成片.mp4 --copy 小红书/文案.md --to xiaohongshu --via phone` | `video-draft/scripts/phone_xiaohongshu.py` |
 
 小红书图文笔记（卡片图片，项目不走图文时用不到）只有浏览器方案：`ic draft 文案.md`。
 
@@ -41,7 +41,7 @@ pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout
 
 ## 录 AI 实测（pd rec）
 
-一般用 `nv rec <输出.mp4> --prompt 提问.txt --app deepseek|doubao`，它调用 `pd rec`。每一轮：
+一般用 `sc rec <输出.mp4> --prompt 提问.txt --app deepseek|doubao`，它调用 `pd rec`。每一轮：
 
 1. **隐私检查，不过就不录**：勿扰模式没开就停下（录屏会录到弹出的通知）；进不了空白新对话就停下（豆包新对话里出现不认识的文字也停下，报错只露每段开头几个字）。豆包新对话要从侧边栏进，侧边栏有历史标题，所以录屏在进了新对话之后才开始。
 2. 设模型开关：DeepSeek 的「深度思考」「智能搜索」默认关，`--think` / `--search` 打开；App 会记住上次的开关，所以每轮都读一遍、不对就点、再核对；录完改回用户原来的设置。豆包没有这两个开关。打字（uiautomator2 经剪贴板粘贴）和「复制」会改手机剪贴板，录完（包括中途失败）放回原来的内容。提问文件的 Windows 换行（\r\n）读入时统一成 \n；不认识的参数直接报错。

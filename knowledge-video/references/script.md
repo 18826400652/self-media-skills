@@ -1,6 +1,6 @@
 # 脚本：依据和类比
 
-SCRIPT.md 用 narrated-video 的格式（`## Line N — 标签 (Frame N)`、`**重点词:**`、`**Emotion:**`、缩进 4 格的口播）。每个块再加一行依据：
+SCRIPT.md 用 voiceover 认的格式（`## Line N — 标签 (Frame N)`、`**重点词:**`、`**Emotion:**`、缩进 4 格的口播）。每个块再加一行依据：
 
 ```
 ## Line 3 — 定义 (Frame 3)

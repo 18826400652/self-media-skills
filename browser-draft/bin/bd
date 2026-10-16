@@ -61,7 +61,7 @@ resolve_ws() {
   return 0
 }
 
-export BU_NAME="${BU_NAME:-browser-draft}"   # 单独的 daemon，不和同时在用这个浏览器的其他会话（nv rec、sc bench）抢标签页
+export BU_NAME="${BU_NAME:-browser-draft}"   # 单独的 daemon，不和同时在用这个浏览器的其他会话（sc rec、sc bench）抢标签页
 command -v browser-harness >/dev/null || { echo "✗ 需要 browser-harness（https://github.com/browser-use/browser-harness）" >&2; exit 1; }
 
 case "${1:-}" in

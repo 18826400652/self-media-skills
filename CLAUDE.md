@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 项目简介 | 自媒体工具包：一组 Claude Code skill，把一个选题做成抖音视频 + 小红书视频笔记 + 公众号长文，三个平台存草稿（只存草稿，永远不点发布）。和具体账号无关，账号、品牌、目录约定都放在**作品项目**里 |
 | 语言 / 框架 | Node.js 22+（ESM `.mjs`，无构建步骤）为主；Python（uv 管理的各 skill 自带 `.venv`）用于浏览器 / 手机自动化和本地 TTS；视频用 HyperFrames（HTML + GSAP）渲染；浏览器操作走 browser-harness（CDP），手机走 adb + uiautomator2；外部依赖 FFmpeg |
 | 测试框架与命令 | Node：`node:test`，在各 skill 目录里 `node --test tests/*.test.mjs`；单个文件 `node --test tests/cues.test.mjs`，单个用例加 `--test-name-pattern "用例名"`。Python：pytest，`cd phone-draft && .venv/bin/python -m pytest -q`；browser-draft 没有自己的 venv，借用 `cd browser-draft && ../phone-draft/.venv/bin/python -m pytest -q` |
-| 格式化 / 静态检查命令 | 目前没有配置（无 eslint / prettier / ruff）。`nv check`、`nv lint` 透传给 hyperframes，检查的是视频工程而不是工具包代码 |
+| 格式化 / 静态检查命令 | 目前没有配置（无 eslint / prettier / ruff）。`vd check` 是 vd 自己的命令（校验 DIRECTOR.md、列组件候选、跑 hyperframes check），`vd lint`、`vd preview` 透传给 hyperframes；检查的都是视频工程而不是工具包代码 |
 | 目录结构 | 根目录每个子目录是一个独立 skill：`SKILL.md`（给 Claude 的说明）+ `bin/<命令>`（bash 入口）+ `scripts/` 或 `lib/` + `tests/` + 可选 `references/`、`templates/`。`docs/superpowers/{specs,plans}/` 放每个功能的设计和实施计划（按日期命名） |
 
 ### 1.1 架构要点
@@ -28,13 +28,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **安装方式**：`st install [--deps]`（`studio/scripts/lib/install.mjs`）把每个 skill 目录软链到 `~/.claude/skills/<名字>`，把 `bin/*` 软链到 `~/.local/bin`。因此改的是仓库里的文件就立即生效；在 git worktree 里开发时，测试前要把 worktree 里相关 skill 的 `bin/` 放到 PATH 最前面，否则调用的是已安装的那份。各 skill 的 `node_modules/`、`.venv/` 装在 skill 目录自己里面，不入库。
 
-**命令与 skill 对应**：`st`（studio，总入口：doctor/new/init/install）、`kv`（knowledge-video，一期的进度调度和确认节点）、`sc`（scenario-content）、`nv`（narrated-video，配音、字幕、HyperFrames 组装与渲染，未知子命令透传给 `hyperframes`）、`vd`（video-director）、`wa`（wechat-article，底座 `@wenyan-md/cli`）、`ic`（image-cards）、`bd`（browser-draft）、`pd`（phone-draft）。`bin/` 入口统一用 `readlink -f` 解析软链后定位 skill 目录。
+**命令与 skill 对应**：`st`（studio，总入口：doctor/new/init/install）、`kv`（knowledge-video，一期的进度调度和确认节点）、`sc`（scenario-content，实测录屏 `sc rec`）、`vo`（voiceover，配音、字幕分组）、`vd`（video-director，导演工程、渲染验片，未知子命令透传给 `hyperframes`）、`vdraft`（video-draft，存抖音、小红书草稿）、`wa`（wechat-article，底座 `@wenyan-md/cli`）、`ic`（image-cards）、`bd`（browser-draft）、`pd`（phone-draft）。`bin/` 入口统一用 `readlink -f` 解析软链后定位 skill 目录。
 
 **一期内容的流程**由 `kv status <作品目录>` 驱动：它根据作品目录里已有的产物判断现在该做哪一步；确认节点要用户明确同意后才 `kv gate`。完整步骤见 `studio/references/workflow.md`。
 
-**发草稿的分层**：`browser-draft` 和 `phone-draft` 只提供连接和公共函数（`bd run <步骤.py>` / `pd run <步骤.py>`）；各平台的具体步骤脚本放在拥有该内容的 skill 里（如 `wechat-article/scripts/draft_wechat.py`、`narrated-video/scripts/draft_douyin.py`、`phone_*.py`）。`bd run` 把 `browser-draft/lib/copy_format.py`、`lib/bd.py` 和步骤脚本拼接后交给 `browser-harness -c` 执行；`phone-draft` 的 Python 通过 `PYTHONPATH` 复用 `browser-draft/lib`。
+**发草稿的分层**：`browser-draft` 和 `phone-draft` 只提供连接和公共函数（`bd run <步骤.py>` / `pd run <步骤.py>`）；各平台的具体步骤脚本放在拥有该内容的 skill 里（如 `wechat-article/scripts/draft_wechat.py`、`video-draft/scripts/draft_douyin.py`、`phone_*.py`）。`bd run` 把 `browser-draft/lib/copy_format.py`、`lib/bd.py` 和步骤脚本拼接后交给 `browser-harness -c` 执行；`phone-draft` 的 Python 通过 `PYTHONPATH` 复用 `browser-draft/lib`。
 
-**视频两条做法**：`template`（narrated-video 的模板 + hf-kit 组件）和 `director`（video-director：`DIRECTOR.md` → 每段一个子画面的 HyperFrames 工程，`vd qa` 抖音专用检查）。作品的 `run.json` / brief 里 `video` 字段决定走哪条；配音都用 `nv hf-audio`，渲染都用 `nv render`。
+**视频**：只有导演做法。`st new` 用 `vd init` 建 `抖音/` 工程；`vo 抖音` 配音（写 `audio_meta.json`、`caption_groups.json`），`vd` 写导演脚本、组装、QA、渲染；两者只靠这几个文件连接。
 
 **铁律**（来自 studio/SKILL.md）：实测绝不编造；只存草稿，不点发布；登录、扫码、验证由用户完成。
 
