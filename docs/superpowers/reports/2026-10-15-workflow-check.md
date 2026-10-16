@@ -385,3 +385,9 @@
 - 和 P-36b 的区别：组件本来就按挂载时长排时间，问题出在素材比段短；实际做片时录屏常常比这一段口播短
 - 可选修法（待定）：录屏放完停在最后一帧；或 vd build 时发现录屏比段短就报 ⚠
 - 严重度：体验
+
+### P-45 dy-rec-phone 写了上方标题时，和 vd 的栏目标签叠在一起（修 P-44 时发现）
+- 现象：flow-check 02 的副本里第 2 段用 dy-rec-phone、`title` 写「打开 DeepSeek」，`vd build` 的 hyperframes check 报 `content_overlap #rp-title inside #bk-text`：组件标题在 top 240px，正好压在 vd 加的栏目标签上
+- 和 P-44 无关：用的是 P-44 修复前的组件版本（0dde9f4）就有；不写 `title` 不会叠
+- 可选修法（待定）：组件标题下移避开栏目标签区；或 vd 文档/规则写明组件段不要用 `title`；或 vd build 时提示
+- 严重度：体验（check 报出来，不会悄悄出错）
