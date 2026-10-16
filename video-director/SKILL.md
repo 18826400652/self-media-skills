@@ -77,6 +77,7 @@ dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独�
 
 - **组件跟着口播走**：组件按段长排时间（`HF.duration`），演完停在最后的样子，到段尾才退场。catalog 里写了 `beats` 的组件有可选变量 `cues`：用 `|` 隔开几个 @词，按顺序对应它的几拍（如清单 `"cues": "@条数|@数字|@补的话"` 是三项各自出现的时间），`vd build` 换算成段内秒数交给组件；不写 `cues` 就按默认节奏铺满整段。每个 @词 要落在这一段里，不然报错。`dy-rec-phone` 的 `cues` 是它自己的 JSON 列表（每项带 `t`），不按这个规则
 - **录屏比段短**：`dy-rec-phone` 的录屏放完停在最后一帧（通常就是 AI 的完整回答）；`vd build` 发现录屏比段短 0.5 秒以上会打 ⚠，说清停住几秒。要画面一直在动，就换长一点的录屏或把这段拆短
+- **不要用 `dy-ai-badge`**：它模仿抖音自带的 AI 标识，固定在左上角，正好压住栏目标签（栏目标签全片都在，关不掉），`vd build` 的检查会报文字重叠
 - **旧版组件**：`components.lock.json` 锁的还是 2026-10 之前的组件库时，组件时间是写死的；放进比 `minDuration + 2` 秒还长的段，`vd build` 直接报错——`vd build . --update-components` 换成新版
 - 第一次 `vd build` 把最新提交号写进 `components.lock.json`，之后一直用这个版本，重新渲染不会变样；要用新版组件：`vd build . --update-components`
 - 下载的仓库缓存在 `~/.cache/video-director/hyperframes/<提交号>/`，断网时已缓存的版本照常能用
