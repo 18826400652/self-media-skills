@@ -19,5 +19,10 @@ def test_import_without_browser_draft_on_path(tmp_path):
     assert "['AI', '效率']" in r.stdout
 
 
-def test_pd_entry_does_not_reference_browser_draft():
-    assert "browser-draft" not in (SKILL / "bin" / "pd").read_text(encoding="utf-8")
+def test_code_does_not_reference_browser_draft_lib():
+    skip = {".venv", "vendor", "__pycache__"}
+    me = Path(__file__).resolve()
+    files = [SKILL / "bin" / "pd", *(p for p in SKILL.rglob("*.py") if p != me and not skip & set(p.relative_to(SKILL).parts))]
+    patterns = ("browser-draft/lib", 'browser-draft" / "lib')
+    hits = [str(p.relative_to(SKILL)) for p in files if any(pat in p.read_text(encoding="utf-8") for pat in patterns)]
+    assert hits == []

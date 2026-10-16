@@ -62,7 +62,7 @@ pd rec deepseek|doubao <提问.txt> <输出.mp4> [--think] [--search] [--timeout
 - 第一次连接时 uiautomator2 会往手机装 ATX 辅助 App，Flyme 弹「允许安装」时点允许。
 - 富文本粘贴需要手机上装 Edge（它开放 `chrome_devtools_remote` 调试接口），并且开着「USB 调试」（`adb_enabled=1`），只开无线调试时 Edge 不开放这个接口。
 - 录 AI 实测要 scrcpy：`scripts/setup-scrcpy.sh` 下载官方 Linux 便携版到 `vendor/`（不入库；断点续传，代理慢时去掉 `http_proxy` 直连 GitHub 反而快），或设 `PD_SCRCPY` 指向已有的 scrcpy。录之前手机解锁、开勿扰。
-- 依赖：`cd skills/phone-draft && uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt`（国内网络慢时加 `-i https://mirrors.aliyun.com/pypi/simple/`）。依赖 browser-draft 的 `lib/copy_format.py`（发布文案解析），两个 skill 要放在同一个 skills 目录下。
+- 依赖：`cd skills/phone-draft && uv venv .venv && uv pip install --python .venv/bin/python -r requirements.txt`（国内网络慢时加 `-i https://mirrors.aliyun.com/pypi/simple/`）。发布文案解析用自带的 `lib/copy_format.py`（正本在工具包根 `shared/python/`，由 `st sync-shared` 同步，不要直接改这份拷贝），单独拷走也能用。
 
 ## 写一个新 App 的步骤脚本
 

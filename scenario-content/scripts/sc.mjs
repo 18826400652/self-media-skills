@@ -220,6 +220,7 @@ function checkPlatforms(ep, config, r) {
   const douyin = read("douyinScript");
   if (douyin) {
     const lines = parseScript(douyin);
+    if (!lines.length && douyin.trim()) r.warn("抖音 SCRIPT.md 没读到口播：每帧要有「## … (Frame N)」标题，口播行用 4 个空格或 Tab 缩进（旧的分镜表写法已不支持）", f.douyinScript);
     for (const { frame, text, emotion, sentences } of lines) {
       for (const s of sentences) {
         if (chars(s) > LIMITS.douyinLine) r.warn(`抖音第 ${frame} 帧有一句 ${chars(s)} 字，建议 ≤ ${LIMITS.douyinLine}：${s}`, f.douyinScript);

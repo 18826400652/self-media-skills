@@ -112,6 +112,11 @@ test("抖音口播检查：小写 frame、### 标题、Tab 缩进的口播也读
   assert.ok(items.some((i) => i.level === "⚠" && /第 1 句有阿拉伯数字/.test(i.msg)));
 });
 
+test("抖音 SCRIPT.md 写了内容但一句口播都没读到（如旧的分镜表写法）→ ⚠ 说明要怎么写", async () => {
+  const items = await scriptItems("| # | 口播 | 情感 |\n|---|---|---|\n| 1 | 你有没有过这种时候？ | 惊讶 |\n");
+  assert.ok(items.some((i) => i.level === "⚠" && /没读到口播.*\(Frame N\).*缩进/.test(i.msg)));
+});
+
 // st new 之后的母稿：{{…}} 已替换，小节下面还是模板的括号说明
 const DRAFT_TEMPLATE = (await import("node:fs")).readFileSync(new URL("../../studio/templates/母稿模板.md", import.meta.url), "utf8").replace(/\{\{[^}]+\}\}/g, "X");
 const SECTIONS = { requiredSections: ["成品", "场景", "步骤", "坑", "领"] };
