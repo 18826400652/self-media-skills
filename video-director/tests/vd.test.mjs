@@ -201,3 +201,17 @@ test("vd check：没装 hyperframes → 报安装办法，先于读工程（空�
   const noHf = () => { throw new Error("video-director 还没装 hyperframes：cd /x && npm ci（或 st install --deps）"); };
   assert.throws(() => COMMANDS.check(dir, [], {}, { requireBin: noHf }), /还没装 hyperframes.*npm ci/);
 });
+
+test("vd components：按工程锁定的版本读组件目录，带关键词只列相关的", async () => {
+  const repo = project({ "catalog/catalog.json": { components: [{ id: "dy-checklist", purpose: "打勾清单" }, { id: "dy-vs-compare", purpose: "左右对比" }] } });
+  const dir = project({ "ep/x": "" });
+  const logs = [];
+  const orig = console.log;
+  console.log = (m) => logs.push(m);
+  try {
+    await COMMANDS.components(`${dir}/ep`, ["对比"], { ensureLock: () => ({ sha: "a".repeat(40) }), fetchArchive: () => repo });
+  } finally { console.log = orig; }
+  assert.match(logs.join("\n"), /@aaaaaaa/);
+  assert.match(logs.join("\n"), /dy-vs-compare/);
+  assert.doesNotMatch(logs.join("\n"), /dy-checklist/);
+});

@@ -2,7 +2,7 @@
 name: video-director
 description: >
   视频导演：已写好的口播稿 + vo 的配音 → 导演脚本 DIRECTOR.md → 按内容设计风格的 HyperFrames 视频工程（每段一个子画面，
-  账号固定元素：栏目标签、字幕、结尾），带配乐重拍对位和人声避让。提供 vd 命令：vd init、vd cues、vd build [--sample] [--no-music]、vd qa（抖音专用检查）、vd render、vd verify、vd check；不认识的子命令透传给 hyperframes。
+  账号固定元素：栏目标签、字幕、结尾），带配乐重拍对位和人声避让。提供 vd 命令：vd init、vd cues、vd build [--sample] [--no-music]、vd qa（抖音专用检查）、vd render、vd verify、vd check、vd components（列组件）；不认识的子命令透传给 hyperframes。
   当用户要「按导演脚本做视频」「做抖音视频」「渲染」「验片」，或作品目录里有 DIRECTOR.md 时使用。配音用 voiceover（vo）。
 ---
 
@@ -60,6 +60,7 @@ vd init 抖音
 | `vd render <工程> [--sample]` | 渲染到 `<工程>/renders/`（`--sample` 出 `sample.mp4`），完成后自动 `vd verify` |
 | `vd verify <成片.mp4> [--project <工程>]` | 成片自检：帧数、时长、声音、尺寸、黑屏 |
 | `vd check <工程>` | 校验 DIRECTOR.md + 列出组件候选 + `hyperframes check` |
+| `vd components <工程> [关键词]` | 列出 dykit 组件（用途、适合、时长、节拍、变量和默认值），关键词按名字、用途、适合场景筛 |
 | `vd <其他子命令> …` | 不认识的子命令透传给 hyperframes：`vd lint`、`vd preview`、`vd snapshot`、`vd doctor` 等 |
 
 `index.html` 里标记块之外的内容（背景、贯穿元素）是手写的，`vd build` 不会动。
@@ -75,7 +76,7 @@ vd init 抖音
 
 ## 用 dykit 组件
 
-dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独维护）。分段里写 `"component": "dy-…"` 和 `"vars": {…}` 就直接用组件，配色自动套用这条视频的 `palette`（dykit 的 custom 主题）。可用组件和变量见仓库的 `catalog/catalog.json`。
+dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独维护）。分段里写 `"component": "dy-…"` 和 `"vars": {…}` 就直接用组件，配色自动套用这条视频的 `palette`（dykit 的 custom 主题）。挑组件用 `vd components <工程> [关键词]`：列出每个组件的用途、适合的口播、最短时长、节拍和变量（含默认值），按工程锁定的版本读，不用去缓存里翻 `catalog/catalog.json`。
 
 - **组件不压字幕**：组件段的宿主带 `--hf-safe-bottom:1150px`，dykit 组件（hyperframes 1bf47fc 之后）内容底边停在字幕带上方；旧工程锁着更早的组件版本，`vd build --update-components` 升级
 - **组件跟着口播走**：组件按段长排时间（`HF.duration`），演完停在最后的样子，到段尾才退场。catalog 里写了 `beats` 的组件有可选变量 `cues`：用 `|` 隔开几个 @词，按顺序对应它的几拍（如清单 `"cues": "@条数|@数字|@补的话"` 是三项各自出现的时间），`vd build` 换算成段内秒数交给组件；不写 `cues` 就按默认节奏铺满整段。每个 @词 要落在这一段里，不然报错。`dy-rec-phone` 的 `cues` 是它自己的 JSON 列表（每项带 `t`），不按这个规则
