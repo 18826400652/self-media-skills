@@ -236,7 +236,7 @@ function checkPlatforms(ep, config, r) {
 
 /**
  * 抖音口播 → [{ n, text, emo }]。支持两种写法：
- *   - 分镜表：表头含「口播…」「情感…」列，第一列是行号（narrated-video 旧流程的 脚本.md）
+ *   - 分镜表：表头含「口播…」「情感…」列，第一列是行号（旧流程的 脚本.md）
  *   - HyperFrames SCRIPT.md：`## … (Frame N)` 开一帧，`**Emotion:**`/`**情感:**`，缩进块是口播原文；
  *     缩进块可以有好几行，每行一句（同一个画面接着说），字数按句检查
  */

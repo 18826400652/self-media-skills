@@ -1,4 +1,4 @@
-"""pd rec：在手机 AI App 里打字、发送、等回答结束，全程录屏。输出和 nv rec 同格式：.mp4 / .json / .txt。"""
+"""pd rec：在手机 AI App 里打字、发送、等回答结束，全程录屏。输出：.mp4 / .json / .txt。"""
 import json
 import os
 import time

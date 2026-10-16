@@ -1,4 +1,4 @@
-// SCRIPT.md（narrated-video 的 HyperFrames 格式）里每句口播的「依据」：引用哪几条 claim，或是类比、观点。
+// SCRIPT.md（HyperFrames 格式）里每句口播的「依据」：引用哪几条 claim，或是类比、观点。
 // 口播块：「## Line N — 标签 (Frame N)」，口播是缩进 4 格的行；依据写一行「**依据:** c01, c03」。
 const HEADING_RE = /^#{2,3}\s+.*?\(frame\s+(\d+)\)/i;
 const BASIS_RE = /^\s*\*\*依据[:：]\*\*\s*(.*)$/;

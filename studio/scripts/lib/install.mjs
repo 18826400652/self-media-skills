@@ -41,7 +41,7 @@ function installDeps(skill, dir, log, run) {
   return steps.reduce((ok, step) => step() && ok, true);
 }
 
-/** 指向本工具包、但目标已经不存在的软链接（比如删掉的 narrated-video、nv）删掉；指向别处的不动 */
+/** 指向本工具包、但目标已经不存在的软链接（比如已删掉的旧 skill 及其命令）删掉；指向别处的不动 */
 function pruneStale(dir, toolkit, log) {
   for (const name of readdirSync(dir)) {
     const at = join(dir, name);

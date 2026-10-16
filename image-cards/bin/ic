@@ -11,7 +11,7 @@ if [[ ! -d "$SKILL_DIR/node_modules" ]]; then
   echo "未安装依赖，请先运行：cd $SKILL_DIR && npm install" >&2
   exit 1
 fi
-# 无 sudo 时手动解压的 Chrome 运行库（与 narrated-video 共用，见其 references/setup.md）
+# 无 sudo 时手动解压的 Chrome 运行库（与 video-director 共用）
 if [[ -d "$HOME/.local/lib/chrome-deps" ]]; then
   export LD_LIBRARY_PATH="$HOME/.local/lib/chrome-deps${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi

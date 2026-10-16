@@ -10,12 +10,12 @@ const V = { hfVersion: "0.8.143" };
 const CFG = { fontsDir: "06-品牌资产/hyperframes/fonts", gsap: "06-品牌资产/hyperframes/gsap.min.js", brandDir: "06-品牌资产/hyperframes", sfxDir: "/s", hfVersion: "0.8.143" };
 
 test("findProjectRoot：从作品子目录向上找到配置", () => {
-  const dir = project({ "video-director.config.json": CFG, "04-作品/a/抖音-director/x.txt": "" });
-  assert.equal(findProjectRoot(join(dir, "04-作品/a/抖音-director")), dir);
+  const dir = project({ "video-director.config.json": CFG, "04-作品/a/抖音/x.txt": "" });
+  assert.equal(findProjectRoot(join(dir, "04-作品/a/抖音")), dir);
 });
 
 test("loadConfig：brandDir 转绝对路径；不读别的 skill 的配置，没有 accent", () => {
-  const dir = project({ "video-director.config.json": CFG, "narrated-video.config.json": { hfKit: { tokens: { accent: "#FFD84D" } } } });
+  const dir = project({ "video-director.config.json": CFG, "other.config.json": { hfKit: { tokens: { accent: "#FFD84D" } } } });
   const c = loadConfig(dir, { hfVersion: "0.8.143" });
   assert.equal(c.brandDir, join(dir, "06-品牌资产/hyperframes"));
   assert.equal("accent" in c, false);

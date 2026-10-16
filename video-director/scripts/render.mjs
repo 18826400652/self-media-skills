@@ -1,6 +1,6 @@
 // vd render <视频目录> [--sample] [hyperframes render 的其他参数]
 // 渲染到 <视频目录>/renders/，完成后自动做成片检查（verify.mjs）。
-// 视频目录是作品下的平台子目录（如 02-导演做法/抖音-director）时用作品名命名；--sample 出 renders/sample.mp4（风格样片）。
+// 视频目录是作品下的平台子目录（如 02-导演做法/抖音）时用作品名命名；--sample 出 renders/sample.mp4（风格样片）。
 import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
