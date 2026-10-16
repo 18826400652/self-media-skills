@@ -11,7 +11,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import MarkdownIt from "markdown-it";
 import puppeteer from "puppeteer-core";
 import YAML from "yaml";
-import { findChrome } from "./lib/chrome.mjs";
+import { findChrome } from "./lib/shared/chrome.mjs";
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CONFIG_NAME = "image-cards.config.json";

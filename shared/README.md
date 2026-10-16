@@ -11,3 +11,10 @@ skill 之间不互相引用，每个 skill 单独拷走就能用。
 ## 模块
 
 （每加一个模块，在这里写一节：用途、接口、谁在用、来源。）
+
+### node/chrome.mjs
+
+- 用途：找一个可用的 Chrome / headless shell（截图、页面检查用）
+- 接口：`findChrome()`，顺序：环境变量 `CHROME_PATH` → HyperFrames / Puppeteer 已下载的 headless shell → 系统 Chrome
+- 谁在用：image-cards（`ic render`）、video-director（`vd qa`）
+- 来源：原 image-cards、video-director 各一份（代码相同）

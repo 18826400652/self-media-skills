@@ -1,1 +1,1 @@
-{}
+{ "node/chrome.mjs": ["image-cards/scripts/lib/shared/chrome.mjs", "video-director/scripts/lib/shared/chrome.mjs"] }
