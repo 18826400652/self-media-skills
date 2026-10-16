@@ -9,7 +9,7 @@ description: >
 # wechat-article：Markdown → 公众号
 
 ```bash
-wa preview <文章.md>   # 生成同目录的 预览.html：手机宽度预览 + 「复制到公众号」按钮
+wa preview <文章.md>   # 生成同目录的 预览.html（手机宽度预览 + 「复制到公众号」按钮）和整篇截图 预览.png（找不到 Chrome 时只出 html）
 wa render  <文章.md>   # 公众号 HTML 输出到标准输出
 wa draft   <文章.md>   # 存进公众号草稿箱：默认用已登录的浏览器（browser-draft），--via phone 用手机上的公众号助手
 wa publish <文章.md>   # 用接口上传图片 + 创建草稿（需要凭据和接口权限，见 references/publish.md）
@@ -90,7 +90,7 @@ python3 scripts/doocs-theme.py grace --primary '#1f2024' --extra themes/src/grac
 - 可以用 CSS 变量，文颜渲染时会解析成具体值。
 - 公众号不支持外部 CSS、`position`、动画；伪元素的支持也不稳定。装饰效果尽量用 `background`、`border` 实现。
 - 代码块（`pre` / `code.hljs`）的底色、字色、`code` 内边距会被代码高亮主题（`highlight`）覆盖：文颜最后应用它，主题里写的不生效。代码块的留白写在 `pre` 的 `padding` 上。
-- 写完后用 `wa preview` 截图检查。
+- 写完后用 `wa preview`，直接看 `预览.png` 检查排版（不用自己起服务器、开浏览器）。
 
 ## 项目配置 wechat-article.config.json（可选，向上查找）
 

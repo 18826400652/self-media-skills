@@ -1,7 +1,8 @@
 {
   "node/chrome.mjs": [
     "image-cards/scripts/lib/shared/chrome.mjs",
-    "video-director/scripts/lib/shared/chrome.mjs"
+    "video-director/scripts/lib/shared/chrome.mjs",
+    "wechat-article/scripts/lib/shared/chrome.mjs"
   ],
   "python/copy_format.py": [
     "browser-draft/lib/copy_format.py",

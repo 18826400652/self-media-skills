@@ -16,7 +16,7 @@ skill 之间不互相引用，每个 skill 单独拷走就能用。
 
 - 用途：找一个可用的 Chrome / headless shell（截图、页面检查用）
 - 接口：`findChrome()`，顺序：环境变量 `CHROME_PATH` → HyperFrames / Puppeteer 已下载的 headless shell → 系统 Chrome
-- 谁在用：image-cards（`ic render`）、video-director（`vd qa`）
+- 谁在用：image-cards（`ic render`）、video-director（`vd qa`）、wechat-article（`wa preview` 截图）
 - 来源：原 image-cards、video-director 各一份（代码相同）
 
 ### python/copy_format.py

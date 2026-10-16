@@ -9,6 +9,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { shootPreview } from "./lib/shot.mjs";
 import { runDraft, takeVia } from "./lib/shared/draft-run.mjs";
 import { studioInfo } from "./lib/shared/studio-info.mjs";
 
@@ -93,13 +94,21 @@ function draft(file, config, via = "browser") {
 
 const escapeHtml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-function preview(file, config) {
+async function preview(file, config) {
   const html = render(file, config);
   const template = readFileSync(join(SKILL_DIR, "templates", "preview.html"), "utf8");
   const page = template.replaceAll("{{TITLE}}", () => escapeHtml(frontmatterTitle(file))).replace("{{CONTENT}}", () => html);
   const out = join(dirname(file), "预览.html");
   writeFileSync(out, page);
   console.log(out);
+  // 顺手截一张整页 PNG：Claude 和人都能直接看排版，不用起服务器、开浏览器
+  const png = join(dirname(file), "预览.png");
+  try {
+    if (await shootPreview(out, png)) console.log(png);
+    else console.error("⚠ 截图没做：找不到 Chrome（设 CHROME_PATH，或装 Chrome）；预览.html 照样能在浏览器里打开");
+  } catch (err) {
+    console.error(`⚠ 截图没做（${err.message}）；预览.html 照样能在浏览器里打开`);
+  }
 }
 
 function publish(file, config) {
@@ -112,7 +121,7 @@ function publish(file, config) {
   wenyan(args, { stdio: "inherit" });
 }
 
-function main() {
+async function main() {
   const [via, rest] = takeVia(process.argv.slice(2));
   const [cmd, file] = rest;
   const commands = { preview, draft, publish, render: (f, c) => process.stdout.write(render(f, c)) };
@@ -122,12 +131,10 @@ function main() {
   }
   const path = resolve(file);
   if (!existsSync(path)) throw new Error(`文件不存在：${path}`);
-  commands[cmd](path, loadConfig(dirname(path)), via);
+  await commands[cmd](path, loadConfig(dirname(path)), via);
 }
 
-try {
-  main();
-} catch (err) {
+main().catch((err) => {
   console.error(`✗ ${err.message}`);
   process.exit(1);
-}
+});
