@@ -18,3 +18,10 @@ skill 之间不互相引用，每个 skill 单独拷走就能用。
 - 接口：`findChrome()`，顺序：环境变量 `CHROME_PATH` → HyperFrames / Puppeteer 已下载的 headless shell → 系统 Chrome
 - 谁在用：image-cards（`ic render`）、video-director（`vd qa`）
 - 来源：原 image-cards、video-director 各一份（代码相同）
+
+### python/copy_format.py
+
+- 用途：读发布文案 Markdown（`## 标题` / `## 正文` / `## 话题`）
+- 接口：`parse_copy(path) → {"title", "paragraphs", "topics"}`；格式不对抛 `CopyFormatError`
+- 谁在用：browser-draft（`bd run` 把它拼在步骤脚本前面）、phone-draft（`pd run`，从自己的 `lib/` 导入）
+- 来源：原 browser-draft/lib，phone-draft 以前用相对路径借
