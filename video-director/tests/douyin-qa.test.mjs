@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "../scripts/lib/douyin-qa.mjs";
+import { checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize, checkComposition } from "../scripts/lib/douyin-qa.mjs";
 
 const built = {
   cues: { 钩子: 1, 小票: 5.5, "小票#2": 9 },
@@ -108,4 +108,19 @@ test("emptyWindows：空不到 2 秒、或中间断开（没构建的段）→ �
   const g = (t, n) => ({ t, sig: "", n });
   assert.deepEqual(emptyWindows([g(1, 0), g(1.5, 0), g(2, 0), g(2.5, 1)]), []);
   assert.deepEqual(emptyWindows([g(1, 0), g(1.5, 0), g(5, 0), g(5.5, 0)]), []);
+});
+
+test("checkComposition：一段里所有截图（@词 时刻和结尾）的内容都在 y 770 以上 → ⚠；段里有一刻铺到下面就不报（结尾收起来是转场）", () => {
+  const el = (y1, y2) => ({ sel: "#x", text: "字", key: false, allowSafe: false, box: [100, y1, 900, y2], opacity: 1 });
+  const shot = (seg, label, boxes) => ({ t: 3, seg, label, data: { elements: boxes.map(([a, b]) => el(a, b)), cueMarks: [], kicker: { visible: false } } });
+  const out = checkComposition([
+    shot("seg-01", "@一百八十多条", [[300, 500], [520, 670]]),
+    shot("seg-01", "seg-01 结尾", [[300, 420]]),
+    shot("seg-02", "@一张表", [[300, 500], [600, 1100]]),
+    shot("seg-02", "seg-02 结尾", [[300, 420]]),
+    shot("seg-03", "seg-03 结尾", []),
+  ]);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].level, "warn");
+  assert.match(out[0].msg, /seg-01 整段内容最低只到 y 670.*字幕带上方一直空着 480 像素/);
 });
