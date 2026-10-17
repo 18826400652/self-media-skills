@@ -33,8 +33,13 @@ Thumbs.db
 
 # 生成的预览与图片输出（可随时重新生成）
 预览.html
+预览.png
 卡片预览.html
+预览.png
 out/
 
 # vd build 的检查记录（本机状态）
 .vd/
+
+# st log-hook 记的工具包命令日志（本机状态，st review 读）
+.studio/

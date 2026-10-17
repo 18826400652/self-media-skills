@@ -1,7 +1,7 @@
 // st init / st doctor / st install / 项目约定
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { doctor } from "../scripts/lib/doctor.mjs";
@@ -198,4 +198,72 @@ test("st install：不加 --deps 时提示的是「没检查依赖」，并指�
 test("作品项目骨架不写死任何真实系列名", () => {
   const html = readFileSync(join(TOOLKIT_DIR, "studio/skeleton/06-品牌资产/hyperframes/brand-kicker.html"), "utf8");
   assert.doesNotMatch(html, /AI 概念一分钟/);
+});
+
+test("st init：新项目带 Claude Code 钩子（记工具包命令）、偏好.md、工具问题.md；.gitignore 排除日志和预览图", () => {
+  const dir = join(tmp("st-init-"), "proj");
+  initProject({ dir }, quiet);
+  const settings = JSON.parse(readFileSync(join(dir, ".claude/settings.json"), "utf8"));
+  for (const ev of ["PostToolUse", "PostToolUseFailure"]) {
+    const h = settings.hooks[ev][0];
+    assert.equal(h.matcher, "Bash", ev);
+    assert.equal(h.hooks[0].command, "st log-hook", ev);
+  }
+  assert.ok(existsSync(join(dir, "00-规划/偏好.md")));
+  assert.ok(existsSync(join(dir, "07-复盘/工具问题.md")));
+  const ignore = readFileSync(join(dir, ".gitignore"), "utf8");
+  assert.match(ignore, /^\.studio\/$/m);
+  assert.match(ignore, /^预览\.png$/m);
+  const claude = readFileSync(join(dir, "CLAUDE.md"), "utf8");
+  assert.match(claude, /00-规划\/偏好\.md/);
+  assert.match(claude, /07-复盘\/工具问题\.md/);
+});
+
+test("st init --update：已有项目只补缺的文件、CLAUDE.md 缺的章节、.gitignore 缺的行；改过的内容不动", () => {
+  const dir = join(tmp("st-init-"), "proj");
+  initProject({ dir, account: "小号" }, quiet);
+  // 模拟老项目：没有新文件，CLAUDE.md 是旧的且被用户改过
+  for (const f of [".claude/settings.json", "00-规划/偏好.md", "07-复盘/工具问题.md"]) rmSync(join(dir, f));
+  writeFileSync(join(dir, "CLAUDE.md"), "# 项目说明（给 AI 助手）\n\n## 规矩\n\n- 我自己加的规矩\n");
+  writeFileSync(join(dir, ".gitignore"), "node_modules/\n*.mp4\n");
+  writeFileSync(join(dir, "00-规划/语气指南.md"), "我改过的语气");
+  const before = readFileSync(join(dir, "studio.json"), "utf8");
+  const logs = [];
+  initProject({ dir, update: true }, (m) => logs.push(m));
+  assert.ok(existsSync(join(dir, ".claude/settings.json")));
+  assert.ok(existsSync(join(dir, "00-规划/偏好.md")));
+  assert.equal(readFileSync(join(dir, "00-规划/语气指南.md"), "utf8"), "我改过的语气");
+  assert.equal(readFileSync(join(dir, "studio.json"), "utf8"), before);
+  const claude = readFileSync(join(dir, "CLAUDE.md"), "utf8");
+  assert.match(claude, /我自己加的规矩/);
+  assert.match(claude, /## 偏好/);
+  assert.equal(claude.match(/^## 规矩$/gm).length, 1, "已有的章节不重复加");
+  const ignore = readFileSync(join(dir, ".gitignore"), "utf8");
+  assert.match(ignore, /^node_modules\/$/m);
+  assert.match(ignore, /^\.studio\/$/m);
+  assert.equal(ignore.match(/^node_modules\/$/gm).length, 1);
+  assert.match(logs.join("\n"), /补了/);
+});
+
+test("st init --update：不是作品项目时报错；已有 .claude/settings.json 不改，提醒手动加钩子", () => {
+  assert.throws(() => initProject({ dir: tmp("st-init-"), update: true }, quiet), /不是作品项目/);
+  const dir = join(tmp("st-init-"), "proj");
+  initProject({ dir }, quiet);
+  writeFileSync(join(dir, ".claude/settings.json"), JSON.stringify({ permissions: { allow: ["Bash"] } }));
+  const logs = [];
+  initProject({ dir, update: true }, (m) => logs.push(m));
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, ".claude/settings.json"), "utf8")), { permissions: { allow: ["Bash"] } });
+  assert.match(logs.join("\n"), /\.claude\/settings\.json 已存在.*st log-hook/);
+});
+
+test("st doctor：没配 st log-hook 钩子 → ⚠ 提示 st init . --update", () => {
+  const dir = join(tmp("st-doc-"), "proj");
+  initProject({ dir }, quiet);
+  let out = capture();
+  doctor({ cwd: dir, log: out.log });
+  assert.match(out.text(), /✓ 工具包命令会记到 \.studio\/log/);
+  rmSync(join(dir, ".claude/settings.json"));
+  out = capture();
+  doctor({ cwd: dir, log: out.log });
+  assert.match(out.text(), /⚠ .*没配钩子.*st init \. --update/);
 });
