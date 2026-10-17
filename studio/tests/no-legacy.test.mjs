@@ -6,7 +6,7 @@ import { extname, join, relative } from "node:path";
 import { test } from "node:test";
 import { TOOLKIT_DIR } from "../scripts/lib/project.mjs";
 
-const SKIP_DIRS = new Set(["node_modules", ".venv", ".git", ".claude", "docs", "vendor", "fixtures"]);
+const SKIP_DIRS = new Set(["node_modules", ".venv", ".git", ".claude", ".worktrees", "docs", "vendor", "fixtures"]);
 const CODE = new Set([".mjs", ".js", ".py", ".json", ".sh", ""]);
 const LEGACY = [/narrated-video/, /抖音-director/, /STORYBOARD/, /faceless-explainer/, /hf-build/, /\bnv (hf-audio|render|draft|rec|verify|init|hf-kit)\b/, /["'`]nv["'`]/];
 // 白名单：整个文件放行，每条写明原因。其余命中都是漏网之鱼，要改代码，不要放宽正则。
@@ -44,10 +44,12 @@ test("代码里不再引用 narrated-video、nv 命令、抖音-director、STORY
   assert.deepEqual(legacyHits(TOOLKIT_DIR), []);
 });
 
-test("不扫 .claude/（worktree 副本、本地设置不是工具包代码），但同样的内容放在 skill 里照样抓到", () => {
+test("不扫 .claude/、.worktrees/（worktree 副本、本地设置不是工具包代码），但同样的内容放在 skill 里照样抓到", () => {
   const root = mkdtempSync(join(tmpdir(), "no-legacy-"));
-  mkdirSync(join(root, ".claude/worktrees/x/studio"), { recursive: true });
-  writeFileSync(join(root, ".claude/worktrees/x/studio/a.mjs"), "// narrated-video\n");
+  for (const d of [".claude/worktrees/x/studio", ".worktrees/x/studio"]) {
+    mkdirSync(join(root, d), { recursive: true });
+    writeFileSync(join(root, d, "a.mjs"), "// narrated-video\n");
+  }
   assert.deepEqual(legacyHits(root), []);
   mkdirSync(join(root, "studio"));
   writeFileSync(join(root, "studio/a.mjs"), "// narrated-video\n");

@@ -67,10 +67,14 @@ test("st init：建出骨架，账号填进去，gitignore 改名；再跑一次
 });
 
 test("st doctor：新建的项目里，项目、模板、品牌、配置几节没有别的 ✗（只有参考音色、配音人设、公众号名称要自己填）", () => {
+  // 假 HOME 里放好 media-use 的音效库，结果不随这台机器装了什么变
+  const home = tmp("st-home-");
+  mkdirSync(join(home, ".claude/skills/media-use/audio/assets/sfx"), { recursive: true });
+  writeFileSync(join(home, ".claude/skills/media-use/audio/assets/sfx/pop.mp3"), "x");
   const dir = join(tmp("st-doc-"), "proj");
-  initProject({ dir, account: "小号", audience: "新手" }, quiet);
+  initProject({ dir, account: "小号", audience: "新手", home }, quiet);
   const out = capture();
-  doctor({ cwd: dir, log: out.log });
+  doctor({ cwd: dir, log: out.log, home });
   const text = out.text();
   const head = text.slice(0, text.indexOf("\n工具包"));
   assert.match(head, /✓ 模板：全部用工具包默认的/);
