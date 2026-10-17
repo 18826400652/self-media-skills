@@ -7,7 +7,7 @@
 //   gate    <节点> [--edit] "用户原话"   记录用户确认。实用类：topic script director sample final；概念科普：script director sample final
 //   done    <wechat|xiaohongshu|douyin>   存草稿成功后记一笔
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { renderBrief } from "./lib/brief.mjs";
 import { loadConfig } from "./lib/config.mjs";
@@ -289,6 +289,22 @@ function printStatus(dir) {
   return 0;
 }
 
+// 一期作品目录里至少有其中一样（st new 建的实用类、概念科普都有）；都没有 = 传错了目录（如作品根目录）
+const EPISODE_MARKERS = ["run.json", "场景卡.md", "brief.md", "research.json", "母稿.md", "发布记录.md", "抖音"];
+const isEpisode = (dir) => EPISODE_MARKERS.some((m) => existsSync(join(dir, m)));
+
+/** dir 下面两层以内的作品目录（相对 dir） */
+function episodesUnder(dir) {
+  const subdirs = (d) => readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory() && !e.name.startsWith(".")).map((e) => join(d, e.name));
+  return subdirs(dir).flatMap((d) => (isEpisode(d) ? [d] : subdirs(d).filter(isEpisode))).map((d) => relative(dir, d)).sort();
+}
+
+function notEpisode(dir) {
+  const found = episodesUnder(dir);
+  const list = found.length ? `下面的作品：\n${found.slice(0, 20).map((e) => `  ${join(dir, e)}`).join("\n")}` : "下面也没有作品：先 st new <系列> <简称> 建一期";
+  return `${dir} 不是一期作品的目录（kv 要的是某一期，如 04-作品/<系列>/<编号-简称>）。${list}`;
+}
+
 function main(argv) {
   const [cmd, target, ...rest] = argv;
   if (!target || !["check", "brief", "status", "init", "gate", "done"].includes(cmd)) {
@@ -298,6 +314,10 @@ function main(argv) {
   const dir = resolve(target);
   if (!existsSync(dir)) {
     console.error(`找不到作品目录：${dir}`);
+    return 1;
+  }
+  if (!isEpisode(dir)) {
+    console.error(`✗ ${notEpisode(dir)}`);
     return 1;
   }
   if (cmd === "check") return printCheck(dir);
