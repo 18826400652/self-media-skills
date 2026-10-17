@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -147,4 +147,20 @@ test("老 run.json（带 video: director）：status 显示 15 步；kv gate dir
   const g = kv({ KV_VD_CMD: VD_OK }, "gate", dir, "director", "通过");
   assert.equal(g.status, 1);
   assert.match(g.stdout, /还不能记 ③a 导演脚本/);
+});
+
+test("kv 传的不是一期作品目录（如作品根目录 04-作品）：报错并列出下面的作品，不当成一期来判断", () => {
+  const works = mkdtempSync(join(tmpdir(), "kv-works-"));
+  const ep = join(works, "AI办公", "01-群聊");
+  mkdirSync(join(ep, "抖音"), { recursive: true });
+  writeFileSync(join(ep, "场景卡.md"), "x");
+  for (const cmd of ["status", "init", "check"]) {
+    const r = kv({}, cmd, works);
+    assert.equal(r.status, 1, cmd);
+    assert.match(r.stderr, /不是一期作品的目录/, cmd);
+    assert.match(r.stderr, /AI办公\/01-群聊/, cmd);
+  }
+  const empty = mkdtempSync(join(tmpdir(), "kv-works-"));
+  assert.match(kv({}, "status", empty).stderr, /下面也没有作品：先 st new/);
+  assert.equal(readdirSync(works).includes("run.json"), false, "不往根目录写 run.json");
 });

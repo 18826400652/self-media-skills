@@ -72,7 +72,20 @@ case "${1:-}" in
     export BD_PAYLOAD="${3:-}"
     export BD_OUT="${BD_OUT:-${TMPDIR:-/tmp}/browser-draft}"
     mkdir -p "$BD_OUT"
-    exec browser-harness -c "$(cat "$SKILL_DIR/lib/copy_format.py" "$SKILL_DIR/lib/bd.py" "$step")"
+    # 浏览器那边的「Target is closing」不显示；browser-harness 抛出的 Python 堆栈换成一句说明，完整的存到 last-error.txt
+    errfile="$BD_OUT/last-stderr.txt"
+    set +e +o pipefail
+    browser-harness -c "$(cat "$SKILL_DIR/lib/copy_format.py" "$SKILL_DIR/lib/bd.py" "$step")" 2>"$errfile" \
+      | { grep -v --line-buffered -x 'Target is closing' || true; }
+    status=${PIPESTATUS[0]}
+    set -e
+    if [[ $status -ne 0 ]] && grep -q '^Traceback' "$errfile"; then
+      cp "$errfile" "$BD_OUT/last-error.txt"
+      echo "✗ 浏览器没响应（$(grep -v '^[[:space:]]' "$errfile" | grep -v -x 'Target is closing' | tail -1)）：常见原因是开着的标签页太多或浏览器卡住了。关掉一些标签页（或重启自动化浏览器）后重跑；这次草稿没存好，到平台后台看一眼有没有存了一半的草稿。完整报错：$BD_OUT/last-error.txt" >&2
+    else
+      grep -v -x 'Target is closing' "$errfile" >&2 || true
+    fi
+    exit "$status"
     ;;
   tabs)
     resolve_ws
