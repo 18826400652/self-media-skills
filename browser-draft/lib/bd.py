@@ -40,7 +40,16 @@ def open_tab(url, reuse=None):
     if tid:
         switch_tab(tid)
     else:
-        new_tab(url)
+        # 浏览器忙（标签页多、上一个标签页正在关）时 new_tab 偶尔超时或报 Target is closing：等一下再试一次
+        for attempt in range(2):
+            try:
+                new_tab(url)
+                break
+            except Exception as err:
+                if attempt:
+                    fail(f"浏览器没响应，新开标签页失败（{type(err).__name__}: {err}）：常见原因是开着的标签页太多或浏览器卡住了，"
+                         "关掉一些标签页（或重启自动化浏览器）后重跑；这次草稿没存")
+                time.sleep(2)
     wait_for_load()
     return page_info()["url"]
 
