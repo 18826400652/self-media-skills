@@ -1,1 +1,1 @@
-{ "label": "公众号封面 1:1（转发卡片、次条）", "width": 383, "height": 383, "fontSize": 18, "padding": [32, 28, 32, 28], "footer": false }
+{"label": "公众号封面 1:1（转发卡片、次条）", "width": 383, "height": 383, "fontSize": 18, "padding": [32, 28, 32, 28], "footer": false, "center": true}

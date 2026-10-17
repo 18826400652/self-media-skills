@@ -67,7 +67,8 @@ function checkProject(p, out) {
     else out.fail(`${k} 不存在：${p[k]}（在 ${MARKER} 里改，或建出来）`);
   }
   if (!existsSync(p.abs.positioning)) out.warn(`账号定位文档不存在：${p.positioning}（模板里的 {{账号定位}} 会指向它）`);
-  for (const k of ["account", "audience"]) if (!p[k]) out.warn(`${MARKER} 没写 ${k}：模板里的 {{${k === "account" ? "账号" : "观众"}}} 会是空的`);
+  const what = { account: "账号名（公众号作者、封面角标、发草稿核对）", audience: "目标观众", lead: "模板怎么领（如「点头像进粉丝群领」，st new 填进各平台模板）" };
+  for (const [k, use] of Object.entries(what)) if (!p[k]) out.warn(`${MARKER} 没写 ${k}：${use}。只改 ${MARKER} 这一处，各工具都从这里读`);
   if (!existsSync(p.abs.registry)) return;
   let reg;
   try { reg = JSON.parse(readFileSync(p.abs.registry, "utf8")); } catch (e) { return out.fail(`系列登记表不是合法 JSON：${e.message}`); }

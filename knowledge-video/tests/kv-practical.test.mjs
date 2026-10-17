@@ -57,6 +57,18 @@ test("kv gate topic：记原话、日期、指纹，同步写选题关.md；原�
   assert.match(kv({}, "status", dir).stdout, /✓ +2 选题关 +① 选题关 ✓/);
 });
 
+test("kv gate 同一节点再确认：上一次的原话和日期留在 history 里，不被覆盖", () => {
+  const dir = practical();
+  kv({}, "init", dir);
+  kv({}, "gate", dir, "topic", "第一次通过");
+  writeFileSync(join(dir, "选题关.md"), readFileSync(join(dir, "选题关.md"), "utf8") + "\n实测后数字改了\n");
+  assert.equal(kv({}, "gate", dir, "topic", "改后的也通过").status, 0);
+  const g = readRun(dir).gates.topic;
+  assert.equal(g.quote, "改后的也通过");
+  assert.deepEqual(g.history.map((h) => h.quote), ["第一次通过"]);
+  assert.match(g.history[0].at, /^\d{4}-\d{2}-\d{2}$/);
+});
+
 test("kv gate --edit：只追加修改意见，不通过", () => {
   const dir = practical();
   kv({}, "init", dir);

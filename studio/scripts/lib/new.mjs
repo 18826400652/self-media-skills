@@ -1,7 +1,7 @@
 // st new：新建一期作品（原 scripts/new-episode.sh）。按系列登记表的 type 放模板：
 //   practical（默认，实用技巧）：场景卡 + 选题关 + 实测记录 + 母稿 + 费曼检查 + 发布记录 + 公众号 + 小红书文案 + 抖音
 //   concept（概念科普，走 knowledge-video）：发布记录 + 抖音（SCRIPT 用概念科普模板）
-// 模板先找项目 templates 目录，没有用工具包默认的；占位符：{{标题}} {{角标}} {{系列}} {{编号}} {{账号}} {{观众}} {{账号定位}} {{系列说明}}
+// 模板先找项目 templates 目录，没有用工具包默认的；占位符：{{标题}} {{角标}} {{系列}} {{编号}} {{账号}} {{观众}} {{账号定位}} {{系列说明}} {{领取方式}}
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -103,6 +103,7 @@ export function createEpisode(opts, cwd = process.cwd()) {
   const vars = {
     标题: opts.name, 角标: plan.badge, 系列: plan.label, 编号: plan.num,
     账号: project.account, 观众: project.audience, 账号定位: project.positioning,
+    领取方式: project.lead || "（模板怎么领：还没定，在 studio.json 的 lead 写）",
     // 系列说明和登记表放在同一个目录：<registry 目录>/<系列>.md；单篇没有系列，指向账号定位
     系列说明: opts.series === "单篇" ? project.positioning : relative(project.root, join(dirname(project.abs.registry), `${opts.series}.md`)),
   };

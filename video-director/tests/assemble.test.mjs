@@ -75,6 +75,13 @@ test("cuesJs：用下一段开头的词给本段做退场是允许的（超出�
 
 const PAL = { bg: "#F1ECE2", ink: "#1C1A17", muted: "#6E675C", accent: "#FFD84D", alert: "#D2372A" };
 
+test("segmentHosts：组件段带 --hf-safe-bottom:1150px（字幕带 1180 上方 30），dykit 组件按它收底边；手写段不带", () => {
+  const segs = [{ id: "seg-01", start: 0, duration: 3, component: "dy-checklist", vars: {} }, { id: "seg-02", start: 3, duration: 2 }];
+  const [comp, frame] = segmentHosts(segs, null, PAL).trim().split("\n");
+  assert.match(comp, /--hf-safe-bottom:1150px/);
+  assert.doesNotMatch(frame, /--hf-safe-bottom/);
+});
+
 test("customVars：配色和字体变成 --hf-custom-* 变量；荧光笔用 accent，组件强调色取和底色对比度够的", () => {
   const v = customVars(PAL, { title: "serif", body: "sans" });
   // 纸面上荧光黄当文字看不清（< 3:1），组件强调色改用 alert 红；荧光笔底色仍是黄

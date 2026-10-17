@@ -145,3 +145,16 @@ export function componentInfo(archiveDir, name, projectDir) {
   const minDuration = catalog.components.find((c) => c.id === name)?.minDuration ?? 0;
   return { html, minDuration };
 }
+
+/** 组件目录（catalog/catalog.json）→ 给人和 Claude 看的列表；query 按名字、用途、适合场景筛 */
+export function catalogText(catalog, query = "") {
+  const q = query.trim().toLowerCase();
+  const hit = (c) => !q || [c.id, c.purpose, c.suitableFor].some((s) => String(s ?? "").toLowerCase().includes(q));
+  const list = (catalog.components ?? []).filter(hit);
+  if (!list.length) return `没有和「${query}」相关的组件（不带关键词看全部）`;
+  return list.map((c) => {
+    const meta = [c.suitableFor && `适合：${c.suitableFor}`, c.minDuration && `至少 ${c.minDuration} 秒`, c.beats?.length && `节拍：${c.beats.join("；")}`].filter(Boolean).join("；");
+    const vars = (c.variables ?? []).map((v) => `    ${v.id} ${v.label ?? ""} = ${JSON.stringify(v.default ?? "")}`);
+    return [`${c.id}（${c.kind ?? "?"}）：${c.purpose ?? ""}`, ...(meta ? [`  ${meta}`] : []), ...(vars.length ? ["  变量：", ...vars] : [])].join("\n");
+  }).join("\n\n");
+}

@@ -67,7 +67,10 @@ def ensure_connected(run=adb):
     serial = pick_serial(parse_devices(run(["devices"])), last)
     if serial:
         return serial
-    raise DeviceUnavailable(f"手机没连上（上次的地址 {last} 连不通）。{RECONNECT_HELP}")
+    raise DeviceUnavailable(
+        f"手机没连上（这台电脑记住的手机地址 {last} 连不通，可能是以前连过的）。{RECONNECT_HELP}。"
+        "手机是备用：实测可以用浏览器录（sc rec --url <AI 网址>），存草稿默认就走浏览器"
+    )
 
 
 def connect(addr=None, run=adb):

@@ -32,7 +32,7 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 | `kv status <作品>` | 每一步开始前；列出 15 步 ✓/·、确认节点、下一步 |
 | `kv gate <作品> <topic\|script\|director\|sample\|final> "用户原话"` | 用户明确说通过之后。前面没做完会被拒绝 |
 | `kv gate <作品> <节点> --edit "用户原话"` | 用户提了修改意见（不算通过） |
-| `kv done <作品> <wechat\|xiaohongshu\|douyin>` | `wa draft` / `vdraft --to xiaohongshu` / `vdraft` 成功之后 |
+| `kv done <作品> <wechat\|xiaohongshu\|douyin>` | `wa draft` / `vdraft --to xiaohongshu` / `vdraft` 成功之后；用户自己存草稿的，用户说存好了再记。④ 通过后第 11–15 步各算各的，内容写好没存的显示「待存草稿」 |
 | `kv init <作品> [--fresh]` | 老作品补 run.json；`--fresh` 记下刚生成的模板，用来判断「还没写」 |
 
 15 步、5 个确认节点：

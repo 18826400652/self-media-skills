@@ -2,6 +2,7 @@
 import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { writeFonts } from "./fonts.mjs";
+import { CAPTION } from "./douyin-qa.mjs";
 
 const esc = (s) => String(s).replaceAll("&", "&amp;").replaceAll("'", "&#39;").replaceAll("<", "&lt;");
 const vars = (o) => `data-variable-values='${esc(JSON.stringify(o))}'`;
@@ -41,6 +42,8 @@ const host = (id, src, start, duration, track, extra = "", hostId = id, style = 
   `    <div id="host-${hostId}" class="clip" data-composition-id="${id}" data-composition-src="${src}" data-start="${start}" data-duration="${duration}" data-track-index="${track}" data-width="1080" data-height="1920" ${extra}style="position:absolute;inset:0${style ? ";" + style : ""}"></div>\n`;
 
 const FONT_VAR = { serif: "var(--vd-serif)", sans: "var(--vd-sans)" };
+// dykit 组件内容的底边（--hf-safe-bottom）：停在字幕带上方 30px；组件库默认 1520 会压到 vd 的字幕
+const SAFE_BOTTOM = `--hf-safe-bottom:${CAPTION.top - 30}px`;
 const INK = "#1C1A17", WHITE = "#FFFFFF";
 
 function luminance(hex) {
@@ -80,7 +83,7 @@ export function applyHead(html, hasComponents) {
 
 export function segmentHosts(segments, only = null, palette = null, fonts = {}) {
   return "\n" + segments.filter((s) => !only || only.includes(s.id)).map((s, i) => s.component
-    ? host(s.component, `compositions/${s.component}.html`, s.start, s.duration, 2 + i, `data-theme="custom" ${vars(s.vars ?? {})} `, s.id, customVars(palette, fonts))
+    ? host(s.component, `compositions/${s.component}.html`, s.start, s.duration, 2 + i, `data-theme="custom" ${vars(s.vars ?? {})} `, s.id, `${customVars(palette, fonts)};${SAFE_BOTTOM}`)
     : host(s.id, `compositions/frames/${s.id}.html`, s.start, s.duration, 2 + i)).join("");
 }
 

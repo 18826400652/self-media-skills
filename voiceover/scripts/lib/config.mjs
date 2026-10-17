@@ -45,13 +45,23 @@ function findStudioJson(startDir) {
   }
 }
 
+/** 骨架里的括号说明「（…）」：还没改成真内容 */
+const PLACEHOLDER_RE = /^（.*）$/;
+
 /**
+ * 配置能不能用。tts.style 还是骨架占位 = 拒绝（会拿占位文字去付费生成）。
  * 没找到 voiceover.config.json 时怎么办：在作品项目里 = 还没迁移配置，拒绝（不能悄悄换成默认音色）；
  * 不在作品项目里 = 单独用，提醒一句用的是默认值。
  * @returns {{ refuse: string | null, warn: string | null }}
  */
 export function configGate(config, startDir) {
-  if (config.configPath) return { refuse: null, warn: null };
+  if (config.configPath) {
+    const style = config.tts?.style;
+    if (typeof style === "string" && PLACEHOLDER_RE.test(style.trim())) {
+      return { refuse: `${config.configPath} 的 tts.style 还是模板占位：${style}。先写配音人设（嗓音、说话场合），不然会拿这段占位文字去付费生成`, warn: null };
+    }
+    return { refuse: null, warn: null };
+  }
   const studio = findStudioJson(startDir);
   if (studio) {
     return { refuse: `这是作品项目（找到 ${studio}），但没有 ${CONFIG_NAME}：把旧配音配置里的 tts 搬过来（见 voiceover/README.md）`, warn: null };

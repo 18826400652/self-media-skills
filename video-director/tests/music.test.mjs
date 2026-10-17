@@ -92,8 +92,9 @@ test("resolveMusic：取到的还是比视频短 → 循环补齐并提醒", () 
   const src = resolveMusic(dir, "lo-fi", fakeRun(calls), { duration: 91, probe: lens({ "bgm.wav": 54 }), warn: (m) => warns.push(m) });
   assert.equal(src, "assets/audio/bgm.wav");
   const ff = calls.find((c) => c[0] === "ffmpeg");
-  assert.ok(ff && ff.includes("-stream_loop") && ff.includes("91"), JSON.stringify(calls));
+  assert.ok(ff && ff.join(" ").includes("acrossfade") && ff.includes("91"), JSON.stringify(calls));
   assert.match(warns.join("\n"), /循环/);
+  assert.match(warns.join("\n"), /接缝处淡入淡出.*不想听出重复.*assets\/audio\/bgm\.mp3/);
 });
 
 test("resolveMusic：用户自己放的 bgm.mp3 太短 → 不替换、不取曲，循环成 bgm-loop.wav", () => {
@@ -127,4 +128,14 @@ test("alignMusic：没装 hyperframes → 警告里带安装办法，配乐从�
   const never = () => { throw new Error("不应调用"); };
   assert.equal(alignMusic(dir, { src: "assets/audio/bgm.wav", drop: 10, duration: 20 }, never, { warn: (m) => warns.push(m), requireBin: noHf }), 0);
   assert.match(warns.join("\n"), /还没装 hyperframes.*npm ci.*配乐从头播放/);
+});
+
+test("loopArgs：短配乐循环时每个接缝 2 秒淡入淡出，份数够铺满视频；太短（≤ 4 秒）退回直接循环", async () => {
+  const { loopArgs } = await import("../scripts/lib/music.mjs");
+  const a = loopArgs("in.wav", "out.wav", 30, 112);
+  assert.equal(a.filter((x) => x === "in.wav").length, 4, "4 份：4×30 − 3×2 = 114 ≥ 112");
+  assert.equal((a.join(" ").match(/acrossfade=d=2/g) ?? []).length, 3);
+  assert.deepEqual(a.slice(-3), ["-t", "112", "out.wav"]);
+  const short = loopArgs("in.wav", "out.wav", 3, 60);
+  assert.ok(short.includes("-stream_loop"));
 });

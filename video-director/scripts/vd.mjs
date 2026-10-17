@@ -3,7 +3,8 @@
 //   init   建空的导演工程（hyperframes blank + vd 模板）；目录不为空时拒绝
 //   render 渲染到 <工程>/renders/（--sample 出 sample.mp4），完成后自动 verify
 //   verify <成片.mp4> [--project <工程>]：帧数、时长、声音、尺寸、黑屏
-//   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）；--check 只校验不写文件
+//   components  列出 dykit 组件（用途、适合、时长、节拍、变量和默认值）；可跟关键词筛，如 vd components 抖音 对比
+//   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）；--check 只校验不写文件；段里 at() 用了没写的词报错
 //   build  cues → 音轨 → dykit 组件 → index.html 标记块 → 配乐对位与避让 → hyperframes check
 //          [--sample] [--no-music] [--update-components]（组件库换成 GitHub 上的最新提交）
 //   check  校验 DIRECTOR.md + 列出组件候选 + hyperframes check
@@ -14,10 +15,11 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
-import { REPO, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, recordingProblem, writeLock } from "./lib/components.mjs";
+import { REPO, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, recordingProblem, writeLock } from "./lib/components.mjs";
 import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
+import { missingAts } from "./lib/frame-ats.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
@@ -25,7 +27,7 @@ import { requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
 
-const USAGE = "用法：vd init|cues|build|check|qa|render|verify <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
+const USAGE = "用法：vd init|cues|build|check|qa|render|verify|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
 const SCRIPTS = fileURLToPath(new URL(".", import.meta.url));
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
@@ -68,6 +70,8 @@ function load(dir) {
   if (errors.length) throw new Error(`DIRECTOR.md 有 ${errors.length} 处问题：\n  - ${errors.join("\n  - ")}`);
   const built = { ...buildCues(parsed, meta), vd: parsed.vd };
   for (const w of built.warnings) console.warn(`⚠ ${w}`);
+  const missing = missingAts(dir, built.cues);
+  if (missing.length) throw new Error(`段里用了 ${missing.length} 个 DIRECTOR.md 没写的 @词（在正文里写成 @词 再跑）：\n  - ${missing.map((m) => `${m.file}：at("${m.name}")`).join("\n  - ")}`);
   return { meta, parsed, built };
 }
 
@@ -142,6 +146,14 @@ const COMMANDS = {
     for (const i of r.issues) console.log(`${i.level === "error" ? "✗" : "⚠"} ${i.msg}`);
     console.log(`${r.passed ? "✓" : "✗"} 抖音专用检查（${sample ? `样片 ${segments.map((s) => s.id).join("、")}` : "整片"}，结果 ${out}）：${r.shots.length} 个时间点，${r.issues.filter((i) => i.level === "error").length} 个 ✗（截图总览 snapshots/cues-sheet.jpg，按 DIRECTOR.md 逐条看）`);
     return r.passed ? 0 : 1;
+  },
+  // 列出 dykit 组件（工程锁着哪个版本就看哪个，没锁看最新）；不写锁文件
+  components(dir, rest = [], deps = { ensureLock, fetchArchive }) {
+    const { sha } = deps.ensureLock(dir);
+    const repo = deps.fetchArchive(sha, CACHE);
+    const catalog = JSON.parse(readFileSync(join(repo, "catalog/catalog.json"), "utf8"));
+    console.log(`dykit 组件库 ${REPO}@${sha.slice(0, 7)}（在 DIRECTOR.md 机器块的段里写 "component" 和 "vars"）\n`);
+    console.log(catalogText(catalog, rest.join(" ")));
   },
   check(dir, _rest, config = loadConfig(findProjectRoot(dir)), { requireBin = requireHf } = {}) {
     const bin = requireBin();

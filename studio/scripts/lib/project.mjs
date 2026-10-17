@@ -15,8 +15,9 @@ export const DEFAULTS = Object.freeze({
   brand: "06-品牌资产/hyperframes",
   registry: "00-规划/系列/系列.json",
   positioning: "00-规划/账号定位.md",
-  account: "",
+  account: "", // 账号名、目标观众、领取方式（模板怎么领）只写在 studio.json 这一处，各工具从这里读
   audience: "",
+  lead: "",
   toolkit: "",
 });
 

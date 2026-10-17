@@ -28,7 +28,7 @@ skill 里不写死任何作品目录名：目录约定读 `studio.json`，其余
 ```bash
 cd <工具包>/studio && bin/st install --deps   # 注册 skill、命令放进 ~/.local/bin、装 Node / Python 依赖
 cd <工具包>/video-director && npx hyperframes skills update hyperframes-audio   # HyperFrames 官方 skill，配乐要用
-st init ~/my-media --account 账号名 --audience "目标观众"   # 没有作品项目时：建一个
+st init ~/my-media --account 账号名 --audience "目标观众" --lead "点头像进粉丝群领"   # 没有作品项目时：建一个
 cd <作品项目> && st doctor                     # 逐项打勾，按提示补齐；--online 再查浏览器
 ```
 
@@ -50,7 +50,7 @@ cd <作品项目> && st doctor                     # 逐项打勾，按提示补
 |---|---|
 | `st doctor [--online]` | 检查作品项目和工具包，✗ 要修、⚠ 提醒；有 ✗ 退出码 1 |
 | `st new <系列> <简称> [--编号 N]` | 新建一期；`st new 单篇 <简称> [--栏目 名称] [--日期 YYYY-MM-DD]`；`--只建抖音` 给已有作品补建抖音工程 |
-| `st init <目录> [--account …] [--audience …]` | 建新的作品项目；已有的文件不覆盖 |
+| `st init <目录> [--account …] [--audience …] [--lead …]` | 建新的作品项目；已有的文件不覆盖 |
 | `st install [--deps]` | 软链 skill 和命令到这个工具包；同名的真实目录不动 |
 | `st version` | 工具包版本（项目 `studio.json` 的 `toolkit` 可以写 `">=1.0.0"`） |
 
@@ -65,9 +65,12 @@ cd <作品项目> && st doctor                     # 逐项打勾，按提示补
   "positioning": "00-规划/账号定位.md",
   "account": "账号名",
   "audience": "目标观众",
+  "lead": "模板怎么领，如：点头像进粉丝群领",
   "toolkit": ">=1.0.0"
 }
 ```
+
+- `account`、`audience`、`lead` 只写在这里：`st new` 填进各期模板（`{{账号}}`、`{{观众}}`、`{{领取方式}}`），`wa` 用 `account` 核对公众号，`ic` 角标默认 `@account`。各 skill 的配置不用再写一遍（写了以 skill 配置为准）
 
 - `registry` 系列登记表：`{"系列名": {"label": "显示名", "unit": "期", "type": "practical|concept", "paused": "暂停原因"}}`
 - `brand` 目录放账号固定元素 `brand-captions.html`、`brand-ending.html`、`brand-kicker.html`（video-director 用）；`brand-*.html` 只能用 `var(--vd-*)` 字体变量（`st doctor` 会查）

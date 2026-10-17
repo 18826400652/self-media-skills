@@ -1,7 +1,8 @@
 {
   "node/chrome.mjs": [
     "image-cards/scripts/lib/shared/chrome.mjs",
-    "video-director/scripts/lib/shared/chrome.mjs"
+    "video-director/scripts/lib/shared/chrome.mjs",
+    "wechat-article/scripts/lib/shared/chrome.mjs"
   ],
   "python/copy_format.py": [
     "browser-draft/lib/copy_format.py",
@@ -16,5 +17,9 @@
     "wechat-article/scripts/lib/shared/draft-run.mjs",
     "image-cards/scripts/lib/shared/draft-run.mjs",
     "video-draft/scripts/lib/shared/draft-run.mjs"
+  ],
+  "node/studio-info.mjs": [
+    "wechat-article/scripts/lib/shared/studio-info.mjs",
+    "image-cards/scripts/lib/shared/studio-info.mjs"
   ]
 }

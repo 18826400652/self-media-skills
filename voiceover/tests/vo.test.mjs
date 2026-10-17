@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { configGate } from "../scripts/lib/config.mjs";
 import { parseScript } from "../scripts/lib/shared/script-md.mjs";
-import { restoreCase, toCaptionWords, writeOutputs } from "../scripts/vo.mjs";
+import { describeError, restoreCase, toCaptionWords, writeOutputs } from "../scripts/vo.mjs";
 
 const chars = (s, t0 = 0, step = 0.1) => [...s].map((ch, i) => ({ text: ch, start: t0 + i * step, end: t0 + (i + 1) * step }));
 
@@ -62,6 +62,30 @@ test("configGate：有配置文件 → 放行，没有提示", () => {
   assert.deepEqual(configGate({ configPath: "/p/voiceover.config.json" }, "/p/ep"), { refuse: null, warn: null });
 });
 
+test("configGate：配音人设 tts.style 还是模板占位 → 拒绝，不拿占位文字去付费生成", () => {
+  const style = "（描述配音人的嗓音和说话场合，例如：中年男性，嗓音低沉，像跟朋友聊天）";
+  const { refuse } = configGate({ configPath: "/p/voiceover.config.json", tts: { style } }, "/p/ep");
+  assert.match(refuse, /tts\.style 还是模板占位/);
+  assert.match(refuse, /\/p\/voiceover\.config\.json/);
+});
+
+test("configGate：tts.style 写了真人设（括号只在中间）→ 放行", () => {
+  const tts = { style: "中年男性（四十岁左右），像跟朋友聊天" };
+  assert.deepEqual(configGate({ configPath: "/p/voiceover.config.json", tts }, "/p/ep"), { refuse: null, warn: null });
+});
+
+test("describeError：fetch failed 补上底层原因和网络、代理提示", () => {
+  const err = new TypeError("fetch failed", { cause: Object.assign(new Error("connect ECONNREFUSED 1.2.3.4:443"), { code: "ECONNREFUSED" }) });
+  const msg = describeError(err);
+  assert.match(msg, /连不上配音服务/);
+  assert.match(msg, /ECONNREFUSED/);
+  assert.match(msg, /代理/);
+});
+
+test("describeError：其他错误原样给出", () => {
+  assert.equal(describeError(new Error("找不到 SCRIPT.md")), "找不到 SCRIPT.md");
+});
+
 test("configGate：没配置、上层有 studio.json → 拒绝并指向 README", () => {
   const root = mkdtempSync(join(tmpdir(), "vo-gate-"));
   writeFileSync(join(root, "studio.json"), "{}");
@@ -76,4 +100,21 @@ test("configGate：没配置、也不在作品项目里 → 不拒绝，警告�
   const { refuse, warn } = configGate({ configPath: null }, dir);
   assert.equal(refuse, null);
   assert.match(warn, /^⚠ 没找到 voiceover\.config\.json，用默认配音设置/);
+});
+
+test("placeVoice：每帧的切片放进工程后删掉，缓存里只留付费合成的整段（不再一段声音存三份）", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const { placeVoice } = await import("../scripts/vo.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "vo-place-"));
+  const tone = (f) => execFileSync("ffmpeg", ["-v", "error", "-f", "lavfi", "-i", "sine=d=0.5", f]);
+  tone(join(dir, "seg-01-02-ab.wav"));
+  for (const [slice, out, pad] of [["seg-01-02-ab.f01.wav", "01.wav", 0], ["seg-01-02-ab.f02.wav", "02.wav", 0.3]]) {
+    tone(join(dir, slice));
+    writeFileSync(join(dir, slice.replace(".wav", ".words.json")), "[]");
+    placeVoice(join(dir, slice), join(dir, out), pad);
+    assert.ok(existsSync(join(dir, out)), out);
+    assert.equal(existsSync(join(dir, slice)), false, `${slice} 应删掉`);
+    assert.equal(existsSync(join(dir, slice.replace(".wav", ".words.json"))), false);
+  }
+  assert.ok(existsSync(join(dir, "seg-01-02-ab.wav")), "付费合成的整段留在缓存");
 });

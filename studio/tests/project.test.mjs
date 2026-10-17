@@ -55,9 +55,9 @@ test("st init：建出骨架，账号填进去，gitignore 改名；再跑一次
   for (const d of ["00-规划", "01-灵感收集", "02-学习笔记", "03-选题池", "04-作品", "05-模板", "06-品牌资产", "07-复盘"])
     assert.ok(existsSync(join(dir, d)), `缺目录 ${d}`);
   assert.match(readFileSync(join(dir, "00-规划/账号定位.md"), "utf8"), /账号名：小号/);
-  assert.equal(JSON.parse(readFileSync(join(dir, "image-cards.config.json"), "utf8")).footer, "@小号");
+  assert.equal("footer" in JSON.parse(readFileSync(join(dir, "image-cards.config.json"), "utf8")), false, "角标由 ic 从 studio.json 的 account 取");
   assert.equal(readFileSync(join(dir, "00-规划/语气指南.md"), "utf8"), "我自己的");
-  assert.match(readFileSync(join(dir, "README.md"), "utf8"), /小号/);
+  assert.match(readFileSync(join(dir, "README.md"), "utf8"), /studio\.json/);
   assert.match(readFileSync(join(dir, ".env.example"), "utf8"), /^DASHSCOPE_API_KEY=$/m);
   assert.doesNotMatch(readFileSync(join(dir, ".env.example"), "utf8"), /WECHAT_APP/, "个人号没有草稿接口，不列公众号密钥");
   for (const f of ["00-规划/平台策略/抖音.md", "00-规划/平台策略/公众号.md", "00-规划/平台策略/小红书.md", "06-品牌资产/视觉规范.md"])

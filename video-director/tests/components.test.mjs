@@ -167,3 +167,20 @@ test("recordingProblem：组件是旧版（放完不停住）→ 说后面是空
 test("recordingProblem：读不到录屏时长 → 说找不到或读不了", () => {
   assert.match(recordingProblem({ segId: "s", src: "nope.mp4", recLen: 0, segDuration: 15, html: HOLDS }), /nope\.mp4 读不到时长/);
 });
+
+test("catalogText：每个组件一段：名字、用途、适合、最短时长、节拍、变量（默认值）；关键词按名字、用途、适合筛", async () => {
+  const { catalogText } = await import("../scripts/lib/components.mjs");
+  const catalog = { components: [
+    { id: "dy-checklist", kind: "overlay", purpose: "打勾清单", suitableFor: "列步骤、要点", minDuration: 4, beats: ["每一项出现"], variables: [{ id: "title", label: "标题", default: "记住这 3 点" }, { id: "items", label: "要点(| 分隔)", default: "a|b" }] },
+    { id: "dy-vs-compare", kind: "overlay", purpose: "左右对比表", suitableFor: "两种做法对比", minDuration: 5, variables: [] },
+  ] };
+  const all = catalogText(catalog);
+  assert.match(all, /^dy-checklist（overlay）：打勾清单/m);
+  assert.match(all, /适合：列步骤、要点；至少 4 秒；节拍：每一项出现/);
+  assert.match(all, /title 标题 = "记住这 3 点"/);
+  assert.match(all, /^dy-vs-compare/m);
+  const found = catalogText(catalog, "对比");
+  assert.doesNotMatch(found, /dy-checklist/);
+  assert.match(found, /dy-vs-compare/);
+  assert.match(catalogText(catalog, "没有的词"), /没有和「没有的词」相关的组件/);
+});

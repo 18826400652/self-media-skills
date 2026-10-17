@@ -10,7 +10,7 @@
 git clone <这个仓库> ~/self-media-skills
 ~/self-media-skills/studio/bin/st install --deps     # 注册 skill 到 ~/.claude/skills、命令放进 ~/.local/bin、装依赖
 (cd ~/self-media-skills/video-director && npx hyperframes skills update hyperframes-audio)   # HyperFrames 官方 skill：配乐要用
-st init ~/my-media --account 账号名 --audience "目标观众"   # 建作品项目（已有就跳过）
+st init ~/my-media --account 账号名 --audience "目标观众" --lead "点头像进粉丝群领"   # 建作品项目（已有就跳过）
 cd ~/my-media && st doctor                          # 逐项检查，按提示补齐（参考音色、.env 密钥、浏览器登录…）
 ```
 

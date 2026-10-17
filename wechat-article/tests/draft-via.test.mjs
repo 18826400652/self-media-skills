@@ -64,3 +64,15 @@ test("公众号载荷带配置里的 account", () => {
   const payloadPath = calls(dir).trim().split(" ").pop();
   assert.equal(JSON.parse(readFileSync(payloadPath, "utf8")).account, "测试号");
 });
+
+test("配置里没写 account（或还是占位）→ 用 studio.json 的 account（账号名只写一处）", () => {
+  for (const cfg of [{ theme: "grace" }, { theme: "grace", account: "（公众号名称）" }]) {
+    const { dir, env } = setup();
+    writeFileSync(join(dir, "wechat-article.config.json"), JSON.stringify(cfg));
+    writeFileSync(join(dir, "studio.json"), JSON.stringify({ account: "小林的AI办公室" }));
+    const r = run(["draft", join(dir, "文章.md")], env);
+    assert.equal(r.status, 0, r.stderr);
+    const payloadPath = calls(dir).trim().split(" ").pop();
+    assert.equal(JSON.parse(readFileSync(payloadPath, "utf8")).account, "小林的AI办公室");
+  }
+});

@@ -2,7 +2,7 @@
 const W = 1080, H = 1920, TOL = 2;
 const SAFE = { top: 200, right: 160, bottom: 480 }; // 平台界面占的边（director-rules 第 11 条）
 const RIGHT_FROM = 760; // 右侧按钮列（头像、点赞、评论、收藏、分享）从这里往下；上半屏内容可以用到 x 1020
-const CAPTION = { top: 1180, bottom: 1440 }; // 字幕带只放字幕
+export const CAPTION = { top: 1180, bottom: 1440 }; // 字幕带只放字幕
 const SETTLE = 0.8; // @词 后多久算落定
 const SEG_TAIL = 0.3; // 每段结尾前多久截一张
 const GRID = 0.5;
@@ -16,9 +16,9 @@ export function qaTimes(built, duration) {
     const seg = segs.find((s) => at >= s.start && at < s.end);
     if (!seg) continue; // 落在这次没构建的段里（样片）
     const t = r2(Math.min(at + SETTLE, seg.end - 0.05));
-    if (t < duration) inspect.push({ t, label: `@${cue}`, cue });
+    if (t < duration) inspect.push({ t, label: `@${cue}`, cue, seg: seg.id });
   }
-  for (const s of segs) if (s.end <= duration) inspect.push({ t: r2(s.end - SEG_TAIL), label: `${s.id} 结尾` });
+  for (const s of segs) if (s.end <= duration) inspect.push({ t: r2(s.end - SEG_TAIL), label: `${s.id} 结尾`, seg: s.id });
   inspect.sort((a, b) => a.t - b.t);
   const end = Math.min(duration, built.total);
   const grid = [];
@@ -43,6 +43,23 @@ export function checkFrame(f) {
   const k = f.data.kicker;
   if (k.visible && k.occludedBy) out.push({ level: "error", kind: "kicker", sel: k.occludedBy, t: f.t, msg: `${at(f)}栏目标签被 ${k.occludedBy} 挡住` });
   return out;
+}
+
+// 构图：一段里所有截图（@词 落定和段结尾）最低的内容元素都在这条线以上 = 整段挤在上方、下半屏空着（约为可用区 200–1150 的 60%）
+const LOW_CONTENT = 770;
+
+/** 整段内容只占上方 → ⚠（有时是故意的，所以不算 ✗）；只看一张会把段尾收起来的转场误报 */
+export function checkComposition(frames) {
+  const lowest = new Map();
+  for (const f of frames) {
+    if (!f.seg) continue;
+    const bottoms = f.data.elements.filter((e) => (e.text || e.key) && (e.opacity ?? 1) > 0.05).map((e) => e.box[3]);
+    if (bottoms.length) lowest.set(f.seg, { t: f.t, low: Math.max(lowest.get(f.seg)?.low ?? 0, ...bottoms) });
+  }
+  return [...lowest].filter(([, v]) => v.low < LOW_CONTENT).map(([seg, v]) => {
+    const low = Math.round(v.low);
+    return { level: "warn", kind: "composition", sel: seg, t: v.t, msg: `${seg} 整段内容最低只到 y ${low}，字幕带上方一直空着 ${CAPTION.top - 30 - low} 像素：画面挤在上方，放大或往下铺（主要内容铺到 y 1150 左右）` };
+  });
 }
 
 export function checkCues(frames, cues) {

@@ -2,7 +2,7 @@
 export const SECTIONS = ["## 1. 视觉方案", "## 2. 分段", "## 3. 导演规则自检", "## 4. 音乐", "## 5. 账号固定元素", "## 6. 新增内容", "## 7. 样片范围", "## 8. 组件候选"];
 const BLOCK = /```json vd\s*\n([\s\S]*?)\n```/g;
 // @词：遇到空白、@、#、|、中英文标点、引号、括号即结束；可带 #序号（| 用来隔开组件 cues 里的几个 @词）
-const TOKEN = /@([^\s@#，。、：；！？,.;:!?"'`「」『』“”‘’（）()\[\]【】<>|]+)(?:#(\d+))?/g;
+const TOKEN = /(?<!\\)@([^\s@#，。、：；！？,.;:!?"'`「」『』“”‘’（）()\[\]【】<>|]+)(?:#(\d+))?/g;
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 const COMPONENT = /^dy-[a-z0-9-]+$/;
 
@@ -21,9 +21,8 @@ export function parseDirector(md) {
 
   const seen = new Set();
   const tokens = [];
-  // 反引号里的 `@词` 是说明文字，不当锚点（``` 围栏不受影响：围栏内换行，匹配不到）
-  const prose = md.replace(/`[^`\n]+`/g, "");
-  for (const m of prose.matchAll(TOKEN)) {
+  // 反引号只是排版，`@一张表` 照样是锚点；只有写法说明里的 `@词`、`@词#2` 不算
+  for (const m of md.replace(/`@词(?:#\d+)?`/g, "").matchAll(TOKEN)) {
     const t = { text: m[1], nth: m[2] ? Number(m[2]) : 1, raw: m[0] };
     const key = `${t.text}#${t.nth}`;
     if (!seen.has(key)) { seen.add(key); tokens.push(t); }

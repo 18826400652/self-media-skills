@@ -38,15 +38,43 @@ const GATE_FILES = {
 
 // DIRECTOR.md 第 8 节「组件候选」是交成片时才补的，改它不算改导演脚本
 const CANDIDATES_RE = /^## 8\. 组件候选[\s\S]*?(?=^## |^```json vd|(?![\s\S]))/m;
-const content = (rel, p) => (rel.endsWith("DIRECTOR.md") ? readFileSync(p, "utf8").replace(CANDIDATES_RE, "") : readFileSync(p));
+const BLOCK_RE = /```json vd\s*\n([\s\S]*?)\n```/;
 
-export function fingerprint(dir, gate) {
+/**
+ * DIRECTOR.md 去掉排版差别后的内容：③a 只在导演脚本的内容变了才失效。
+ * 不算内容的：反引号、加粗 *、行内多余空白、空行、表格分隔行和对齐、机器块 JSON 的缩进
+ */
+export function normalizeDirector(md) {
+  const block = md.match(BLOCK_RE);
+  let json = "";
+  if (block) {
+    try { json = JSON.stringify(JSON.parse(block[1])); } catch { json = block[1].replace(/\s+/g, ""); }
+  }
+  const prose = md.replace(BLOCK_RE, "").replace(CANDIDATES_RE, "").split("\n")
+    .map((l) => l.replace(/[`*]/g, "").replace(/\s*\|\s*/g, "|").replace(/\s+/g, " ").trim())
+    .filter((l) => l && !/^\|?[\s:|-]+\|?$/.test(l));
+  return `${prose.join("\n")}\n${json}`;
+}
+
+const content = (rel, p) => (rel.endsWith("DIRECTOR.md") ? normalizeDirector(readFileSync(p, "utf8")) : readFileSync(p));
+// 旧版指纹（按原文算）：老 run.json 里记的是这个，照样认
+const rawContent = (rel, p) => (rel.endsWith("DIRECTOR.md") ? readFileSync(p, "utf8").replace(CANDIDATES_RE, "") : readFileSync(p));
+
+function hashFiles(dir, gate, read) {
   const h = createHash("sha256");
   for (const rel of GATE_FILES[gate](dir)) {
     const p = join(dir, rel);
-    if (existsSync(p)) h.update(rel).update(content(rel, p));
+    if (existsSync(p)) h.update(rel).update(read(rel, p));
   }
   return h.digest("hex");
+}
+
+export const fingerprint = (dir, gate) => hashFiles(dir, gate, content);
+export const legacyFingerprint = (dir, gate) => hashFiles(dir, gate, rawContent);
+
+/** 每个文件单独的指纹（kv gate 时记下，失效时说出改了哪个文件） */
+export function gateFileHashes(dir, gate) {
+  return Object.fromEntries(GATE_FILES[gate](dir).filter((rel) => existsSync(join(dir, rel))).map((rel) => [rel, sha(content(rel, join(dir, rel)))]));
 }
 
 export function templateHashes(dir, files) {
@@ -168,7 +196,7 @@ function directorSteps(dir, runVdCues) {
     : !vdQa ? no("还没跑 vd qa")
     : vdQa.passed !== true ? no("vd qa 还有 ✗")
     : mtime(vdQaPath) < newestHtml(root) ? no("画面改过，要重跑 vd qa")
-    : !qa ? no("还没写 qa.json") : mtime(qaPath) < mtime(mp4) ? no("渲染后还没重新 QA（重写 qa.json）")
+    : !qa ? no("还没写 qa.json") : mtime(qaPath) < mtime(mp4) ? no("渲染后还没重新 QA：qa.json 比成片旧（成片是写 qa.json 之后渲染的），看过新成片再更新 qa.json")
       : qaProblem(qa) ? no(qaProblem(qa)) : ok();
   return { director, sample, render };
 }
@@ -202,7 +230,10 @@ function gateFacts(dir, run) {
   return Object.fromEntries(Object.keys(GATE_FILES).map((g) => {
     const r = run.gates?.[g] ?? {};
     const passed = r.passed === true;
-    return [g, { passed, at: r.at ?? null, quote: r.quote ?? null, stale: passed && r.fingerprint !== fingerprint(dir, g) }];
+    const stale = passed && r.fingerprint !== fingerprint(dir, g) && r.fingerprint !== legacyFingerprint(dir, g);
+    const now = stale && r.files ? gateFileHashes(dir, g) : null;
+    const changed = now ? [...new Set([...Object.keys(r.files), ...Object.keys(now)])].filter((f) => r.files[f] !== now[f]) : [];
+    return [g, { passed, at: r.at ?? null, quote: r.quote ?? null, stale, changed }];
   }));
 }
 

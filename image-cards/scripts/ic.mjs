@@ -12,10 +12,11 @@ import MarkdownIt from "markdown-it";
 import puppeteer from "puppeteer-core";
 import YAML from "yaml";
 import { findChrome } from "./lib/shared/chrome.mjs";
+import { studioInfo } from "./lib/shared/studio-info.mjs";
 
 const SKILL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const CONFIG_NAME = "image-cards.config.json";
-const DEFAULTS = { preset: "xiaohongshu", theme: null, footer: "" };
+const DEFAULTS = { preset: "xiaohongshu", theme: null };
 const LAYOUTS = ["cover", "content", "list2", "quote", "end", "image"];
 const LAYOUT_RE = /<!--\s*layout:\s*([a-z0-9-]+)\s*-->/;
 const OUTPUT_RE = /^\d{2}\.png$/;
@@ -84,7 +85,8 @@ function buildHtml({ cards, preset, themeCss, footer, baseDir }) {
     const foot = preset.footer
       ? `<footer class="card-footer"><span>${escapeHtml(footer)}</span><span class="page">${i + 1} / ${cards.length}</span></footer>`
       : "";
-    return `<section class="card layout-${c.layout}" data-index="${i + 1}"><div class="card-body">${md.render(c.src)}</div>${foot}</section>`;
+    // 预设写了 center（公众号封面）：文字居中，转发卡片裁中间 1:1 时标题不被切
+    return `<section class="card layout-${c.layout}${preset.center ? " card-center" : ""}" data-index="${i + 1}"><div class="card-body">${md.render(c.src)}</div>${foot}</section>`;
   });
   return `<!doctype html>
 <html lang="zh-CN"><head><meta charset="UTF-8" />
@@ -139,7 +141,8 @@ async function main() {
   const html = buildHtml({
     cards, preset, baseDir,
     themeCss: readFileSync(themePath, "utf8"),
-    footer: meta.footer ?? config.footer,
+    // 角标：卡片 frontmatter → 配置 footer → studio.json 的账号名（只写一处）
+    footer: meta.footer ?? config.footer ?? (studioInfo(baseDir).account ? `@${studioInfo(baseDir).account}` : ""),
   });
   const htmlPath = join(baseDir, "卡片预览.html");
   writeFileSync(htmlPath, html);

@@ -61,6 +61,16 @@ test("parseDirector：反引号里的 @词 是说明文字，不算锚点", () =
   assert.deepEqual(p.tokens.map((t) => t.text), ["编一套", "根本没这条"]);
 });
 
+test("parseDirector：正文里带反引号的 `@词`（不是写法说明里的 `@词`）照样算锚点", () => {
+  const p = parseDirector(doc(VD, "说到 `@一百八十多条` 时数字定住，`@一张表#2` 展开；写法说明 `@词`。"));
+  assert.deepEqual(p.tokens.map((t) => [t.text, t.nth]), [["一百八十多条", 1], ["一张表", 2], ["编一套", 1], ["根本没这条", 1]]);
+});
+
+test("parseDirector：\\@ 是屏幕上的普通 @（如群聊「王总：\\@小林」），不算锚点", () => {
+  const p = parseDirector(doc(VD, "气泡写「王总：\\@小林 周三前确认」，说到 @编一套 时盖章。"));
+  assert.deepEqual(p.tokens.map((t) => t.text), ["编一套", "根本没这条"]);
+});
+
 test("分段可以直接用 dykit 组件：component 名必须是 dy-…，vars 必须是对象", () => {
   const ok = parseDirector(doc({ ...VD, segments: [{ id: "seg-01-hook", lines: [1, 2], component: "dy-scene-title", vars: { title: "x" } }, { id: "seg-02-why", lines: [3, 3] }] }));
   assert.deepEqual(ok.errors, []);

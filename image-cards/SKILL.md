@@ -25,7 +25,7 @@ ffmpeg -v error -y -i out/%02d.png -vf "scale=360:-1,tile=9x1:padding=8" -frames
 ```markdown
 ---
 preset: xiaohongshu        # 可选，覆盖项目配置
-footer: "@账号名"           # 可选，页脚文字
+footer: "@账号名"           # 可选，页脚文字；不写用配置的 footer，再没有用 studio.json 的 @account
 ---
 
 # 封面大标题<br>手动断行      ← 以 # 开头的卡片自动用 cover 版式
@@ -66,11 +66,11 @@ footer: "@账号名"           # 可选，页脚文字
 |---|---|---|
 | `xiaohongshu` | 1080×1440 | 小红书图文（3:4，推荐） |
 | `xiaohongshu-square` | 1080×1080 | 小红书图文（1:1） |
-| `wechat-cover` | 900×383 | 公众号头条封面（2.35:1） |
+| `wechat-cover` | 900×383 | 公众号头条封面（2.35:1），文字居中（转发卡片会裁中间 1:1，标题写短、放中间） |
 | `wechat-cover-square` | 383×383 | 公众号次条、转发卡片封面（1:1） |
 | `douyin-cover` | 1080×1920 | 抖音视频封面 |
 
-新增预设：在 `presets/` 加一个 JSON，字段包括 `width`、`height`、`fontSize`（基准字号，其余字号按 em 缩放）、`padding`（上右下左）、`footer`（是否显示页脚）。
+新增预设：在 `presets/` 加一个 JSON，字段包括 `width`、`height`、`fontSize`（基准字号，其余字号按 em 缩放）、`padding`（上右下左）、`footer`（是否显示页脚）、`center`（可选，整张卡文字居中）。
 
 ## 内容规则（小红书图文）
 
@@ -88,7 +88,7 @@ footer: "@账号名"           # 可选，页脚文字
 ## 项目配置 image-cards.config.json（可选，向上查找）
 
 ```json
-{ "preset": "xiaohongshu", "theme": "品牌/theme.css", "footer": "@账号名" }
+{ "preset": "xiaohongshu", "theme": "品牌/theme.css" }
 ```
 
 路径相对配置文件。优先级：命令行参数 > 卡片 frontmatter > 项目配置 > 默认值。
