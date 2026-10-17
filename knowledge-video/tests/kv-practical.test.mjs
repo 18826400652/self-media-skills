@@ -4,6 +4,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFile
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { episode } from "./helpers.mjs";
 
@@ -163,4 +164,31 @@ test("kv 传的不是一期作品目录（如作品根目录 04-作品）：报�
   const empty = mkdtempSync(join(tmpdir(), "kv-works-"));
   assert.match(kv({}, "status", empty).stderr, /下面也没有作品：先 st new/);
   assert.equal(readdirSync(works).includes("run.json"), false, "不往根目录写 run.json");
+});
+
+test("确认 ① 后改了场景卡 → ① 也是确认后改过，说出改的是场景卡", () => {
+  const dir = practical();
+  kv({}, "init", dir);
+  kv({}, "gate", dir, "topic", "通过");
+  assert.deepEqual(Object.keys(readRun(dir).gates.topic.files).sort(), ["场景卡.md", "选题关.md"]);
+  writeFileSync(join(dir, "场景卡.md"), "换了个人");
+  assert.match(kv({}, "status", dir).stdout, /确认后改过[^\n]*场景卡\.md/);
+});
+
+test("老的 ① 记录（指纹只算选题关）照样认，不因为加了场景卡就失效", () => {
+  const dir = practical();
+  kv({}, "init", dir);
+  kv({}, "gate", dir, "topic", "通过");
+  const run = readRun(dir);
+  const sel = readFileSync(join(dir, "选题关.md"));
+  run.gates.topic = { passed: true, at: run.gates.topic.at, quote: "通过", fingerprint: createHash("sha256").update("选题关.md").update(sel).digest("hex") };
+  writeFileSync(join(dir, "run.json"), JSON.stringify(run));
+  assert.doesNotMatch(kv({}, "status", dir).stdout, /确认后改过/);
+});
+
+test("kv init --unsettled：记进 run.json，status 一直提醒这期是方向没定时开的", () => {
+  const dir = practical();
+  assert.equal(kv({}, "init", dir, "--fresh", "--unsettled", "账号方向还没填完").status, 0);
+  assert.equal(readRun(dir).unsettled.note, "账号方向还没填完");
+  assert.match(kv({}, "status", dir).stdout, /⚠ .*--先不定.*账号方向还没填完/);
 });

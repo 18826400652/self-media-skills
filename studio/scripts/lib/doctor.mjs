@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
+import { accountStatus, describe, seriesStatus } from "./direction.mjs";
 import { hasAudio, mediaUseSfx } from "./init.mjs";
 import { hasShared, syncShared } from "./shared-sync.mjs";
 import { DEFAULT_TEMPLATES, loadProject, MARKER, satisfies, TOOLKIT_DIR, toolkitVersion, VO_PY } from "./project.mjs";
@@ -66,9 +67,8 @@ function checkProject(p, out) {
     if (existsSync(p.abs[k])) out.ok(`${k}：${p[k]}`);
     else out.fail(`${k} 不存在：${p[k]}（在 ${MARKER} 里改，或建出来）`);
   }
-  if (!existsSync(p.abs.positioning)) out.warn(`账号定位文档不存在：${p.positioning}（模板里的 {{账号定位}} 会指向它）`);
-  const what = { account: "账号名（公众号作者、封面角标、发草稿核对）", audience: "目标观众", lead: "模板怎么领（如「点头像进粉丝群领」，st new 填进各平台模板）" };
-  for (const [k, use] of Object.entries(what)) if (!p[k]) out.warn(`${MARKER} 没写 ${k}：${use}。只改 ${MARKER} 这一处，各工具都从这里读`);
+  const account = accountStatus(p);
+  (account.state === "ok" ? out.ok : out.warn)(describe(account));
   const hook = join(p.root, ".claude/settings.json");
   if (existsSync(hook) && readFileSync(hook, "utf8").includes("st log-hook")) out.ok("工具包命令会记到 .studio/log/（st review 汇总）");
   else out.warn("没配钩子，工具包命令的报错不会自动记录：在项目根跑 st init . --update 补上（也会补 偏好.md、工具问题.md）");
@@ -80,6 +80,10 @@ function checkProject(p, out) {
   else {
     const active = Object.keys(reg).filter((k) => !reg[k].paused);
     out.ok(`系列 ${Object.keys(reg).length} 个，在做的：${active.join("、") || "（无）"}`);
+    for (const name of active) {
+      const s = seriesStatus(p, name);
+      (s.state === "ok" ? out.ok : out.warn)(describe(s, name));
+    }
     const dir = dirname(p.abs.registry);
     const noDoc = Object.keys(reg).filter((k) => !existsSync(join(dir, `${k}.md`))).map((k) => relative(p.root, join(dir, `${k}.md`)));
     if (noDoc.length) out.warn(`系列没有说明文件（选题硬标准写在里面，st new 会用模板建一份）：${noDoc.join("、")}`);

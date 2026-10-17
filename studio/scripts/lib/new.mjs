@@ -5,6 +5,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
+import { directionProblems } from "./direction.mjs";
 import { loadProject, templatePath } from "./project.mjs";
 
 export const USAGE = `用法：
@@ -12,7 +13,8 @@ export const USAGE = `用法：
       → <works>/<系列>/NN-<简称>/，编号默认自动递增；系列须登记在系列登记表
   st new 单篇 <简称> [--栏目 名称] [--日期 YYYY-MM-DD]
       → <works>/单篇/YYYY-MM-DD-<简称>/
-  加 --只建抖音：作品已存在时只补建 抖音/ 工程`;
+  加 --只建抖音：作品已存在时只补建 抖音/ 工程
+  账号方向、这个系列要先和用户定好（st confirm），否则拦下；只想先试做一期加 --先不定`;
 
 const PRACTICAL_FILES = [
   ["场景卡模板.md", "场景卡.md"],
@@ -32,7 +34,7 @@ const has = (cmd) => spawnSync("bash", ["-c", `command -v ${cmd}`], { stdio: "ig
 export function parseArgs(argv) {
   const [series, name, ...rest] = argv;
   if (!series || !name) throw new Error(USAGE);
-  const opts = { series, name, num: "", column: "", date: today(), douyinOnly: false };
+  const opts = { series, name, num: "", column: "", date: today(), douyinOnly: false, unsettled: false };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
     const val = () => {
@@ -43,6 +45,7 @@ export function parseArgs(argv) {
     else if (a === "--栏目") opts.column = val();
     else if (a === "--日期") opts.date = val();
     else if (a === "--只建抖音") opts.douyinOnly = true;
+    else if (a === "--先不定") opts.unsettled = true;
     else throw new Error(`未知参数：${a}`);
   }
   if (name.includes("/") || name.includes("&")) throw new Error(`简称里不能有 / 或 &：${name}`);
@@ -99,6 +102,12 @@ export function createEpisode(opts, cwd = process.cwd()) {
     if (!existsSync(ep)) throw new Error(`作品不存在：${ep}`);
     if (existsSync(join(ep, "抖音"))) throw new Error(`已存在：${join(ep, "抖音")}（先改名或删除旧的）`);
   } else if (existsSync(ep)) throw new Error(`已存在：${ep}`);
+  // 方向没定的一期，选题关没有已确认的标准可对照：硬拦，除非用户明说先试做（--先不定）
+  const problems = opts.douyinOnly ? [] : directionProblems(project, opts.series);
+  if (problems.length && !opts.unsettled) {
+    throw new Error(`还不能开新的一期：\n  ${problems.join("\n  ")}\n只想先试做一期：加 --先不定（这期的选题就没有定好的标准可对照，方向定了以后可能要返工）`);
+  }
+  const unsettled = problems.length ? problems.map((m) => m.split("（")[0].split("：")[0]).join("；") : "";
 
   const vars = {
     标题: opts.name, 角标: plan.badge, 系列: plan.label, 编号: plan.num,
@@ -133,11 +142,12 @@ export function createEpisode(opts, cwd = process.cwd()) {
   fill("抖音/发布文案模板.md", "抖音/发布文案.md");
   if (!opts.douyinOnly && type === "practical") {
     if (!has("kv")) throw new Error("找不到 kv 命令：先在工具包里跑 st install");
-    run("kv", ["init", ep, "--fresh"]); // 记下空模板，kv status 才分得清「还没写」
+    run("kv", ["init", ep, "--fresh", ...(unsettled ? ["--unsettled", unsettled] : [])]); // 记下空模板，kv status 才分得清「还没写」
   }
 
   const rel = relative(project.root, ep);
   const lines = [opts.douyinOnly ? `已补建：${rel}/抖音/（作品里的其他文件没动）` : `已创建：${rel}（${plan.badge || "无角标"}）`];
+  if (unsettled) lines.push(`⚠ 用 --先不定 开的这期：${unsettled}。这期的选题关没有定好的标准可对照，定好方向后再看要不要返工`);
   if (newSeriesDoc) lines.push(`系列说明还没写，已用模板建好：${relative(project.root, seriesDoc)}（先填选题硬标准，选题关要逐条对照）`);
   if (concept) lines.push("顺序：按 knowledge-video 导演手册：brief.md → research.json → 抖音/SCRIPT.md → kv check → 确认节点 ①（见 knowledge-video 的 SKILL.md）");
   else lines.push(`下一步：kv status ${rel}（每一步开始前都先跑它，只做它说的那一步）`);

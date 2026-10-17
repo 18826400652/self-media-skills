@@ -15,6 +15,7 @@ export const DEFAULTS = Object.freeze({
   brand: "06-品牌资产/hyperframes",
   registry: "00-规划/系列/系列.json",
   positioning: "00-规划/账号定位.md",
+  voiceGuide: "00-规划/语气指南.md",
   account: "", // 账号名、目标观众、领取方式（模板怎么领）只写在 studio.json 这一处，各工具从这里读
   audience: "",
   lead: "",
@@ -43,7 +44,7 @@ export function loadProject(startDir = process.cwd()) {
   if (!root) throw new Error(`找不到 ${MARKER}：从 ${resolve(startDir)} 向上都没有。新项目先跑 st init <目录>`);
   const raw = JSON.parse(readFileSync(join(root, MARKER), "utf8"));
   const cfg = { ...DEFAULTS, ...raw };
-  const abs = Object.fromEntries(["works", "templates", "brand", "registry", "positioning"].map((k) => [k, resolve(root, cfg[k])]));
+  const abs = Object.fromEntries(["works", "templates", "brand", "registry", "positioning", "voiceGuide"].map((k) => [k, resolve(root, cfg[k])]));
   return { root, ...cfg, abs };
 }
 
