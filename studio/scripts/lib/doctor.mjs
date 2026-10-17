@@ -69,6 +69,9 @@ function checkProject(p, out) {
   if (!existsSync(p.abs.positioning)) out.warn(`账号定位文档不存在：${p.positioning}（模板里的 {{账号定位}} 会指向它）`);
   const what = { account: "账号名（公众号作者、封面角标、发草稿核对）", audience: "目标观众", lead: "模板怎么领（如「点头像进粉丝群领」，st new 填进各平台模板）" };
   for (const [k, use] of Object.entries(what)) if (!p[k]) out.warn(`${MARKER} 没写 ${k}：${use}。只改 ${MARKER} 这一处，各工具都从这里读`);
+  const hook = join(p.root, ".claude/settings.json");
+  if (existsSync(hook) && readFileSync(hook, "utf8").includes("st log-hook")) out.ok("工具包命令会记到 .studio/log/（st review 汇总）");
+  else out.warn("没配钩子，工具包命令的报错不会自动记录：在项目根跑 st init . --update 补上（也会补 偏好.md、工具问题.md）");
   if (!existsSync(p.abs.registry)) return;
   let reg;
   try { reg = JSON.parse(readFileSync(p.abs.registry, "utf8")); } catch (e) { return out.fail(`系列登记表不是合法 JSON：${e.message}`); }
