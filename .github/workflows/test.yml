@@ -1,0 +1,40 @@
+# 每次推送和 PR 跑工具包的全部测试（st test --strict：缺依赖跳过也算失败）
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 外部程序（配音、渲染的测试要用 ffmpeg）
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Node 依赖
+        run: |
+          for d in image-cards video-director wechat-article; do
+            (cd "$d" && npm ci --no-audit --no-fund)
+          done
+
+      - name: Chrome（预览、页面检查的测试要用）
+        run: npx --yes @puppeteer/browsers install chrome-headless-shell@stable --path ~/.cache/puppeteer
+
+      - name: Python 依赖（phone-draft 的 venv，browser-draft 借用）
+        run: |
+          python -m venv phone-draft/.venv
+          phone-draft/.venv/bin/pip install -r phone-draft/requirements.txt
+
+      - name: 全部测试
+        run: node studio/scripts/st.mjs test --strict

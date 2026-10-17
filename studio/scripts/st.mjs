@@ -7,6 +7,7 @@
 //   st series add <系列名> [--label 显示名] [--unit 期] [--type practical|concept]   登记新系列，建系列说明
 //   st install [--deps]         把 skill 注册给 Claude Code、命令放进 ~/.local/bin；--deps 顺便装依赖
 //   st sync-shared [--check]    把 shared/ 里的正本同步到各 skill（--check 只检查）
+//   st test [套件…] [--strict]   跑工具包里全部（或点名的）测试套件并汇总；--strict 时跳过的也算失败
 //   st review [--since 天数] [--out 文件]   汇总最近的工具问题和偏好候选（在作品项目里跑，默认 7 天）
 //   st log-hook                 作品项目的 Claude Code 钩子调用（从 stdin 读），记工具包命令的结果
 //   st version                  工具包版本
@@ -20,8 +21,9 @@ import { createEpisode, parseArgs, USAGE } from "./lib/new.mjs";
 import { loadProject, TOOLKIT_DIR, toolkitVersion } from "./lib/project.mjs";
 import { review } from "./lib/review.mjs";
 import { syncShared } from "./lib/shared-sync.mjs";
+import { testAll } from "./lib/test-all.mjs";
 
-const HELP = `st doctor [--online] | st new <系列> <简称> | st init <目录> [--update] | st confirm account|series … | st series add <系列名> | st install [--deps] | st sync-shared [--check] | st review [--since 天数] [--out 文件] | st version`;
+const HELP = `st doctor [--online] | st new <系列> <简称> | st init <目录> [--update] | st confirm account|series … | st series add <系列名> | st install [--deps] | st sync-shared [--check] | st test [套件…] [--strict] | st review [--since 天数] [--out 文件] | st version`;
 
 function reviewCmd(args) {
   const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined; };
@@ -74,6 +76,8 @@ function main([cmd, ...args]) {
       return 0;
     case "review":
       return reviewCmd(args);
+    case "test":
+      return testAll({ toolkit: TOOLKIT_DIR, only: args.filter((a) => !a.startsWith("--")), strict: args.includes("--strict") });
     case "log-hook":
       logHook(readFileSync(0, "utf8"));
       return 0;

@@ -132,8 +132,13 @@ test("checkDeps：都装齐时打印一行 ✓ 汇总", () => {
   mkdirSync(join(tk, "node-skill/node_modules/y"), { recursive: true });
   writeFileSync(join(tk, "node-skill/node_modules/y/package.json"), "{}");
   writeFileSync(join(tk, "py-skill/.venv/bin/python"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  // 外部程序用假的放在 PATH 最前面，结果不随这台机器装了什么变
+  const bin = tmp("st-bin-");
+  for (const cmd of ["ffmpeg", "ffprobe", "browser-harness"]) writeFileSync(join(bin, cmd), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  const path = process.env.PATH;
+  process.env.PATH = `${bin}:${path}`;
   const { r, out } = recorder();
-  checkDeps(out, tk);
+  try { checkDeps(out, tk); } finally { process.env.PATH = path; }
   assert.ok(!r.fails.some((m) => /skill/.test(m)), r.fails.join("\n"));
   assert.ok(r.oks.some((m) => /依赖都装好了/.test(m)), r.oks.join("\n"));
 });
