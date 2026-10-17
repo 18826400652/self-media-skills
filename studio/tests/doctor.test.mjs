@@ -81,14 +81,14 @@ test("st init：账号名、观众、领取方式只在 studio.json 一处；其
   assert.match(readFileSync(join(dir, "CLAUDE.md"), "utf8"), /studio\.json/);
 });
 
-test("st doctor：studio.json 没写账号名、观众、领取方式 → ⚠ 指明只改 studio.json 这一处", () => {
+test("st doctor：studio.json 没写账号名、观众、领取方式 → 账号方向没填完的 ⚠ 里列出来", () => {
   const home = fakeHome({ withSfx: true });
   const dir = join(tmp("st-init-"), "proj");
   initProject({ dir, home }, quiet);
   const out = capture();
   doctor({ cwd: dir, log: out.log, home });
-  for (const k of ["account", "audience", "lead"]) assert.match(out.text(), new RegExp(`⚠ studio\\.json 没写 ${k}`));
-  assert.match(out.text(), /只改 studio\.json 这一处/);
+  assert.match(out.text(), /⚠ 账号方向还没填完/);
+  for (const k of ["account", "audience", "lead"]) assert.match(out.text(), new RegExp(`studio\\.json 的 ${k} 没填`));
 });
 
 test("st doctor：占位字段填了真实值、或字段不存在 → 不报", () => {

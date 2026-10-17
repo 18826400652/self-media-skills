@@ -28,8 +28,9 @@ const finalMp4 = (dir, sub) => {
 };
 
 // 每个确认节点看哪些文件：确认后这些文件变了，节点失效
+// ① 和场景卡一起确认（谁、什么时候、遇到什么，和标题、开头三秒是一回事）
 const GATE_FILES = {
-  topic: () => ["选题关.md"],
+  topic: () => ["场景卡.md", "选题关.md"],
   script: () => [`${DY}/SCRIPT.md`, `${DY}/VOICE.md`],
   director: () => [`${DY}/DIRECTOR.md`, `${DY}/audio_meta.json`],
   sample: () => [`${DY}/renders/sample.mp4`],
@@ -60,9 +61,12 @@ const content = (rel, p) => (rel.endsWith("DIRECTOR.md") ? normalizeDirector(rea
 // 旧版指纹（按原文算）：老 run.json 里记的是这个，照样认
 const rawContent = (rel, p) => (rel.endsWith("DIRECTOR.md") ? readFileSync(p, "utf8").replace(CANDIDATES_RE, "") : readFileSync(p));
 
-function hashFiles(dir, gate, read) {
+// 场景卡并进 ① 之前记的指纹只算选题关：老记录照样认
+const LEGACY_GATE_FILES = { topic: () => ["选题关.md"] };
+
+function hashFiles(dir, gate, read, files = GATE_FILES) {
   const h = createHash("sha256");
-  for (const rel of GATE_FILES[gate](dir)) {
+  for (const rel of files[gate](dir)) {
     const p = join(dir, rel);
     if (existsSync(p)) h.update(rel).update(read(rel, p));
   }
@@ -71,6 +75,11 @@ function hashFiles(dir, gate, read) {
 
 export const fingerprint = (dir, gate) => hashFiles(dir, gate, content);
 export const legacyFingerprint = (dir, gate) => hashFiles(dir, gate, rawContent);
+/** 老版本记过的指纹：按原文算的（DIRECTOR.md 归一化之前）、① 只算选题关的 */
+const legacyFingerprints = (dir, gate) => [
+  legacyFingerprint(dir, gate),
+  ...(LEGACY_GATE_FILES[gate] ? [hashFiles(dir, gate, content, LEGACY_GATE_FILES)] : []),
+];
 
 /** 每个文件单独的指纹（kv gate 时记下，失效时说出改了哪个文件） */
 export function gateFileHashes(dir, gate) {
@@ -230,7 +239,7 @@ function gateFacts(dir, run) {
   return Object.fromEntries(Object.keys(GATE_FILES).map((g) => {
     const r = run.gates?.[g] ?? {};
     const passed = r.passed === true;
-    const stale = passed && r.fingerprint !== fingerprint(dir, g) && r.fingerprint !== legacyFingerprint(dir, g);
+    const stale = passed && r.fingerprint !== fingerprint(dir, g) && !legacyFingerprints(dir, g).includes(r.fingerprint);
     const now = stale && r.files ? gateFileHashes(dir, g) : null;
     const changed = now ? [...new Set([...Object.keys(r.files), ...Object.keys(now)])].filter((f) => r.files[f] !== now[f]) : [];
     return [g, { passed, at: r.at ?? null, quote: r.quote ?? null, stale, changed }];

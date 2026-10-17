@@ -109,8 +109,8 @@ export function initProject({ dir, account = "", audience = "", lead = "", updat
 
   log(`✓ 已建作品项目：${root}（新建 ${created} 个文件${skipped ? `，跳过 ${skipped} 个已有的` : ""}）`);
   log(`接下来：
-  1. 账号名、目标观众、模板怎么领（如「点头像进粉丝群领」「公众号回复关键词领」）只写在 studio.json 的 account、audience、lead，各工具都从这里读${account && audience && lead ? "（已填）" : "（还没填全）"}
-     填 00-规划/账号定位.md、00-规划/语气指南.md，在 00-规划/系列/系列.json 登记系列：{"系列名": {"label": "显示名", "unit": "期"}}
+  1. 定方向：在项目里和 AI 说「帮我定方向」，一项一项聊完账号方向（观众、看完的感受、人设、变现、选题标准、语气、账号名和怎么领），
+     你通过后 st confirm account；再用 st series add 开系列、聊系列说明、st confirm series。没定好 st new 会拦下
   2. 品牌：改 06-品牌资产/theme.css 的颜色；参考音色放 06-品牌资产/参考音色.wav；要配音时把 .env.example 复制成 .env 填密钥（字体和 GSAP 由 video-director 自带，不用准备）
   3. cd ${root} && st doctor，按提示补齐
   4. st new <系列> <简称> 开第一期`);

@@ -7,6 +7,8 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileS
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { confirmAccount, confirmSeries } from "../scripts/lib/direction.mjs";
+import { loadProject } from "../scripts/lib/project.mjs";
 
 const ST = resolve(dirname(fileURLToPath(import.meta.url)), "../scripts/st.mjs");
 const REGISTRY = {
@@ -20,10 +22,20 @@ function write(root, rel, content) {
   writeFileSync(join(root, rel), typeof content === "string" ? content : JSON.stringify(content));
 }
 
-function sandbox(studio = {}) {
+/** 测试项目；settled（默认）时账号方向和各系列都已填好、确认过（st new 才不拦） */
+function sandbox(studio = {}, { settled = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), "st-new-"));
-  write(root, "studio.json", { account: "测试账号", audience: "测试观众", ...studio });
+  write(root, "studio.json", { account: "测试账号", audience: "测试观众", lead: "公众号回复「领」", ...studio });
   write(root, "00-规划/系列/系列.json", REGISTRY);
+  if (settled) {
+    write(root, "00-规划/账号定位.md", "# 账号定位\n\n- 看完的感受：今天就能用上\n");
+    write(root, "00-规划/语气指南.md", "# 语气指南\n\n同事之间随口分享\n");
+    confirmAccount(loadProject(root), "可以");
+    for (const k of Object.keys(REGISTRY)) {
+      write(root, `00-规划/系列/${k}.md`, "# 系列规划\n\n已填好\n");
+      confirmSeries(loadProject(root), k, "可以");
+    }
+  }
   // 假 vd：init 建目录并放 DIRECTOR.md（真的 vd init 会放模板），记下参数；假 kv：记下参数
   const bin = join(root, "bin");
   mkdirSync(bin);
@@ -78,16 +90,18 @@ test("领取方式从 studio.json 的 lead 填进模板，不再写死「粉丝�
 });
 
 test("studio.json 没写 lead：模板里提示去 studio.json 填，不替用户编一个入口", () => {
-  const sb = sandbox();
-  run(sb, "普通人的AI课", "周报");
+  // 没写 lead 账号方向就没定，要 --先不定 才建得出来
+  const sb = sandbox({ lead: "" }, { settled: false });
+  run(sb, "普通人的AI课", "周报", "--先不定");
   const t = readFileSync(join(sb.root, "04-作品/普通人的AI课/01-周报/发布记录.md"), "utf8");
   assert.match(t, /studio\.json 的 lead/);
   assert.doesNotMatch(t, /粉丝群/);
 });
 
 test("系列说明不存在时用模板建一份并提醒去填；已有的不动", () => {
-  const sb = sandbox();
-  const r = run(sb, "普通人的AI课", "周报");
+  // 系列说明不存在，系列就没确认，要 --先不定 才建得出来
+  const sb = sandbox({}, { settled: false });
+  const r = run(sb, "普通人的AI课", "周报", "--先不定");
   assert.equal(r.status, 0, r.stderr);
   const doc = join(sb.root, "00-规划/系列/普通人的AI课.md");
   const text = readFileSync(doc, "utf8");
@@ -96,7 +110,7 @@ test("系列说明不存在时用模板建一份并提醒去填；已有的不�
   assert.doesNotMatch(text, /\{\{(账号|观众|账号定位|系列)\}\}/);
   assert.match(r.stdout, /系列说明.*00-规划\/系列\/普通人的AI课\.md/);
   writeFileSync(doc, "我写好的");
-  const r2 = run(sb, "普通人的AI课", "第二期");
+  const r2 = run(sb, "普通人的AI课", "第二期", "--先不定");
   assert.equal(readFileSync(doc, "utf8"), "我写好的");
   assert.doesNotMatch(r2.stdout, /系列说明/);
 });

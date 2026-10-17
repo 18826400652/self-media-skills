@@ -3,7 +3,7 @@
 //   check   检查 research.json、SCRIPT.md 的依据、qa.json（存在时）。有 ✗ 退出码 1
 //   brief   research.json → 研究简报.md（给人在确认节点 ① 看）
 //   status  当前阶段、下一步、还没通过的确认节点（实用类：完整一期的 15 步）
-//   init    [--fresh]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」
+//   init    [--fresh] [--unsettled 说明]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」；--unsettled：st new --先不定 开的，记下当时没定的方向
 //   gate    <节点> [--edit] "用户原话"   记录用户确认。实用类：topic script director sample final；概念科普：script director sample final
 //   done    <wechat|xiaohongshu|douyin>   存草稿成功后记一笔
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -21,7 +21,7 @@ import { FINAL_RE } from "./lib/video.mjs";
 import { collectPracticalFacts, defaultRunners, fingerprint, gateFileHashes, newestHtml, templateHashes } from "./lib/practical-facts.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
-const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
+const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh] [--unsettled 说明]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
 
 /** run.json → 对象；没有时 null；坏了报中文错误 */
 export function readRun(dir) {
@@ -194,6 +194,8 @@ function initRun(dir, args) {
   const practical = looksPractical(dir);
   const run = JSON.parse(readFileSync(join(TEMPLATES_DIR, practical ? "run-practical.json" : "run.json"), "utf8"));
   if (practical && args.includes("--fresh")) run.templates = templateHashes(dir, TEMPLATE_FILES);
+  const u = args.indexOf("--unsettled");
+  if (u >= 0) run.unsettled = { at: today(), note: args[u + 1] || "账号方向或系列还没定" };
   writeRun(dir, run);
   console.log(`✓ run.json（${TYPE_LABEL[episodeType(run)]}）`);
   return 0;
@@ -269,6 +271,7 @@ function printPracticalStatus(dir, run) {
     console.log(` ${r.done ? "✓" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}${r.note ? `  ${r.note}` : ""}`);
   }
   console.log(`下一步：${s.next}`);
+  if (run.unsettled) console.log(`⚠ 这期是 ${run.unsettled.at} 用 st new --先不定 开的（当时：${run.unsettled.note}）：选题关没有定好的标准可对照，st doctor 看现在定了没有`);
   return 0;
 }
 

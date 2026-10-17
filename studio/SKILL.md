@@ -32,10 +32,21 @@ st init ~/my-media --account 账号名 --audience "目标观众" --lead "点头�
 cd <作品项目> && st doctor                     # 逐项打勾，按提示补齐；--online 再查浏览器
 ```
 
+## 定方向（第一期之前、开新系列时）
+
+账号方向和每个系列的说明要和用户一项一项聊定，用户明确通过后 `st confirm`；没填完、没确认、确认后改过，`st new` 都会拦下。怎么聊（一次问一项、每项给候选、只有用户知道的不编）、聊哪几项：**`references/direction.md`**。
+
+```bash
+st doctor                                     # 看账号方向、各系列哪项还没填
+st confirm account "用户原话"                  # 账号方向聊完、用户通过后
+st series add <系列名> --label 显示名           # 登记新系列，用模板建系列说明
+st confirm series <系列名> "用户原话"           # 系列说明聊完、用户通过后
+```
+
 ## 做一期内容
 
 1. **先读**项目的 `CLAUDE.md`、`00-规划/本项目设置.md`（如果有）、`00-规划/语气指南.md`、`00-规划/经验库/规律.md`
-2. `st new <系列> <简称>`（会用 `vd init 抖音` 建好抖音的导演工程）
+2. 先和用户挑题：从系列说明的候选选题、`03-选题池/` 挑 2–3 个，按系列的选题硬标准打分，用户选定后 `st new <系列> <简称>`（会用 `vd init 抖音` 建好抖音的导演工程；方向没定会拦下，见上一节）
 3. **每一步开始前先跑 `kv status <作品目录>`，只做它说的那一步**
 4. 确认节点：用户明确说通过后才 `kv gate <作品> <节点> "用户原话"`；提修改意见用 `--edit`
 5. 三个草稿（`wa draft`、`vdraft --to xiaohongshu`、`vdraft`）成功后 `kv done <作品> wechat|xiaohongshu|douyin`
@@ -49,7 +60,10 @@ cd <作品项目> && st doctor                     # 逐项打勾，按提示补
 | 命令 | 用途 |
 |---|---|
 | `st doctor [--online]` | 检查作品项目和工具包，✗ 要修、⚠ 提醒；有 ✗ 退出码 1 |
-| `st new <系列> <简称> [--编号 N]` | 新建一期；`st new 单篇 <简称> [--栏目 名称] [--日期 YYYY-MM-DD]`；`--只建抖音` 给已有作品补建抖音工程 |
+| `st new <系列> <简称> [--编号 N]` | 新建一期；`st new 单篇 <简称> [--栏目 名称] [--日期 YYYY-MM-DD]`；`--只建抖音` 给已有作品补建抖音工程。账号方向、这个系列（单篇只看账号）没确认就拦下；用户明说先试做才加 `--先不定` |
+| `st confirm account "原话"` | 账号方向（`账号定位.md`、`语气指南.md`、studio.json 的 account、audience、lead）聊完、用户通过后记下原话和指纹，记在 studio.json 的 `confirmed.account`；没填完拒绝 |
+| `st series add <系列名> [--label 显示名] [--unit 期] [--type practical\|concept]` | 登记新系列（账号方向要先确认），用模板建 `<系列>.md` |
+| `st confirm series <系列名> "原话"` | 系列说明聊完、用户通过后记下，记在登记表这个系列的 `confirmed`；没填完拒绝 |
 | `st init <目录> [--account …] [--audience …] [--lead …]` | 建新的作品项目；已有的文件不覆盖。老项目补新版骨架里的东西：`st init . --update`（只补缺的文件、CLAUDE.md 缺的节、.gitignore 缺的行） |
 | `st review [--since 天数] [--out 文件]` | 汇总最近的工具问题（命令报错、翻了工具包源码的地方、`07-复盘/工具问题.md`）和偏好候选（各期确认节点说过的话），默认 7 天 |
 | `st install [--deps]` | 软链 skill 和命令到这个工具包；同名的真实目录不动 |
