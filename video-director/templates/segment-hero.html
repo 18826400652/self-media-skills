@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        /* 好段模板：大标题 + 主体卡片 + 胶带 + 三层投影；复制到 compositions/frames/<段id>.html 后把 SEG_ID 换成段 id、文案换成这期的。
+           字体只用 var(--vd-sans) / var(--vd-serif) / var(--vd-mono)；颜色换成这期 palette，下面是默认值。 */
+        #SEG_ID { position: absolute; inset: 0; --hero-ink: #1C1A17; --hero-paper: #FDFBF6; --hero-muted: #6E675C; --hero-alert: #C0392B; }
+        #SEG_ID .hero-card {
+          position: absolute; left: 110px; top: 280px; width: 860px; height: 860px;
+          border-radius: 28px; background: var(--hero-paper); transform: rotate(-3deg);
+          box-shadow: var(--vd-shadow-paper);
+        }
+        #SEG_ID .hero-tape {
+          position: absolute; left: 50%; top: -22px; width: 200px; height: 44px; margin-left: -100px;
+          background: rgba(255,255,255,.55); transform: rotate(-2deg);
+          box-shadow: 0 2px 6px rgba(40,28,14,.12);
+        }
+        #SEG_ID .hero-eyebrow { position: absolute; left: 44px; top: 44px; font-size: 24px; font-weight: 700; letter-spacing: .04em; color: var(--hero-muted); }
+        #SEG_ID .hero-title { position: absolute; left: 44px; top: 96px; width: 760px; font-family: var(--vd-serif); font-size: 44px; font-weight: 900; line-height: 1.2; color: var(--hero-ink); }
+        #SEG_ID .hero-body { position: absolute; left: 44px; top: 220px; width: 760px; font-size: 32px; font-weight: 500; line-height: 1.5; color: var(--hero-ink); }
+        #SEG_ID .hero-body i { display: block; height: 12px; border-radius: 6px; background: #D9D2C3; margin-top: 16px; }
+        #SEG_ID .hero-stamp {
+          position: absolute; right: 90px; bottom: 40px; padding: 8px 14px; border: 5px solid var(--hero-alert);
+          border-radius: 12px; color: var(--hero-alert); font-size: 30px; font-weight: 900; transform: rotate(-8deg);
+        }
+        #SEG_ID .hero-headline {
+          position: absolute; left: 60px; top: 840px; width: 840px; z-index: 4;
+          font-family: var(--vd-serif); font-size: var(--vd-type-display, 104px); font-weight: 900;
+          line-height: 1.08; letter-spacing: -.01em; color: var(--hero-ink);
+        }
+      </style>
+      <div id="SEG_ID" data-composition-id="SEG_ID" data-width="1080" data-height="1920">
+        <div class="hero-card">
+          <div class="hero-tape" data-vd-material="tape"></div>
+          <div class="hero-eyebrow">（这期栏目）</div>
+          <div class="hero-title">（卡片标题）</div>
+          <div class="hero-body">（第一行说明）<i style="width:92%"></i><i style="width:76%"></i><i style="width:64%"></i></div>
+          <div class="hero-stamp">待确认</div>
+        </div>
+        <!-- 标题写画面要表达的意思，不要重复下面的字幕（导演规则第 9 条） -->
+        <div class="hero-headline">把这件事说清楚</div>
+      </div>
+      <script>
+        (() => {
+          const SEG = "SEG_ID";
+          const at = (w) => VD.at(w, SEG);   // 相对本段开头的秒数
+          const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out", immediateRender: false } });
+          // 入场：把下面的 at("词") 换成 DIRECTOR.md 里的 @词；卡片和标题各落一次
+          // tl.fromTo(".hero-card", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, immediateRender: false }, at("词"));
+          // tl.fromTo(".hero-headline", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, immediateRender: false }, at("词"));
+          window.__timelines[SEG] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

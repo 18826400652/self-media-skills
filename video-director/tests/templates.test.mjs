@@ -18,7 +18,7 @@ test("templates/index.html：四个 vd 标记都在", () => {
 
 // 项目品牌目录里的 brand-*.html 同样只能用字体变量，由 st doctor 检查（工具包测试不读作品项目）
 test("单段模板只用 var(--vd-*) 字体变量（hyperframes lint 看不到跨文件的 @font-face）", () => {
-  const files = { "segment.html": read("segment.html") };
+  const files = { "segment.html": read("segment.html"), "segment-hero.html": read("segment-hero.html") };
   for (const [name, html] of Object.entries(files)) {
     const literal = [...html.matchAll(/font-family:\s*([^;"]*"[^"]+"[^;]*);/g)].map((m) => m[1]);
     assert.deepEqual(literal, [], `${name} 写了字体名`);
@@ -65,4 +65,14 @@ test("templates/index.html：材质 / 字阶变量和工具类都在；材质层
   assert.match(html, /data-vd-material="vignette"/);
   assert.ok(html.indexOf("<!-- /vd:segments -->") < html.indexOf('data-vd-material="grain"'), "材质层要在各段之后");
   assert.ok(html.indexOf('data-vd-material="vignette"') < html.indexOf("<!-- vd:brand -->"), "材质层要在账号固定元素之前");
+});
+
+test("templates/segment-hero.html：好段模板有大标题、主体卡片、胶带和三层投影", () => {
+  const html = read("segment-hero.html");
+  assert.match(html, /var\(--vd-type-display/);
+  assert.match(html, /var\(--vd-shadow-paper\)/);
+  assert.match(html, /data-vd-material="tape"/);
+  assert.match(html, /rotate\(-3deg\)/);
+  assert.match(html, /860px/);
+  assert.match(html, /data-composition-id="SEG_ID"/);
 });

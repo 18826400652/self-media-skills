@@ -69,7 +69,7 @@ vd init 抖音
 
 ## 每段画面怎么写
 
-- 从 `templates/segment.html` 复制到 `compositions/frames/<段id>.html`，把 `SEG_ID` 换成段 id。
+- 从 `templates/segment.html` 复制到 `compositions/frames/<段id>.html`，把 `SEG_ID` 换成段 id；首段 / 关键段可以先从 `templates/segment-hero.html` 起步（大标题 + 主体卡片 + 胶带 + 三层投影）。
 - 时间只用 `at("词")`（相对本段开头的秒数），不写死数字；词必须在 DIRECTOR.md 里以 `@词` 出现过。
 - 元素 id 加段前缀；栏目标签和字幕不要自己画（账号固定元素会画）。
 - 写完在这段每个 @词 的时间点截图看一遍（`references/director-rules.md` 第 11–17 条）。
