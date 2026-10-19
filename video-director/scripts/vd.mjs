@@ -22,7 +22,7 @@ import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
-import { craftSummary } from "./lib/douyin-qa.mjs";
+import { craftSummary } from "./lib/craft.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
 import { requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";

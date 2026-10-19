@@ -2,7 +2,8 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cuesJs } from "./assemble.mjs";
-import { analyzeCraft, checkComposition, checkCraft, checkCues, checkFrame, craftCounts, emptyWindows, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
+import { analyzeCraft, checkCraft, craftCounts } from "./craft.mjs";
+import { checkComposition, checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
 
 /** 这次构建装了哪些段：index.html 里有 host-<段id> 的（样片只装几段） */
 export function presentSegments(html, segments) {
