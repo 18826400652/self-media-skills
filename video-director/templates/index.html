@@ -13,6 +13,21 @@
       #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
       /* 字体只在这里写名字；子画面一律用 var(--vd-sans / --vd-serif / --vd-mono)（hyperframes lint 看不到跨文件的 @font-face） */
       :root { --vd-sans: "Noto Sans SC Variable", sans-serif; --vd-serif: "Noto Serif SC Variable", serif; --vd-mono: "JetBrains Mono", monospace; }
+      /* 视觉工艺：默认值；作品项目在 视觉规范.md 里覆盖。见 references/visual-craft.md */
+      :root {
+        --vd-shadow-paper: 0 2px 0 rgba(255,255,255,.9) inset, 0 0 0 2px rgba(25,22,18,.9),
+                           26px 44px 60px rgba(40,28,14,.22), 8px 14px 22px rgba(40,28,14,.16);
+        --vd-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='0.16'/></svg>");
+        --vd-vignette: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(40,28,14,.20) 100%);
+        --vd-type-display: 104px;
+        --vd-type-heading: 72px;
+        --vd-type-body: 48px;
+        --vd-type-caption: 58px;
+        --vd-type-label: 24px;
+      }
+      .vd-shadow { box-shadow: var(--vd-shadow-paper); }
+      .vd-grain { position: absolute; inset: 0; pointer-events: none; opacity: .5; background-image: var(--vd-grain); }
+      .vd-vignette { position: absolute; inset: 0; pointer-events: none; background: var(--vd-vignette); }
       /* 手写：全片背景、贯穿元素的样式 */
     </style>
   </head>
@@ -21,6 +36,9 @@
       <!-- vd:audio --><!-- /vd:audio -->
       <!-- 手写：全片背景层（放在各段下面） -->
       <!-- vd:segments --><!-- /vd:segments -->
+      <!-- 手写：材质层（在各段上面、账号固定元素下面；data-layout-ignore 让 vd qa 不把它当遮挡） -->
+      <div class="vd-grain" data-vd-material="grain" data-layout-ignore></div>
+      <div class="vd-vignette" data-vd-material="vignette" data-layout-ignore></div>
       <!-- 手写：贯穿元素（跨段移动，用总时间轴控制） -->
       <!-- vd:brand --><!-- /vd:brand -->
     </div>
