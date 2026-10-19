@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize, checkComposition } from "../scripts/lib/douyin-qa.mjs";
+import { analyzeCraft, checkComposition, checkCraft, checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "../scripts/lib/douyin-qa.mjs";
 
 const built = {
   cues: { 钩子: 1, 小票: 5.5, "小票#2": 9 },
@@ -13,7 +13,7 @@ const frame = (data, t = 1.8, label = "@钩子") => ({ t, label, data: { element
 test("qaTimes：@词 后 0.8 秒（不超过本段结尾前 0.05 秒）+ 每段结尾前 0.3 秒，按时间排序", () => {
   const { inspect } = qaTimes(built, 12);
   assert.deepEqual(inspect.map((x) => [x.t, x.label]), [
-    [1.8, "@钩子"], [4.7, "s1 结尾"], [6.3, "@小票"], [9.7, "s2 结尾"], [9.8, "@小票#2"],
+    [0.8, "首帧"], [1.8, "@钩子"], [4.7, "s1 结尾"], [6.3, "@小票"], [9.7, "s2 结尾"], [9.8, "@小票#2"],
   ].sort((a, b) => a[0] - b[0]));
   assert.equal(inspect.find((x) => x.label === "@小票#2").cue, "小票#2");
 });
@@ -25,7 +25,7 @@ test("qaTimes：@词 在本段最后 0.8 秒内时，截在段结尾前 0.05 秒
 
 test("qaTimes：样片时长之外的 @词 和段不查；grid 每 0.5 秒，只到口播结束", () => {
   const r = qaTimes(built, 6);
-  assert.deepEqual(r.inspect.map((x) => x.label), ["@钩子", "s1 结尾"]);
+  assert.deepEqual(r.inspect.map((x) => x.label), ["首帧", "@钩子", "s1 结尾"]);
   assert.deepEqual(r.grid, [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]);
   assert.equal(qaTimes(built, 30).grid.at(-1), 9.5);
 });
@@ -83,7 +83,7 @@ test("summarize：同一元素同类问题合并成一条，写次数和第一�
 test("qaTimes：样片段不相邻时，只查构建了的段（中间没构建的段不截图、不进 grid）", () => {
   const b = { cues: { 甲: 1, 乙: 7, 丙: 11 }, segments: [{ id: "s1", start: 0, duration: 5 }, { id: "s3", start: 10, duration: 5 }], total: 15 };
   const r = qaTimes(b, 15);
-  assert.deepEqual(r.inspect.map((x) => x.label), ["@甲", "s1 结尾", "@丙", "s3 结尾"]);
+  assert.deepEqual(r.inspect.map((x) => x.label), ["首帧", "@甲", "s1 结尾", "@丙", "s3 结尾"]);
   assert.ok(!r.grid.some((t) => t >= 5 && t < 10), "没构建的 5–10 秒不比画面");
   assert.ok(r.grid.includes(4.5) && r.grid.includes(10));
 });
@@ -123,4 +123,138 @@ test("checkComposition：一段里所有截图（@词 时刻和结尾）的内�
   assert.equal(out.length, 1);
   assert.equal(out[0].level, "warn");
   assert.match(out[0].msg, /seg-01 整段内容最低只到 y 670.*字幕带上方一直空着 480 像素/);
+});
+
+const block = (o) => ({ sel: "#b", box: [100, 300, 500, 800], opacity: 1, shadow: "none", rot: 0, bgImage: false, ...o });
+const text = (o) => ({ sel: "#t", box: [100, 1400, 900, 1460], opacity: 1, fontSize: 32, fontWeight: 400, color: "rgb(0,0,0)", text: "字", ...o });
+const shot = (seg, t, data = {}) => ({ t, seg, label: "@x", data: { blocks: [], texts: [], materials: [], aestheticOk: [], px: null, ...data } });
+const kinds = (frames) => checkCraft(frames).map((i) => i.kind);
+
+test("checkCraft：首帧 46px / 簇约 34% → craft-hook", () => {
+  const f = shot("seg-01", 0.8, {
+    blocks: [block({ box: [60, 300, 390, 1140] }), block({ box: [450, 300, 910, 1140] })],
+    texts: [text({ fontSize: 46 })],
+  });
+  assert.ok(kinds([f]).includes("craft-hook"));
+  assert.ok(!kinds([f]).includes("craft-subject"), "34.4% ≥ 30%，不报主体过小");
+});
+
+test("checkCraft：首帧 104px / 簇 49% → 不报 craft-hook", () => {
+  const f = shot("seg-01", 0.8, {
+    blocks: [block({ box: [100, 200, 1000, 1300] })],
+    texts: [text({ fontSize: 104 }), text({ fontSize: 34 }), text({ fontSize: 34 })],
+  });
+  assert.ok(!kinds([f]).includes("craft-hook"));
+});
+
+test("checkCraft：60px 内的块合并成簇；拉远后按单块算", () => {
+  const near = shot("seg-01", 1.2, {
+    blocks: [block({ box: [60, 300, 390, 1140] }), block({ box: [450, 300, 910, 1140] })],
+    texts: [text({ fontSize: 64 })],
+  });
+  assert.ok(!kinds([near]).includes("craft-subject"));
+
+  const far = shot("seg-01", 1.2, {
+    blocks: [block({ box: [60, 300, 390, 1140] }), block({ box: [900, 300, 1040, 1140] })],
+    texts: [text({ fontSize: 64 })],
+  });
+  assert.ok(kinds([far]).includes("craft-subject"));
+});
+
+test("checkCraft：全屏背景块不计入主体；只剩背景时不报", () => {
+  const onlyBg = shot("seg-01", 1.2, {
+    blocks: [block({ box: [0, 0, 1080, 1920] })],
+    texts: [text({ fontSize: 64 })],
+  });
+  assert.ok(!kinds([onlyBg]).includes("craft-subject"));
+
+  const small = shot("seg-01", 1.2, {
+    blocks: [block({ box: [0, 0, 1080, 1920] }), block({ box: [100, 300, 500, 800] })],
+    texts: [text({ fontSize: 64 })],
+  });
+  assert.ok(kinds([small]).includes("craft-subject"));
+});
+
+test("checkCraft：段内最大字号 76 但中位 42 → craft-type；max/median 1.31 → craft-hierarchy", () => {
+  const frames = [
+    shot("seg-06", 0.8, { blocks: [block({ box: [100, 230, 900, 1150] })], texts: [text({ fontSize: 76 }), text({ fontSize: 40 }), text({ fontSize: 40 })] }),
+    shot("seg-06", 2, { blocks: [block({ box: [100, 230, 900, 1150] })], texts: [text({ fontSize: 42 }), text({ fontSize: 32 }), text({ fontSize: 32 })] }),
+    shot("seg-06", 4, { blocks: [block({ box: [100, 230, 900, 1150] })], texts: [text({ fontSize: 42 }), text({ fontSize: 32 }), text({ fontSize: 32 })] }),
+    shot("seg-06", 6, { blocks: [block({ box: [100, 230, 900, 1150] })], texts: [text({ fontSize: 42 }), text({ fontSize: 32 }), text({ fontSize: 32 })] }),
+  ];
+  const ks = kinds(frames);
+  assert.ok(ks.includes("craft-type"), "中位 42 < 64");
+  assert.ok(ks.includes("craft-hierarchy"), "中位 1.31 < 1.6");
+});
+
+test("checkCraft：首帧 104px、max/median 3.06 → 不报 craft-type / craft-hierarchy", () => {
+  const f = shot("seg-01", 0.8, {
+    blocks: [block({ box: [100, 200, 1000, 1300] })],
+    texts: [text({ fontSize: 104 }), text({ fontSize: 34 }), text({ fontSize: 34 })],
+  });
+  const ks = kinds([f]);
+  assert.ok(!ks.includes("craft-type"));
+  assert.ok(!ks.includes("craft-hierarchy"));
+});
+
+test("checkCraft：内容区空白带 415px → craft-gap；240px 不报", () => {
+  const big = shot("seg-01", 1.2, {
+    blocks: [block({ box: [100, 300, 900, 700] }), block({ box: [100, 1115, 900, 1150] })],
+    texts: [text({ fontSize: 64 })],
+  });
+  assert.ok(kinds([big]).includes("craft-gap"));
+
+  const ok = shot("seg-01", 1.2, {
+    blocks: [block({ box: [100, 300, 900, 700] }), block({ box: [100, 940, 900, 1150] })],
+    texts: [text({ fontSize: 64 })],
+  });
+  assert.ok(!kinds([ok]).includes("craft-gap"));
+});
+
+test("checkCraft：9 段里 7 段中心在 ±5% 宽内 → craft-variety；只有 5 段不报", () => {
+  const one = (id, x) => shot(id, 1, { blocks: [block({ box: [x - 100, 300, x + 100, 1100] })], texts: [text({ fontSize: 64 })] });
+  const seven = [540, 540, 540, 540, 540, 540, 540, 200, 900].map((x, i) => one("s" + i, x));
+  assert.ok(kinds(seven).includes("craft-variety"));
+  const five = [540, 540, 540, 540, 540, 200, 300, 900, 950].map((x, i) => one("s" + i, x));
+  assert.ok(!kinds(five).includes("craft-variety"));
+});
+
+test("checkCraft：材质 0/4 报；只有 rotate(-4deg) 1/4 仍报；4/4 不报", () => {
+  const flat = shot("s1", 1, { blocks: [block({ box: [100, 300, 500, 800], shadow: "0 0 10px rgba(0,0,0,.2)" })], texts: [text({ fontSize: 64 })] });
+  assert.ok(kinds([flat]).includes("craft-material"));
+
+  const rotated = shot("s1", 1, { blocks: [block({ box: [100, 300, 500, 800], shadow: "0 0 10px rgba(0,0,0,.2)", rot: -4 })], texts: [text({ fontSize: 64 })] });
+  assert.ok(kinds([rotated]).includes("craft-material"));
+
+  const full = shot("s1", 1, {
+    blocks: [block({ box: [100, 300, 500, 800], rot: -4, shadow: "0 1px 0 rgba(255,255,255,.9) inset, 0 0 0 2px rgba(0,0,0,.9), 24px 40px 60px rgba(0,0,0,.2)" })],
+    texts: [text({ fontSize: 64 })],
+    materials: ["grain", "vignette"],
+  });
+  assert.ok(!kinds([full]).includes("craft-material"));
+});
+
+test("checkCraft：旧工程只有 elements → []，不抛错", () => {
+  assert.deepEqual(checkCraft([{ t: 1, seg: "s1", data: { elements: [] } }]), []);
+  assert.deepEqual(analyzeCraft([{ t: 1, seg: "s1", data: { elements: [] } }]).segments, []);
+});
+
+test("checkCraft：data-vd-aesthetic-ok 的段全部豁免", () => {
+  const f1 = shot("seg-01", 0.8, { aestheticOk: ["seg-01"], texts: [text({ fontSize: 46 })] });
+  const f2 = shot("seg-02", 0.8, { texts: [text({ fontSize: 46 })] });
+  const out = checkCraft([f1, f2]);
+  assert.ok(!out.some((i) => i.sel === "seg-01"));
+  assert.ok(out.some((i) => i.sel === "seg-02"));
+});
+
+test("checkCraft：所有 issue 都是 warn", () => {
+  const f = shot("seg-01", 0.8, { blocks: [block({ box: [100, 300, 500, 800] })], texts: [text({ fontSize: 46 })] });
+  assert.ok(checkCraft([f]).length > 0);
+  assert.ok(checkCraft([f]).every((i) => i.level === "warn"));
+});
+
+test("qaTimes：首帧 0.8 秒排在最前；0.8 秒没有构建的段就不加", () => {
+  assert.deepEqual(qaTimes(built, 12).inspect[0], { t: 0.8, label: "首帧", seg: "s1" });
+  const late = qaTimes({ cues: {}, segments: [{ id: "s3", start: 10, duration: 5 }], total: 15 }, 15);
+  assert.ok(!late.inspect.some((x) => x.label === "首帧"));
 });

@@ -19,6 +19,9 @@ export function qaTimes(built, duration) {
     if (t < duration) inspect.push({ t, label: `@${cue}`, cue, seg: seg.id });
   }
   for (const s of segs) if (s.end <= duration) inspect.push({ t: r2(s.end - SEG_TAIL), label: `${s.id} 结尾`, seg: s.id });
+  // 首帧（0.8 秒，入场基本落定；还没进第一段就不加）
+  const first = segs.find((s) => s.start <= 0.8 && 0.8 < s.end);
+  if (first && 0.8 < duration && !inspect.some((x) => x.t === 0.8)) inspect.push({ t: 0.8, label: "首帧", seg: first.id });
   inspect.sort((a, b) => a.t - b.t);
   const end = Math.min(duration, built.total);
   const grid = [];
@@ -108,4 +111,164 @@ export function summarize(issues) {
     groups.set(key, [...(groups.get(key) ?? []), i]);
   }
   return [...groups.values()].map((g) => (g.length === 1 ? g[0] : { ...g[0], msg: `${g[0].msg}（共 ${g.length} 处）` }));
+}
+
+// 视觉工艺：主体簇、字阶、空白带、材质、构图变化（纯函数，只报 warn）
+const CONTENT = { left: 60, right: 1020, top: 230, bottom: 1150 };
+const CLUSTER_GAP = 60;
+const TYPE_FLOOR = 64;
+const TYPE_RATIO = 1.6;
+const HOOK_FONT = 96;
+const HOOK_CLUSTER = 35;
+const SUBJECT_MIN = 30;
+const GAP_MAX = 250;
+const VARIETY = 70;
+const MATERIAL_NAMES = { shadow: "多层投影", grain: "纹理", vignette: "暗角", rotation: "离轴或胶带" };
+
+const median = (a) => {
+  if (!a.length) return 0;
+  const s = [...a].sort((x, y) => x - y);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+const areaOf = (b) => Math.max(0, b[2] - b[0]) * Math.max(0, b[3] - b[1]);
+const visible = (x) => (x.opacity ?? 1) > 0.05 && areaOf(x.box) > 0;
+const textSizes = (f) => (f.data?.texts ?? []).filter(visible).map((t) => t.fontSize).filter((n) => Number.isFinite(n) && n > 0);
+const frameMax = (f) => { const s = textSizes(f); return s.length ? Math.max(...s) : 0; };
+const frameRatio = (f) => { const s = textSizes(f); if (!s.length) return 0; const m = median(s); return m ? Math.max(...s) / m : 0; };
+
+/** 60px 内邻近的框合并成簇，返回并集包围盒 */
+function mergeClusters(boxes, gap = CLUSTER_GAP) {
+  if (!boxes.length) return [];
+  const parent = boxes.map((_, i) => i);
+  const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+  const union = (i, j) => { parent[find(i)] = find(j); };
+  const gapX = (a, b) => Math.max(0, Math.max(a[0], b[0]) - Math.min(a[2], b[2]));
+  const gapY = (a, b) => Math.max(0, Math.max(a[1], b[1]) - Math.min(a[3], b[3]));
+  for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (gapX(boxes[i], boxes[j]) <= gap && gapY(boxes[i], boxes[j]) <= gap) union(i, j);
+  const groups = new Map();
+  for (let i = 0; i < boxes.length; i++) {
+    const r = find(i), b = boxes[i], c = groups.get(r);
+    groups.set(r, c ? [Math.min(c[0], b[0]), Math.min(c[1], b[1]), Math.max(c[2], b[2]), Math.max(c[3], b[3])] : [...b]);
+  }
+  return [...groups.values()];
+}
+
+function maxCluster(f) {
+  const boxes = (f.data?.blocks ?? []).filter(visible).filter((b) => areaOf(b.box) < 0.9 * W * H).map((b) => b.box);
+  const cs = mergeClusters(boxes).map((b) => ({ box: b, ratio: (areaOf(b) / (W * H)) * 100 }));
+  return cs.sort((a, b) => b.ratio - a.ratio)[0] ?? null;
+}
+
+function maxGap(f) {
+  const rows = new Uint8Array((CONTENT.bottom - CONTENT.top) / 5);
+  for (const e of [...(f.data?.blocks ?? []), ...(f.data?.texts ?? [])]) {
+    if (!visible(e)) continue;
+    const [x1, y1, x2, y2] = e.box;
+    if (x2 <= CONTENT.left || x1 >= CONTENT.right) continue;
+    for (let y = Math.max(CONTENT.top, Math.floor(y1 / 5) * 5); y < Math.min(CONTENT.bottom, y2); y += 5) rows[(y - CONTENT.top) / 5] = 1;
+  }
+  let best = 0, bestAt = CONTENT.top, run = 0;
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i]) { run = 0; continue; }
+    run += 5;
+    if (run > best) { best = run; bestAt = CONTENT.top + i * 5 - run + 5; }
+  }
+  return { gap: best, at: bestAt };
+}
+
+/** 汇总视觉工艺指标；旧工程没有 blocks/texts 时返回空结构 */
+export function analyzeCraft(frames) {
+  const usable = frames.filter((f) => (f.data?.blocks?.length ?? 0) || (f.data?.texts?.length ?? 0));
+  if (!usable.length) {
+    return { first: null, segments: [], material: { shadow: false, grain: false, vignette: false, rotation: false, score: 0, missing: Object.values(MATERIAL_NAMES) }, variety: { total: 0, centered: 0, centers: [] }, color: [] };
+  }
+  const bySeg = new Map();
+  for (const f of frames) {
+    if (!f.seg) continue;
+    if (!bySeg.has(f.seg)) bySeg.set(f.seg, []);
+    bySeg.get(f.seg).push(f);
+  }
+  const segments = [...bySeg.entries()].map(([id, fs]) => {
+    const withContent = fs.filter((f) => (f.data?.blocks?.length ?? 0) || (f.data?.texts?.length ?? 0));
+    const hasBlocks = fs.some((f) => (f.data?.blocks?.length ?? 0) > 0);
+    const hasText = fs.some((f) => textSizes(f).length > 0);
+    const maxFonts = fs.map(frameMax).filter((n) => n > 0);
+    const ratios = fs.map(frameRatio).filter((n) => n > 0);
+    const clusters = withContent.map(maxCluster).filter(Boolean);
+    const gaps = withContent.map(maxGap);
+    const biggest = clusters.sort((a, b) => b.ratio - a.ratio)[0];
+    const widest = gaps.sort((a, b) => b.gap - a.gap)[0] ?? { gap: 0, at: CONTENT.top };
+    return {
+      id,
+      t: fs[0].t,
+      maxFont: maxFonts.length ? median(maxFonts) : 0,
+      ratio: ratios.length ? median(ratios) : 0,
+      cluster: biggest ? biggest.ratio : null,
+      gap: hasBlocks || hasText ? widest.gap : 0,
+      gapAt: widest.at,
+      center: biggest ? (biggest.box[0] + biggest.box[2]) / 2 : null,
+      hasBlocks,
+      hasText,
+    };
+  });
+  const firstFrame = frames.find((f) => f.label === "首帧") ?? [...frames].sort((a, b) => a.t - b.t)[0];
+  const firstCluster = firstFrame ? maxCluster(firstFrame) : null;
+  const first = firstFrame && (textSizes(firstFrame).length || firstCluster) ? {
+    t: firstFrame.t,
+    label: firstFrame.label,
+    maxFont: frameMax(firstFrame),
+    cluster: firstCluster ? firstCluster.ratio : null,
+  } : null;
+  const allBlocks = frames.flatMap((f) => f.data?.blocks ?? []);
+  const shadow = allBlocks.some((b) => String(b.shadow ?? "").split(/rgba?[(]/g).length - 1 >= 2);
+  const materials = new Set(frames.flatMap((f) => f.data?.materials ?? []));
+  const grain = materials.has("grain");
+  const vignette = materials.has("vignette");
+  const rotation = allBlocks.some((b) => Math.abs(b.rot ?? 0) >= 3 && Math.abs(b.rot ?? 0) <= 8) || materials.has("tape");
+  const flags = { shadow, grain, vignette, rotation };
+  const missing = Object.entries(flags).filter(([, v]) => !v).map(([k]) => MATERIAL_NAMES[k]);
+  const material = { ...flags, score: Object.values(flags).filter(Boolean).length, missing };
+  const centers = segments.map((s) => s.center).filter((x) => x !== null);
+  const variety = { total: centers.length, centered: 0, centers };
+  if (centers.length) {
+    const mid = median(centers);
+    variety.centered = centers.filter((x) => Math.abs(x - mid) <= 0.05 * W).length;
+  }
+  const color = frames.map((f) => ({ t: f.t, ...(f.data?.px ?? {}) })).filter((x) => x.vivid !== undefined);
+  return { first, segments, material, variety, color };
+}
+
+/** 视觉工艺检查：全部 warn；sel 是段 id（全片级的为空串） */
+export function checkCraft(frames) {
+  const m = analyzeCraft(frames);
+  const out = [];
+  const add = (kind, sel, t, msg) => out.push({ level: "warn", kind, sel, t, msg });
+  const allow = new Set(frames.flatMap((f) => f.data?.aestheticOk ?? []));
+  const t0 = m.first?.t ?? 0;
+  for (const s of m.segments) {
+    if (allow.has(s.id)) continue;
+    if (s.hasText && s.maxFont > 0 && s.maxFont < TYPE_FLOOR) add("craft-type", s.id, s.t, s.id + " 段内最大字号中位 " + Math.round(s.maxFont) + "px（<" + TYPE_FLOOR + "）：标题和正文一个量级");
+    if (s.hasText && s.ratio > 0 && s.ratio < TYPE_RATIO) add("craft-hierarchy", s.id, s.t, s.id + " 字号层级 " + s.ratio.toFixed(2) + "（最大/中位，<" + TYPE_RATIO + "）：画面没有落点");
+    if (s.hasBlocks && s.cluster !== null && s.cluster < SUBJECT_MIN) add("craft-subject", s.id, s.t, s.id + " 主体簇最大 " + s.cluster.toFixed(1) + "%（<" + SUBJECT_MIN + "%）：画面没有视觉重心");
+    if (s.gap > GAP_MAX) add("craft-gap", s.id, s.t, s.id + " 内容区最大空白带 " + s.gap + "px（y " + s.gapAt + " 起，>" + GAP_MAX + "）：中间空一大块");
+  }
+  if (m.first) {
+    const fontBad = m.first.maxFont > 0 && m.first.maxFont < HOOK_FONT;
+    const clusterBad = m.first.cluster !== null && m.first.cluster < HOOK_CLUSTER;
+    if (fontBad || clusterBad) {
+      const font = m.first.maxFont ? Math.round(m.first.maxFont) + "px" : "—";
+      const cluster = m.first.cluster !== null ? m.first.cluster.toFixed(1) + "%" : "—";
+      add("craft-hook", "", t0, "首帧最大字号 " + font + "（<" + HOOK_FONT + "）、主体簇 " + cluster + "（<" + HOOK_CLUSTER + "%）：第一秒没有落点");
+    }
+  }
+  if (frames.some((f) => (f.data?.blocks?.length ?? 0) > 0) && m.material.score < 2) {
+    add("craft-material", "", t0, "全片材质 " + m.material.score + "/4（" + m.material.missing.map((x) => x + "×").join(" ") + "）：像线框，不像实景");
+  }
+  if (m.variety.total >= 3 && (m.variety.centered / m.variety.total) * 100 >= VARIETY) {
+    const mid = median(m.variety.centers);
+    const lo = Math.round(mid - 0.05 * W), hi = Math.round(mid + 0.05 * W);
+    add("craft-variety", "", t0, m.variety.total + " 段里 " + m.variety.centered + " 段主体中心在 x " + lo + "–" + hi + "（±5% 宽）：构图雷同");
+  }
+  return out;
 }
