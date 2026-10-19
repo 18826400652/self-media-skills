@@ -3,6 +3,7 @@
 //   init   建空的导演工程（hyperframes blank + vd 模板）；目录不为空时拒绝
 //   render 渲染到 <工程>/renders/（--sample 出 sample.mp4），完成后自动 verify
 //   verify <成片.mp4> [--project <工程>]：帧数、时长、声音、尺寸、黑屏
+//   measure <成片.mp4> [--json]：时长、内容区静态率 / 变化率 / 最长静止、响度
 //   components  列出 dykit 组件（用途、适合、时长、节拍、变量和默认值）；可跟关键词筛，如 vd components 抖音 对比
 //   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）；--check 只校验不写文件；段里 at() 用了没写的词报错
 //   build  cues → 音轨 → dykit 组件 → index.html 标记块 → 配乐对位与避让 → hyperframes check
@@ -28,7 +29,7 @@ import { requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
 
-const USAGE = "用法：vd init|cues|build|check|qa|render|verify|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
+const USAGE = "用法：vd init|cues|build|check|qa|render|verify|measure|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
 const SCRIPTS = fileURLToPath(new URL(".", import.meta.url));
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
@@ -86,6 +87,9 @@ const COMMANDS = {
   },
   verify(file, rest = []) {
     return spawnSync(process.execPath, [join(SCRIPTS, "verify.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;
+  },
+  measure(file, rest = [], { run = spawnSync } = {}) {
+    return run(process.execPath, [join(SCRIPTS, "measure.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;
   },
   cues(dir, rest = []) {
     const { built } = load(dir);

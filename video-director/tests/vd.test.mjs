@@ -215,3 +215,12 @@ test("vd components：按工程锁定的版本读组件目录，带关键词只�
   assert.match(logs.join("\n"), /dy-vs-compare/);
   assert.doesNotMatch(logs.join("\n"), /dy-checklist/);
 });
+
+test("vd measure：调 measure.mjs，透传文件参数", () => {
+  const calls = [];
+  const run = (bin, args) => { calls.push([bin, args]); return { status: 0 }; };
+  assert.equal(COMMANDS.measure("/x.mp4", ["--json"], { run }), 0);
+  assert.match(calls[0][1][0], /measure\.mjs$/);
+  assert.equal(calls[0][1][1], "/x.mp4");
+  assert.ok(calls[0][1].includes("--json"));
+});

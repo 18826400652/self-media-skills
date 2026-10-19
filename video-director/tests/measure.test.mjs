@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { analyzeFrames, ffmpegFramesArgs, SAMPLE } from "../scripts/lib/measure.mjs";
+import { format } from "../scripts/measure.mjs";
 
 const W = 4, H = 2, N = W * H;
 const f = (v) => Buffer.alloc(N, v);
@@ -31,4 +32,17 @@ test("ffmpegFramesArgs：只取内容区，字幕带和栏目标签不参与", (
     "-vf", "fps=1,crop=960:920:60:230,scale=48:46,format=gray",
     "-f", "rawvideo", "-",
   ]);
+});
+
+test("format：打印五项指标，缺响度时写 —", () => {
+  const text = format({
+    duration: 75.4,
+    video: { staticRatio: 0.42, changeRate: 14.3, longestStill: 2, changeEvents: 18 },
+    loudness: { integrated: -14.1, truePeak: -1.4 },
+  });
+  assert.match(text, /时长 75\.4s/);
+  assert.match(text, /静态率 42%/);
+  assert.match(text, /变化 14\.3 次\/分/);
+  assert.match(text, /最长静止 2s/);
+  assert.match(text, /响度 -14\.1 LUFS/);
 });
