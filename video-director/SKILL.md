@@ -23,7 +23,7 @@ curl -fsSL https://static.heygen.ai/cli/install.sh | bash   # 配乐用的 heyge
 HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免费额度（API Key 会扣钱包）
 ```
 
-项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）；`hfVersion` 不用写（hyperframes 装在 vd 自己的 `node_modules`，写了且不一致会报错）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
+项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）；`hfVersion` 不用写（hyperframes 装在 vd 自己的 `node_modules`，写了且不一致会报错）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）；选填 `craft`（视觉工艺阈值：typeFloor / typeRatio / hookFont / hookCluster / subjectMin / gapMax / variety / materialMin / scaleCv，不写就用 `references/visual-craft.md` 的默认值）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
 
 ## 流程（一期的抖音部分）
 

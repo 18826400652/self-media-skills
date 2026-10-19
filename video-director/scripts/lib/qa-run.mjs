@@ -50,7 +50,7 @@ export function buildProblem(dir) {
   return changed.length ? `${changed.join("、")} 在上次 vd build 之后改过：先重新 vd build` : null;
 }
 
-export async function douyinQa(built, page, shotDir) {
+export async function douyinQa(built, page, shotDir, { craft: craftOpts } = {}) {
   const { inspect, grid } = qaTimes(built, page.duration);
   rmSync(shotDir, { recursive: true, force: true });
   mkdirSync(shotDir, { recursive: true });
@@ -74,7 +74,7 @@ export async function douyinQa(built, page, shotDir) {
   }
   const empty = emptyWindows(sigs).map((w) => ({ level: "error", kind: "empty", sel: "", t: w.from, msg: `${w.from}–${w.to} 秒画面上只有背景（没有文字或 data-vd-key 元素）：这段没内容` }));
   const errors = summarize([...frames.flatMap(checkFrame), ...checkCues(frames, built.cues), ...empty]);
-  const craftIssues = checkCraft(frames);
+  const craftIssues = checkCraft(frames, craftOpts);
   const craft = { ...analyzeCraft(frames), counts: craftCounts(craftIssues) };
   const warns = [
     ...stillWindows(sigs).map((w) => ({ level: "warn", kind: "still", sel: "", t: w.from, msg: `${w.from}–${w.to} 秒画面没有变化（任意 2 秒内要有东西在动）` })),

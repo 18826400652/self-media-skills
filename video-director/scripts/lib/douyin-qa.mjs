@@ -116,13 +116,8 @@ export function summarize(issues) {
 // 视觉工艺：主体簇、字阶、空白带、材质、构图变化（纯函数，只报 warn）
 const CONTENT = { left: 60, right: 1020, top: 230, bottom: 1150 };
 const CLUSTER_GAP = 60;
-const TYPE_FLOOR = 64;
-const TYPE_RATIO = 1.6;
-const HOOK_FONT = 96;
-const HOOK_CLUSTER = 35;
-const SUBJECT_MIN = 30;
-const GAP_MAX = 250;
-const VARIETY = 70;
+// 项目可以在 video-director.config.json 的 craft 里覆盖这些默认值
+export const CRAFT_DEFAULTS = { typeFloor: 64, typeRatio: 1.6, hookFont: 96, hookCluster: 35, subjectMin: 30, gapMax: 250, variety: 70, materialMin: 2, scaleCv: 0.15 };
 const MATERIAL_NAMES = { shadow: "多层投影", grain: "纹理", vignette: "暗角", rotation: "离轴或胶带" };
 
 const median = (a) => {
@@ -264,7 +259,8 @@ export function analyzeCraft(frames) {
 }
 
 /** 视觉工艺检查：全部 warn；sel 是段 id（全片级的为空串） */
-export function checkCraft(frames) {
+export function checkCraft(frames, craft = {}) {
+  const o = { ...CRAFT_DEFAULTS, ...craft };
   const m = analyzeCraft(frames);
   const out = [];
   const add = (kind, sel, t, msg) => out.push({ level: "warn", kind, sel, t, msg });
@@ -272,24 +268,24 @@ export function checkCraft(frames) {
   const t0 = m.first?.t ?? 0;
   for (const s of m.segments) {
     if (allow.has(s.id)) continue;
-    if (s.hasText && s.maxFont > 0 && s.maxFont < TYPE_FLOOR) add("craft-type", s.id, s.t, s.id + " 段内最大字号中位 " + Math.round(s.maxFont) + "px（<" + TYPE_FLOOR + "）：标题和正文一个量级");
-    if (s.hasText && s.ratio > 0 && s.ratio < TYPE_RATIO) add("craft-hierarchy", s.id, s.t, s.id + " 字号层级 " + s.ratio.toFixed(2) + "（最大/中位，<" + TYPE_RATIO + "）：画面没有落点");
-    if (s.hasBlocks && s.cluster !== null && s.cluster < SUBJECT_MIN) add("craft-subject", s.id, s.t, s.id + " 主体簇最大 " + s.cluster.toFixed(1) + "%（<" + SUBJECT_MIN + "%）：画面没有视觉重心");
-    if (s.gap > GAP_MAX) add("craft-gap", s.id, s.t, s.id + " 内容区最大空白带 " + s.gap + "px（y " + s.gapAt + " 起，>" + GAP_MAX + "）：中间空一大块");
+    if (s.hasText && s.maxFont > 0 && s.maxFont < o.typeFloor) add("craft-type", s.id, s.t, s.id + " 段内最大字号中位 " + Math.round(s.maxFont) + "px（<" + o.typeFloor + "）：标题和正文一个量级");
+    if (s.hasText && s.ratio > 0 && s.ratio < o.typeRatio) add("craft-hierarchy", s.id, s.t, s.id + " 字号层级 " + s.ratio.toFixed(2) + "（最大/中位，<" + o.typeRatio + "）：画面没有落点");
+    if (s.hasBlocks && s.cluster !== null && s.cluster < o.subjectMin) add("craft-subject", s.id, s.t, s.id + " 主体簇最大 " + s.cluster.toFixed(1) + "%（<" + o.subjectMin + "%）：画面没有视觉重心");
+    if (s.gap > o.gapMax) add("craft-gap", s.id, s.t, s.id + " 内容区最大空白带 " + s.gap + "px（y " + s.gapAt + " 起，>" + o.gapMax + "）：中间空一大块");
   }
   if (m.first) {
-    const fontBad = m.first.maxFont > 0 && m.first.maxFont < HOOK_FONT;
-    const clusterBad = m.first.cluster !== null && m.first.cluster < HOOK_CLUSTER;
+    const fontBad = m.first.maxFont > 0 && m.first.maxFont < o.hookFont;
+    const clusterBad = m.first.cluster !== null && m.first.cluster < o.hookCluster;
     if (fontBad || clusterBad) {
       const font = m.first.maxFont ? Math.round(m.first.maxFont) + "px" : "—";
       const cluster = m.first.cluster !== null ? m.first.cluster.toFixed(1) + "%" : "—";
-      add("craft-hook", "", t0, "首帧最大字号 " + font + "（<" + HOOK_FONT + "）、主体簇 " + cluster + "（<" + HOOK_CLUSTER + "%）：第一秒没有落点");
+      add("craft-hook", "", t0, "首帧最大字号 " + font + "（<" + o.hookFont + "）、主体簇 " + cluster + "（<" + o.hookCluster + "%）：第一秒没有落点");
     }
   }
-  if (frames.some((f) => (f.data?.blocks?.length ?? 0) > 0) && m.material.score < 2) {
+  if (frames.some((f) => (f.data?.blocks?.length ?? 0) > 0) && m.material.score < o.materialMin) {
     add("craft-material", "", t0, "全片材质 " + m.material.score + "/4（" + m.material.missing.map((x) => x + "×").join(" ") + "）：像线框，不像实景");
   }
-  if (m.variety.total >= 3 && (m.variety.centered / m.variety.total) * 100 >= VARIETY) {
+  if (m.variety.total >= 3 && (m.variety.centered / m.variety.total) * 100 >= o.variety) {
     const mid = median(m.variety.centers);
     const lo = Math.round(mid - 0.05 * W), hi = Math.round(mid + 0.05 * W);
     add("craft-variety", "", t0, m.variety.total + " 段里 " + m.variety.centered + " 段主体中心在 x " + lo + "–" + hi + "（±5% 宽）：构图雷同");

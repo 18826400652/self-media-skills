@@ -140,7 +140,7 @@ const COMMANDS = {
     const { bundleToSingleHtml } = await import(pathToFileURL(join(dir, "node_modules/@hyperframes/core/dist/compiler/index.js")).href);
     const page = await openPage({ html: await bundleToSingleHtml(dir), root: dir });
     let r;
-    try { r = await douyinQa({ ...built, segments }, page, join(dir, "snapshots/cues")); } finally { await page.close(); }
+    try { r = await douyinQa({ ...built, segments }, page, join(dir, "snapshots/cues"), { craft: config.craft }); } finally { await page.close(); }
     writeFileSync(join(dir, out), JSON.stringify({ passed: r.passed, issues: r.issues.map(({ level, msg }) => ({ level, msg })), shots: r.shots, craft: r.craft }, null, 2) + "\n");
     const sheet = run("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", "snapshots/cues/*.png", "-vf", `scale=270:-1,tile=6x${Math.ceil(r.shots.length / 6)}:padding=6:color=0x444444`, "-frames:v", "1", "snapshots/cues-sheet.jpg"], { cwd: dir });
     if (sheet.status !== 0) console.warn(`⚠ 总览图没拼成：${sheet.stderr.trim()}`);

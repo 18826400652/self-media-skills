@@ -307,3 +307,14 @@ test("checkCraft：2.2% 的多层投影不给材质分；10% 的给", () => {
   assert.equal(analyzeCraft([small]).material.shadow, false);
   assert.equal(analyzeCraft([big]).material.shadow, true);
 });
+
+test("checkCraft：阈值可以从第二个参数覆盖", () => {
+  const f = shot("s1", 1, {
+    blocks: [block({ box: [100, 300, 900, 700] }), block({ box: [100, 850, 900, 1150] })],
+    texts: [text({ fontSize: 96 })],
+  });
+  assert.ok(!checkCraft([f]).some((i) => i.kind === "craft-type"));
+  assert.ok(checkCraft([f], { typeFloor: 100 }).some((i) => i.kind === "craft-type"));
+  assert.ok(!checkCraft([f]).some((i) => i.kind === "craft-gap"));
+  assert.ok(checkCraft([f], { gapMax: 100 }).some((i) => i.kind === "craft-gap"));
+});

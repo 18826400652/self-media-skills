@@ -89,3 +89,18 @@ test("douyinQa：视觉工艺只给 warn，不影响 passed；返回 craft 指�
   assert.equal(r.craft.counts.type, 1);
   assert.equal(r.craft.counts.material, 1);
 });
+
+test("douyinQa：craft 阈值从参数传入", async () => {
+  const dir = project({});
+  const page = fakePage(() => ({
+    ...blank,
+    sig: String(Math.random()),
+    blocks: [
+      { sel: "#c", box: [100, 300, 900, 700], opacity: 1, shadow: "none", rot: 0, bgImage: false },
+      { sel: "#d", box: [100, 850, 900, 1150], opacity: 1, shadow: "none", rot: 0, bgImage: false },
+    ],
+    texts: [{ sel: "#t", box: [100, 1400, 900, 1460], opacity: 1, fontSize: 96, fontWeight: 900, color: "rgb(0,0,0)" }],
+  }));
+  const r = await douyinQa(built, page, join(dir, "snapshots/cues"), { craft: { typeFloor: 100 } });
+  assert.ok(r.issues.some((i) => i.kind === "craft-type"));
+});
