@@ -17,7 +17,9 @@
 ## 2. 分段
 
 按意思分段（不是一句一帧）。每段：包含哪几句、起止时间、画面、每个动作的 `@词`、和下一段怎么连（由哪个元素连起来）。
-功能性的画面（步骤、对比、数字、手机录屏框……）先查 dykit 组件库（hyperframes 仓库的 `catalog/catalog.json`），有就写「用组件 dy-…」，机器块里给这段写 `component` 和 `vars`；要跟着口播一拍拍出现，`vars` 里写 `cues`（`|` 隔开的 `@词`，对应 catalog 里这个组件的 `beats`）。
+每段**先选镜头**（`vd components` 里 `dy-shot-` 开头的那些），写「用镜头 dy-shot-…」，机器块里给这段写 `shot` 和 `vars`；要跟着口播一拍拍出现，`vars` 里写 `cues`（`|` 隔开的 `@词`，对应 catalog 里这个镜头的 `beats`）。花字、单独的盖章叠在段上，写进这段的 `overlays`（每项 `shot`、`at` 写成 `@词`、`vars`），不单独占一段。段与段之间默认平移转场，要硬切写 `"transition": "none"`。
+
+镜头库里确实没有合适的，才把这段写成 `"shot": "custom"`，并写 `reason`（为什么现有镜头都不合适）、`need`（一句话：要展示什么）、`candidate`（建议的镜头名；先读项目的 `00-规划/镜头候选.json`，同一类需求用台账里已有的名字）。一期最多 1 段 custom。旧的 dykit 组件（`component`）照常能用。
 
 每段再列一张 beat 表（写进机器块的 `beats`，段 HTML 里用 `data-vd-beat` 标在元素上，值是「动作:锚点」）：
 
@@ -85,8 +87,9 @@
   "palette": { "bg": "#F1ECE2", "ink": "#1C1A17", "muted": "#6E675C", "accent": "#FFD84D", "alert": "#D2372A" },
   "fonts": { "title": "serif", "body": "sans" },
   "segments": [
-    { "id": "seg-01-hook", "lines": [1, 2] },
-    { "id": "seg-02-steps", "lines": [3, 3], "component": "dy-scene-steps", "vars": { "title": "……", "steps": "第一步::说明|第二步::说明", "cues": "@词|@词" } }
+    { "id": "seg-01-hook", "lines": [1, 2], "shot": "dy-shot-transform", "vars": { "headline": "……", "inputs": "……|……", "cues": "@词|@词|@词" } },
+    { "id": "seg-02-proof", "lines": [3, 3], "shot": "dy-shot-proof", "vars": { "src": "assets/……png", "notes": "标签::10,20,30,8", "cues": "@词" },
+      "overlays": [{ "shot": "dy-shot-stamp", "at": "@词", "vars": { "mode": "stamp-only", "stamp": "编的" } }] }
   ],
   "sfx": [{ "name": "pop", "at": "@词", "volume": 0.6 }],
   "music": { "intent": "light curious lo-fi explainer, clear steady beat", "drop": "@词", "volume": 0.4 },

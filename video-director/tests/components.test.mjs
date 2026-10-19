@@ -196,3 +196,11 @@ test("localArchive：没有 registry/registry.json 时报错，说清路径", as
   const dir = project({ "x.txt": "" });
   assert.throws(() => localArchive(dir), (err) => err.message.includes(dir) && err.message.includes("registry/registry.json"));
 });
+
+test("catalogEntry：没有 catalog/catalog.json 时返回 null；有就按 id 找", async () => {
+  const { catalogEntry } = await import("../scripts/lib/components.mjs");
+  assert.equal(catalogEntry(project({ "x.txt": "" }), "dy-a"), null);
+  const dir = project({ "catalog/catalog.json": { components: [{ id: "dy-a", variables: [] }] } });
+  assert.deepEqual(catalogEntry(dir, "dy-a"), { id: "dy-a", variables: [] });
+  assert.equal(catalogEntry(dir, "dy-b"), null);
+});

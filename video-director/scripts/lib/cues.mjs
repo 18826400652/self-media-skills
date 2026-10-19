@@ -58,8 +58,11 @@ export function segmentTimes(segments, lines) {
   return segments.map((s) => {
     const a = byLine.get(s.lines[0]), b = byLine.get(s.lines[1]);
     if (!a || !b) throw new Error(`段 ${s.id} 的句号 ${s.lines.join("–")} 超出配音范围（共 ${lines.length} 句）`);
-    const seg = { id: s.id, start: a.start, duration: round(b.end - a.start) };
-    return s.component ? { ...seg, component: s.component, vars: s.vars ?? {} } : seg;
+    const seg = { id: s.id, start: a.start, duration: round(b.end - a.start), transition: s.transition ?? "auto", overlays: [] };
+    const component = s.shot && s.shot !== "custom" ? s.shot : s.component;
+    if (component) return { ...seg, component, vars: s.vars ?? {} };
+    if (s.shot === "custom") return { ...seg, custom: { reason: s.reason, need: s.need, candidate: s.candidate } };
+    return seg;
   });
 }
 
@@ -74,11 +77,31 @@ export function buildCues({ vd, tokens }, meta) {
     if (t.nth === 1 && r.lines.length > 1)
       warnings.push(`@${t.text} 在口播里出现了 ${r.lines.length} 次（第 ${r.lines.join("、")} 句），现在用的是第 1 次；要别的写 @${t.text}#2`);
   }
-  const segments = segmentTimes(vd.segments, lines).map((s) => withVarCues(s, stream, cues));
+  const segments = segmentTimes(vd.segments, lines).map((s, i) => {
+    const overlays = (vd.segments[i].overlays ?? []).map((o) => overlayTimes(s, o, stream, cues));
+    return { ...withVarCues(s, stream, cues), overlays };
+  });
   return { cues, warnings, segments, lines, total: lines.at(-1).end };
 }
 
 const CUE = /^@(.+?)(?:#(\d+))?$/;
+
+const cueTime = (raw, stream, cues) => {
+  const m = raw.trim().match(CUE);
+  const nth = m[2] ? Number(m[2]) : 1;
+  return cues[nth > 1 ? `${m[1]}#${nth}` : m[1]] ?? resolveCue(stream, m[1], nth).start;
+};
+
+/** 段里的叠加镜头：从 @词 开始到段尾；它的 vars.cues 从 overlay 开始算 */
+function overlayTimes(seg, o, stream, cues) {
+  const t = cueTime(o.at, stream, cues);
+  const end = seg.start + seg.duration;
+  if (t < seg.start || t > end)
+    throw new Error(`段 ${seg.id} 的 overlay「${o.at}」在 ${round(t)} 秒，不在这一段（${round(seg.start)}–${round(end)} 秒）里`);
+  const ov = { id: seg.id, component: o.shot, start: t, duration: round(end - t), vars: o.vars ?? {} };
+  const { id: _id, ...rest } = withVarCues(ov, stream, cues);
+  return rest;
+}
 
 /** 组件段 vars.cues（| 隔开）里的 @词 → 从这段开头算的秒数，交给组件的 HF.cues；数字原样保留 */
 function withVarCues(seg, stream, cues) {

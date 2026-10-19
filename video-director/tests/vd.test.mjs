@@ -240,3 +240,32 @@ test("installAll：local 目录不对时报错，不回退到 GitHub", () => {
   const local = project({ "x.txt": "" });
   assert.throws(() => installAll(project({}), { segments: [{ id: "a", component: "dy-x" }] }, { local }, { ensureLock: never, fetchArchive: never, writeLock: never, installComponent: never }), /registry\/registry\.json/);
 });
+
+test("installAll：overlay 用到的镜头也装上", () => {
+  const installed = [];
+  const deps = { ensureLock: () => ({ sha: "c".repeat(40), changed: false }), fetchArchive: () => "/repo", writeLock: () => {}, installComponent: (_r, name) => { installed.push(name); return []; } };
+  installAll(project({}), { segments: [{ id: "a", overlays: [{ component: "dy-shot-stamp", start: 1, duration: 2, vars: {} }] }] }, {}, deps);
+  assert.deepEqual(installed, ["dy-shot-stamp"]);
+});
+
+test("textProblems：变量去掉 HTML 后超过 maxChars（| 隔开的每项分别算）给出提示；没写 maxChars 的不管", async () => {
+  const { textProblems } = await import("../scripts/lib/components.mjs");
+  const catalogEntry = { variables: [{ id: "lines", maxChars: 5 }, { id: "src" }] };
+  assert.deepEqual(textProblems({ segId: "seg-06", vars: { lines: "短的|<b>这一行太长了</b>", src: "很长很长很长很长的路径.png" }, catalogEntry }),
+    ["seg-06 的 lines 有 6 字，这个镜头最多 5 字：删字或拆段"]);
+  assert.deepEqual(textProblems({ segId: "a", vars: { lines: "短" }, catalogEntry }), []);
+});
+
+test("installAll：镜头和 overlay 的文本超过 maxChars 打 ⚠，不中断构建", () => {
+  const warns = [];
+  const orig = console.warn;
+  console.warn = (m) => warns.push(m);
+  const deps = {
+    ensureLock: () => ({ sha: "c".repeat(40), changed: false }), fetchArchive: () => "/repo", writeLock: () => {}, installComponent: () => [],
+    componentInfo: () => ({ html: "HF.duration(", minDuration: 1 }),
+    catalogEntry: (_r, name) => ({ variables: [{ id: name === "dy-shot-stamp" ? "stamp" : "title", maxChars: 2 }] }),
+  };
+  const segs = [{ id: "a", duration: 5, component: "dy-shot-proof", vars: { title: "太长了" }, overlays: [{ component: "dy-shot-stamp", start: 1, duration: 2, vars: { stamp: "编的啊" } }] }];
+  try { installAll(project({}), { segments: segs }, {}, deps); } finally { console.warn = orig; }
+  assert.deepEqual(warns, ["⚠ a 的 title 有 3 字，这个镜头最多 2 字：删字或拆段", "⚠ a 的 stamp 有 3 字，这个镜头最多 2 字：删字或拆段"]);
+});

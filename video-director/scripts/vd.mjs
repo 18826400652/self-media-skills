@@ -16,7 +16,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
-import { REPO, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, localArchive, recordingProblem, writeLock } from "./lib/components.mjs";
+import { REPO, catalogEntry, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, localArchive, recordingProblem, textProblems, writeLock } from "./lib/components.mjs";
 import { buildAudio } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig, localDykitDir } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
@@ -35,9 +35,10 @@ const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
 /** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
 export function installAll(dir, built, { update = false, only = null, local = null } = {}, overrides = {}) {
-  const deps = { ensureLock, fetchArchive, installComponent, writeLock, componentInfo, probeLen, ...overrides };
-  const segs = built.segments.filter((s) => s.component && (!only || only.includes(s.id)));
-  const names = [...new Set(segs.map((s) => s.component))];
+  const deps = { ensureLock, fetchArchive, installComponent, writeLock, componentInfo, catalogEntry, probeLen, ...overrides };
+  const wanted = built.segments.filter((s) => !only || only.includes(s.id));
+  const segs = wanted.filter((s) => s.component);
+  const names = [...new Set([...segs.map((s) => s.component), ...wanted.flatMap((s) => (s.overlays ?? []).map((o) => o.component))])];
   if (!names.length) {
     if (update) console.log("◇ 本次构建没有用到组件，--update-components 没有效果");
     return [];
@@ -52,6 +53,9 @@ export function installAll(dir, built, { update = false, only = null, local = nu
     const w = recordingProblem({ segId: s.id, src: s.vars.src, recLen: deps.probeLen(join(dir, s.vars.src)), segDuration: s.duration, html: deps.componentInfo(repo, s.component, dir).html });
     if (w) console.warn(`⚠ ${w}`);
   }
+  const texts = [...segs, ...wanted.flatMap((s) => (s.overlays ?? []).map((o) => ({ ...o, id: s.id })))]
+    .flatMap((x) => textProblems({ segId: x.id, vars: x.vars, catalogEntry: deps.catalogEntry(repo, x.component) }));
+  for (const w of texts) console.warn(`⚠ ${w}`);
   // 下载、安装都成功才写锁文件：失败时还停在旧版本
   if (changed) {
     deps.writeLock(dir, sha);

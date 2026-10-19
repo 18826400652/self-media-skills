@@ -99,3 +99,42 @@ test("buildCues：vars.cues 是 JSON 列表（dy-rec-phone 自己的点击、框
   const parsed = { vd: { segments: [{ id: "a", lines: [1, 17], component: "dy-rec-phone", vars: { cues: own } }] }, tokens: [] };
   assert.equal(buildCues(parsed, META).segments[0].vars.cues, own);
 });
+
+test("buildCues：shot 归一成 component；transition 缺省 auto；overlays 缺省空", () => {
+  const parsed = { vd: { segments: [{ id: "a", lines: [1, 17], shot: "dy-shot-proof", vars: { src: "x.png" } }] }, tokens: [] };
+  const [s] = buildCues(parsed, META).segments;
+  assert.equal(s.component, "dy-shot-proof");
+  assert.deepEqual(s.vars, { src: "x.png" });
+  assert.equal(s.transition, "auto");
+  assert.deepEqual(s.overlays, []);
+});
+
+test("buildCues：overlay 的 start 是 @词 的全片秒数，duration 到段尾；overlay 的 vars.cues 从 overlay 开始算", () => {
+  const parsed = {
+    vd: { segments: [{ id: "a", lines: [1, 2] }, { id: "b", lines: [3, 17], shot: "dy-shot-proof", overlays: [{ shot: "dy-shot-stamp", at: "@不在里面", vars: { cues: "@先去翻资料" } }] }] },
+    tokens: [{ text: "不在里面", nth: 1 }, { text: "先去翻资料", nth: 1 }],
+  };
+  const b = buildCues(parsed, META);
+  const seg = b.segments[1];
+  const [o] = seg.overlays;
+  assert.equal(o.component, "dy-shot-stamp");
+  near(o.start, 10.44);
+  near(o.duration, seg.start + seg.duration - 10.44);
+  near(Number(o.vars.cues), 13.55 - 10.44);
+});
+
+test("buildCues：overlay 的 @词 不在它的段里时报错，说清段的起止秒数", () => {
+  const parsed = {
+    vd: { segments: [{ id: "a", lines: [1, 2], overlays: [{ shot: "dy-shot-stamp", at: "@先去翻资料" }] }, { id: "b", lines: [3, 17] }] },
+    tokens: [{ text: "先去翻资料", nth: 1 }],
+  };
+  assert.throws(() => buildCues(parsed, META), /段 a 的 overlay「@先去翻资料」在 [\d.]+ 秒，不在这一段（[\d.]+–[\d.]+ 秒）里/);
+});
+
+test("buildCues：custom 段带上 reason、need、candidate，不当成组件", () => {
+  const custom = { reason: "没有合适的", need: "两份文件逐行对照", candidate: "dy-shot-diff" };
+  const parsed = { vd: { segments: [{ id: "a", lines: [1, 17], shot: "custom", ...custom }] }, tokens: [] };
+  const [s] = buildCues(parsed, META).segments;
+  assert.equal(s.component, undefined);
+  assert.deepEqual(s.custom, custom);
+});
