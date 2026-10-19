@@ -138,3 +138,8 @@ test("buildCues：custom 段带上 reason、need、candidate，不当成组件",
   assert.equal(s.component, undefined);
   assert.deepEqual(s.custom, custom);
 });
+
+test("buildCues：vars.cues 里有 @词 时另给 cueNames（不带 @，| 隔开），镜头用它标 data-vd-zoom", () => {
+  const parsed = { vd: { segments: [{ id: "a", lines: [1, 17], shot: "dy-shot-proof", vars: { cues: "@不在里面| 3 |@先去翻资料" } }] }, tokens: [{ text: "不在里面", nth: 1 }, { text: "先去翻资料", nth: 1 }] };
+  assert.equal(buildCues(parsed, META).segments[0].vars.cueNames, "不在里面||先去翻资料");
+});

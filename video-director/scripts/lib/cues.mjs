@@ -117,5 +117,6 @@ function withVarCues(seg, stream, cues) {
       throw new Error(`段 ${seg.id} 的 cues 第 ${i + 1} 拍「${raw.trim()}」在 ${round(t)} 秒，不在这一段（${round(seg.start)}–${round(seg.start + seg.duration)} 秒）里`);
     return String(rel);
   });
-  return { ...seg, vars: { ...seg.vars, cues: beats.join("|") } };
+  const names = seg.vars.cues.split("|").map((raw) => raw.trim().match(CUE)?.[1] ?? "");
+  return { ...seg, vars: { ...seg.vars, cues: beats.join("|"), cueNames: names.join("|") } };
 }
