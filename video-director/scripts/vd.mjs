@@ -19,6 +19,7 @@ import { assemble, cuesJs } from "./lib/assemble.mjs";
 import { REPO, projectCatalog, catalogEntry, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, localArchive, recordingProblem, textProblems, writeLock } from "./lib/components.mjs";
 import { buildAudio, shotSfx } from "./lib/audio.mjs";
 import { recordLedger } from "./lib/ledger.mjs";
+import { parseArgs, reviewPack } from "./lib/review-pack.mjs";
 import { findProjectRoot, loadConfig, localDykitDir } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
@@ -30,7 +31,7 @@ import { coreEntry, requireCore, requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
 
-const USAGE = "用法：vd init|cues|build|check|qa|render|verify|measure|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
+const USAGE = "用法：vd init|cues|build|check|qa|render|verify|measure|review-pack|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
 const SCRIPTS = fileURLToPath(new URL(".", import.meta.url));
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
@@ -93,6 +94,11 @@ const COMMANDS = {
   },
   verify(file, rest = []) {
     return spawnSync(process.execPath, [join(SCRIPTS, "verify.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;
+  },
+  "review-pack"(file, rest = [], { reviewPack: pack = reviewPack } = {}) {
+    const out = pack(parseArgs([file, ...rest]));
+    console.log(`✓ 评审素材包：${out}（contact.jpg 总览、full/ 原尺寸帧、strip-*.jpg 连拍、spec.json 规格）`);
+    return 0;
   },
   measure(file, rest = [], { run = spawnSync } = {}) {
     return run(process.execPath, [join(SCRIPTS, "measure.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;

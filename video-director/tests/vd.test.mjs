@@ -269,3 +269,15 @@ test("installAll：镜头和 overlay 的文本超过 maxChars 打 ⚠，不中�
   try { installAll(project({}), { segments: segs }, {}, deps); } finally { console.warn = orig; }
   assert.deepEqual(warns, ["⚠ a 的 title 有 3 字，这个镜头最多 2 字：删字或拆段", "⚠ a 的 stamp 有 3 字，这个镜头最多 2 字：删字或拆段"]);
 });
+
+test("vd review-pack：解析参数交给 reviewPack，打印输出目录", () => {
+  const seen = [];
+  const logs = [];
+  const orig = console.log;
+  console.log = (m) => logs.push(m);
+  try {
+    COMMANDS["review-pack"]("/a/片.mp4", ["--at", "1.2"], { reviewPack: (o) => (seen.push(o), "/a/review/片") });
+  } finally { console.log = orig; }
+  assert.deepEqual(seen, [{ file: "/a/片.mp4", every: 0.5, at: [1.2], out: "/a/review/片" }]);
+  assert.match(logs.join("\n"), /\/a\/review\/片/);
+});
