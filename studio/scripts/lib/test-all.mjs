@@ -1,5 +1,5 @@
 // st test：一次跑完工具包里所有测试套件，逐个给出通过数、失败数，跳过的说清原因和怎么装。
-//   Node：有 package.json 的 test 脚本的 skill，跑 tests/*.test.mjs；shared/tests 也算
+//   Node：tests/ 里有 *.test.mjs 的目录（不要求 package.json；有 dependencies 时才查 node_modules）
 //   Python：tests/ 里有 test_*.py 的目录，用自己的 .venv，没有就借 phone-draft 的（browser-draft 就是这样）
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -24,7 +24,7 @@ export function findSuites(toolkit) {
     const tests = join(dir, "tests");
     const pkg = readPkg(dir);
     const nodeFiles = files(tests, /\.test\.mjs$/);
-    if ((pkg?.scripts?.test || name === "shared") && nodeFiles.length) {
+    if (nodeFiles.length) {
       const needsDeps = Object.keys(pkg?.dependencies ?? {}).length && !existsSync(join(dir, "node_modules"));
       return [{ name, kind: "node", dir, files: nodeFiles.map((f) => join("tests", f)), ...(needsDeps ? { skip: `缺依赖，先 cd ${name} && npm ci` } : {}) }];
     }

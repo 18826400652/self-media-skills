@@ -26,6 +26,7 @@ function toolkit() {
   write(root, "needdeps/package.json", pkg({ "left-pad": "1" }));
   write(root, "needdeps/tests/a.test.mjs", PASS);
   write(root, "shared/tests/s.test.mjs", PASS);
+  write(root, "nopkg/tests/n.test.mjs", PASS);
   write(root, "py/tests/test_x.py", "def test_x(): pass\n");
   write(root, "py/.venv/bin/python", '#!/usr/bin/env bash\necho "3 passed in 0.01s"\n');
   chmodSync(join(root, "py/.venv/bin/python"), 0o755);
@@ -40,9 +41,9 @@ function run(root, opts = {}) {
   return { code, text: lines.join("\n") };
 }
 
-test("findSuites：有 test 脚本的 skill、shared/tests、带 test_*.py 的目录；其余目录不算", () => {
+test("findSuites：tests/ 里有 *.test.mjs 的 skill（不管有没有 package.json）、带 test_*.py 的目录；其余目录不算", () => {
   const names = findSuites(toolkit()).map((s) => s.name).sort();
-  assert.deepEqual(names, ["bad", "good", "needdeps", "novenv", "py", "shared"]);
+  assert.deepEqual(names, ["bad", "good", "needdeps", "nopkg", "novenv", "py", "shared"]);
 });
 
 test("st test：逐个套件给出通过数、失败数；有失败退出码 1，并列出失败的用例名", () => {
@@ -53,6 +54,7 @@ test("st test：逐个套件给出通过数、失败数；有失败退出码 1�
   assert.match(text, /坏了/);
   assert.match(text, /✓ py +3 通过/);
   assert.match(text, /✓ shared +1 通过/);
+  assert.match(text, /✓ nopkg +1 通过/);
 });
 
 test("st test：缺 node_modules、没有 Python 环境的套件跳过并说怎么装；只有跳过时退出码 0，--strict 时 1", () => {
