@@ -838,6 +838,8 @@ templates/segment.html 的注释补一行：
 
 不要用 #root::after 做纹理：伪元素不在 elementsFromPoint 里，会绕过遮挡判断，也测不到材质分；用真实的 div + 标记。
 
+模板实际用一张 128×128 的预渲染 PNG data URI 代替 `feTurbulence`（每帧重算滤镜更慢）。实测全屏纸纹会让 `vd qa` 从约 30s 到约 48s（SVG 版约 52s），这是内容成本，不是 craft 检查的成本；不需要纸纹时删掉 grain 层，材质仍有 3/4。
+
 - [ ] **Step 4: 跑测试和 hyperframes check**
 
 ~~~bash
@@ -1044,7 +1046,7 @@ git commit -m "docs(vd): 视觉工艺验收报告（指标、性能、样片对�
 3. **旧工程**：没有 blocks / texts / materials / px 的 frames 调 checkCraft 返回 []，vd qa 不崩。
 4. **模板**：npx hyperframes check 0 error；四个 vd:* 标记还在；材质层在 vd:segments 和 vd:brand 之间。
 5. **样片**：副本里 seg-01 的首帧 ≥96px、主体簇 ≥35%、材质 ≥2/4；没有新 ✗；有改造前后对比图。
-6. **性能**：vd qa 增幅 ≤20%（预期 <5%）。
+6. **性能**：vd qa 的 **craft 检查**增幅 ≤20%（预期 <5%）；这个数字不含可选的整屏纸纹层（实测约 30s→48s，属于画面内容成本）。
 7. **边界**：不改 kv / vo / vd build 的时间轴和音频；不改 components.lock.json；不新增依赖。
 8. **文档**：evals/cases.md 至少跑 1、3、4、6 四条，结果写进验收报告。
 

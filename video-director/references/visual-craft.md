@@ -74,13 +74,10 @@ box-shadow:
 ### 2.2 纹理：纸纹 / 噪点
 
 ~~~css
-.grain {
-  position: absolute; inset: 0; pointer-events: none; opacity: .5;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='0.16'/></svg>");
-}
+.grain { position: absolute; inset: 0; pointer-events: none; opacity: .5; background-image: var(--vd-grain); }
 ~~~
 
-不透明度 0.4–0.6；太重建模会脏，太浅看不出来。放在 `index.html` 手写区，加 `data-vd-material="grain"` 和 `data-layout-ignore`。
+模板里的 `--vd-grain` 是一张 128×128 的预渲染噪点 PNG（data URI），比 `feTurbulence` 每帧重算快。不透明度 0.4–0.6；太重建模会脏，太浅看不出来。放在 `index.html` 手写区，加 `data-vd-material="grain"` 和 `data-layout-ignore`。纸纹是全屏叠加，`vd qa` 会多花约 15–20 秒；不需要纸纹时删掉 grain 层，材质仍有 3/4。
 
 ### 2.3 暗角：把视线压回主体
 
@@ -202,7 +199,7 @@ background: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(40,28,1
 - **标题和正文一个量级**：段标题 46px、正文 40px，max/中位 1.15；观众找不到先看哪。
 - **主体按单块算**：手机单块 18.6%，和便利贴合成簇 34.6%；只报单块会改错方向。
 - **中间空一大块**：内容区 y 735 起空 415px，画面断成两截；不是"下方留白"。
-- **每段一张居中卡**：9 段里 7 段主体中心在 x 490–540（±5% 宽）；没有景别变化。
+- **每段一张居中卡**：9 段里 8 段主体簇中心落在 x 446–554（±5% 宽）；没有景别变化。
 - **单层投影 + 纯色块**：全片最大 box-shadow 只有 1 层，没有纹理 / 暗角；像 Figma 线框。
 - **靠铺色显眼**：把强调色铺满 30% 背景，主体反而被压掉；小面积锚点才抓眼。
 
@@ -216,7 +213,7 @@ background: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(40,28,1
   :root {
     --vd-shadow-paper: 0 2px 0 rgba(255,255,255,.9) inset, 0 0 0 2px rgba(25,22,18,.9),
                        26px 44px 60px rgba(40,28,14,.22), 8px 14px 22px rgba(40,28,14,.16);
-    --vd-grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='0.16'/></svg>");
+    /* --vd-grain 从 templates/index.html 的 :root 整行复制（128×128 PNG data URI） */
     --vd-vignette: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(40,28,14,.20) 100%);
     --vd-type-display: 104px; --vd-type-heading: 72px; --vd-type-body: 48px;
     --vd-type-caption: 58px; --vd-type-label: 24px;
