@@ -340,3 +340,23 @@ test("checkCraft：中心分开 + 大小分开 → 不报 craft-variety", () => 
   const frames = xs.map((x, i) => shot("s" + i, 1, { blocks: [block({ box: [x - sizes[i % 3] / 2, 300, x + sizes[i % 3] / 2, 1100] })], texts: [text({ fontSize: 64 })] }));
   assert.ok(!checkCraft(frames).some((i) => i.kind === "craft-variety"));
 });
+
+test("checkCraft：104px 大标题 + 3 行 34px 正文 + 10 个 12px 标签 → 层级不报", () => {
+  const texts = [
+    text({ fontSize: 104, box: [100, 900, 900, 1000] }),
+    ...[0, 1, 2].map((i) => text({ fontSize: 34, box: [100, 300 + i * 60, 900, 360 + i * 60] })),
+    ...Array.from({ length: 10 }, (_, i) => text({ fontSize: 12, box: [100, 1100 + i * 12, 300, 1112 + i * 12] })),
+  ];
+  const f = shot("s1", 1, { blocks: [block({ box: [100, 300, 900, 700] })], texts });
+  assert.ok(!checkCraft([f]).some((i) => i.kind === "craft-hierarchy"));
+});
+
+test("checkCraft：42px 标题 + 32px 正文 → 层级报", () => {
+  const f = shot("s1", 1, { texts: [text({ fontSize: 42, box: [100, 300, 900, 360] }), text({ fontSize: 32, box: [100, 400, 900, 460] })] });
+  assert.ok(checkCraft([f]).some((i) => i.kind === "craft-hierarchy"));
+});
+
+test("checkCraft：只有一种字号 → 层级报（没有层级）", () => {
+  const f = shot("s1", 1, { texts: [text({ fontSize: 64 })] });
+  assert.ok(checkCraft([f]).some((i) => i.kind === "craft-hierarchy"));
+});

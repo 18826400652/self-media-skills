@@ -128,9 +128,19 @@ const median = (a) => {
 };
 const areaOf = (b) => Math.max(0, b[2] - b[0]) * Math.max(0, b[3] - b[1]);
 const visible = (x) => (x.opacity ?? 1) > 0.05 && areaOf(x.box) > 0;
-const textSizes = (f) => (f.data?.texts ?? []).filter(visible).map((t) => t.fontSize).filter((n) => Number.isFinite(n) && n > 0);
-const frameMax = (f) => { const s = textSizes(f); return s.length ? Math.max(...s) : 0; };
-const frameRatio = (f) => { const s = textSizes(f); if (!s.length) return 0; const m = median(s); return m ? Math.max(...s) / m : 0; };
+const textSizes = (f) => (f.data?.texts ?? []).filter(visible).map((t) => ({ size: t.fontSize, area: areaOf(t.box) })).filter((x) => Number.isFinite(x.size) && x.size > 0);
+const frameMax = (f) => { const s = textSizes(f); return s.length ? Math.max(...s.map((x) => x.size)) : 0; };
+/** 最大字号 / 主体字号：主体字号 = 比最大字号小的字号里总面积最大的那个（小标签拉不低它） */
+const frameRatio = (f) => {
+  const s = textSizes(f);
+  if (!s.length) return 0;
+  const max = Math.max(...s.map((x) => x.size));
+  const bySize = new Map();
+  for (const x of s) if (x.size < max) bySize.set(x.size, (bySize.get(x.size) ?? 0) + x.area);
+  if (!bySize.size) return 1;
+  const body = [...bySize.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  return body ? max / body : 1;
+};
 
 /** 60px 内邻近的框合并成簇，返回并集包围盒 */
 function mergeClusters(boxes, gap = CLUSTER_GAP) {
@@ -275,7 +285,7 @@ export function checkCraft(frames, craft = {}) {
   for (const s of m.segments) {
     if (allow.has(s.id)) continue;
     if (s.hasText && s.maxFont > 0 && s.maxFont < o.typeFloor) add("craft-type", s.id, s.t, s.id + " 段内最大字号中位 " + Math.round(s.maxFont) + "px（<" + o.typeFloor + "）：标题和正文一个量级");
-    if (s.hasText && s.ratio > 0 && s.ratio < o.typeRatio) add("craft-hierarchy", s.id, s.t, s.id + " 字号层级 " + s.ratio.toFixed(2) + "（最大/中位，<" + o.typeRatio + "）：画面没有落点");
+    if (s.hasText && s.ratio > 0 && s.ratio < o.typeRatio) add("craft-hierarchy", s.id, s.t, s.id + " 字号层级 " + s.ratio.toFixed(2) + "（最大/主体，<" + o.typeRatio + "）：画面没有落点");
     if (s.hasBlocks && s.cluster !== null && s.cluster < o.subjectMin) add("craft-subject", s.id, s.t, s.id + " 主体簇最大 " + s.cluster.toFixed(1) + "%（<" + o.subjectMin + "%）：画面没有视觉重心");
     if (s.gap > o.gapMax) add("craft-gap", s.id, s.t, s.id + " 内容区最大空白带 " + s.gap + "px（y " + s.gapAt + " 起，>" + o.gapMax + "）：中间空一大块");
   }
