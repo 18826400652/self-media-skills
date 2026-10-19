@@ -13,7 +13,7 @@ export function ffmpegFramesArgs(file, sample = SAMPLE) {
 
 /**
  * 原始灰度帧 → 静态率 / 变化事件 / 变化率 / 最长静止。
- * - 相邻帧差 = 平均绝对差 / 255，>= threshold 记为变化；
+ * - 相邻帧差 = 内容区平均绝对差 / 255，>= threshold 记为变化；
  * - 2 秒窗口 t 有变化 = changed[t .. t+window-1] 里任意一个为 true；
  * - changeEvents 只合并连续的变化帧（中间隔一帧静止算两次）；
  * - longestStill 是保守值：连续无变化窗口数 / fps。

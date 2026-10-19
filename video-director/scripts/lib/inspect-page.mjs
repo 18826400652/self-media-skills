@@ -87,7 +87,7 @@ function collect() {
     sig.push(`${sel}:${box.map((v) => Math.round(v / 2)).join(",")}:${Math.round(op * 20)}${text ? `:${e.textContent.trim()}` : ""}`);
     if (paints(e, cs) && !text) blocks.push({ sel, box, opacity: Math.round(op * 100) / 100, shadow: cs.boxShadow, rot: rotOf(cs.transform), bg: cs.backgroundColor, bgImage: cs.backgroundImage !== "none", material: e.closest("[data-vd-material]")?.getAttribute("data-vd-material") ?? null });
     if (text) texts.push({ sel, box, opacity: Math.round(op * 100) / 100, fontSize: parseFloat(cs.fontSize), fontWeight: Number(cs.fontWeight) || 400, color: cs.color, text: e.textContent.trim().slice(0, 40) });
-    if (text || e.hasAttribute("data-vd-key")) {
+    if (text || e.hasAttribute("data-vd-key") || e.hasAttribute("data-vd-proof")) {
       const item = { sel, text, key: e.hasAttribute("data-vd-key"), allowSafe: !!e.closest("[data-vd-allow-safe]"), box, opacity: Math.round(op * 100) / 100 };
       // 只有标了才加这个字段：旧 fixture 的 deepEqual 不受影响
       if (e.hasAttribute("data-vd-proof")) item.proof = true;
