@@ -67,12 +67,14 @@ export function main(argv, { requireBin = requireHf, run = spawnSync } = {}) {
   const sample = rest.includes("--sample");
   const out = renderTarget(dir, { sample });
   mkdirSync(join(dir, "renders"), { recursive: true });
-  const r = spawnSync(hf, ["render", dir, "-o", out, ...rest.filter((a) => a !== "--sample")], { stdio: "inherit" });
+  const r = run(hf, ["render", dir, "-o", out, ...rest.filter((a) => a !== "--sample")], { stdio: "inherit" });
   if (r.status !== 0) return r.status ?? 1;
   normalizeAudio(out, { run });
-  const verified = spawnSync(process.execPath, [join(SKILL_DIR, "scripts/verify.mjs"), out, "--project", dir], { stdio: "inherit" }).status ?? 1;
-  const measured = spawnSync(process.execPath, [join(SKILL_DIR, "scripts/measure.mjs"), out, "--out", join(dir, "measure.json")], { stdio: "inherit" }).status ?? 1;
-  return verified || measured;
+  const verified = run(process.execPath, [join(SKILL_DIR, "scripts/verify.mjs"), out, "--project", dir], { stdio: "inherit" }).status ?? 1;
+  // measure 只是记录指标：失败不影响成片，只打 ⚠
+  const measured = run(process.execPath, [join(SKILL_DIR, "scripts/measure.mjs"), out, "--out", join(dir, "measure.json")], { stdio: "inherit" }).status ?? 1;
+  if (measured !== 0) console.warn(`⚠ 注意力指标没量出来（成片不受影响）：可以再跑 vd measure ${out} --out ${join(dir, "measure.json")}`);
+  return verified;
 }
 
 if (isMain(import.meta.url)) process.exitCode = main(process.argv.slice(2));

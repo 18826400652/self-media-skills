@@ -1,5 +1,8 @@
 // vd render 的输出文件名
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { main, renderTarget } from "../scripts/render.mjs";
 
@@ -43,4 +46,33 @@ test("loudnormFilter / applyArgs：两遍 linear，视频流直接复制", async
   assert.ok(args.includes("copy"));
   assert.ok(args.includes("-af"));
   assert.equal(args.at(-1), "/x.norm.mp4");
+});
+
+test("vd render：成片已出、verify 通过时，measure 失败只打 ⚠，不算渲染失败", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vd-render-"));
+  const calls = [];
+  const run = (cmd, args) => {
+    calls.push(args.find((a) => /(verify|measure)\.mjs$/.test(a)) ?? cmd);
+    if (cmd === "ffmpeg") return { status: 1, stderr: "" };
+    if (args.some((a) => a.endsWith("measure.mjs"))) return { status: 1 };
+    return { status: 0 };
+  };
+  const warns = [];
+  const orig = console.warn;
+  console.warn = (m) => warns.push(m);
+  try {
+    assert.equal(main([dir], { requireBin: () => "hf", run }), 0);
+  } finally { console.warn = orig; }
+  assert.ok(calls.some((c) => c.endsWith("measure.mjs")), "要跑 measure");
+  assert.match(warns.join("\n"), /注意力指标没量出来/);
+});
+
+test("vd render：verify 失败仍返回非 0", () => {
+  const dir = mkdtempSync(join(tmpdir(), "vd-render-"));
+  const run = (cmd, args) => (cmd === "ffmpeg" ? { status: 1, stderr: "" } : { status: args.some((a) => a.endsWith("verify.mjs")) ? 1 : 0 });
+  const orig = console.warn;
+  console.warn = () => {};
+  try {
+    assert.equal(main([dir], { requireBin: () => "hf", run }), 1);
+  } finally { console.warn = orig; }
 });
