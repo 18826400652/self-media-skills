@@ -67,6 +67,13 @@ test("templates/index.html：材质 / 字阶变量和工具类都在；材质层
   assert.ok(html.indexOf('data-vd-material="vignette"') < html.indexOf("<!-- vd:brand -->"), "材质层要在账号固定元素之前");
 });
 
+test("templates/segment.html：有 camera 包裹层和 push-in", () => {
+  const html = read("segment.html");
+  assert.match(html, /data-vd-camera="push-in"/);
+  assert.match(html, /VDACT\.pushIn/);
+  assert.match(html, /\.cam \{ position: absolute; inset: 0/);
+});
+
 test("templates/segment-hero.html：好段模板有大标题、主体卡片、胶带和三层投影", () => {
   const html = read("segment-hero.html");
   assert.match(html, /var\(--vd-type-display/);
