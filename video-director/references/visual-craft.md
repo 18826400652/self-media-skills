@@ -78,7 +78,7 @@ box-shadow:
 .grain { position: absolute; inset: 0; pointer-events: none; opacity: .5; background-image: var(--vd-grain); }
 ~~~
 
-模板里的 `--vd-grain` 是一张 128×128 的预渲染噪点 PNG（data URI），比 `feTurbulence` 每帧重算快。不透明度 0.4–0.6；太重建模会脏，太浅看不出来。放在 `index.html` 手写区，加 `data-vd-material="grain"` 和 `data-layout-ignore`。纸纹是全屏叠加，`vd qa` 会多花约 15–20 秒；不需要纸纹时删掉 grain 层，材质仍有 3/4。
+模板里的 `--vd-grain` 是一张 128×128 的预渲染噪点 PNG（data URI），比 `feTurbulence` 每帧重算快。不透明度 0.4–0.6；太重建模会脏，太浅看不出来。模板默认**不放**纸纹层：纸感是一种风格，要不要由这期内容决定（风格从内容里长出来）。要用时放在 `index.html` 的材质层位置（各段之后、账号固定元素之前）：`<div class="vd-grain" data-vd-material="grain" data-layout-ignore></div>`。纸纹是全屏叠加，`vd qa` 会从约 30 秒变成约 48 秒；不用纸纹，材质靠投影 + 暗角 + 胶带也能到 3/4。
 
 ### 2.3 暗角：把视线压回主体
 
@@ -86,7 +86,7 @@ box-shadow:
 background: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(40,28,14,.20) 100%);
 ~~~
 
-加 `data-vd-material="vignette"` 和 `data-layout-ignore`。不要盖在字幕和栏目标签上。
+模板默认也不放。要用时同样放在材质层位置：`<div class="vd-vignette" data-vd-material="vignette" data-layout-ignore></div>`。不要盖在字幕和栏目标签上。
 
 ### 2.4 一件实物细节
 
@@ -206,7 +206,7 @@ background: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(40,28,1
 
 ## 9. 已有工程迁移
 
-`vd init` 新建的工程自带材质变量和工具类；旧工程要手动补。**先备份 `index.html`**，再把下面两段分别粘到对应位置：
+`vd init` 新建的工程自带材质变量和工具类（纸纹、暗角层不默认放，见第 2.2、2.3 节）；旧工程要手动补。**先备份 `index.html`**，再把第 1 段粘到对应位置；第 2 段只在这期要纸纹 / 暗角时才粘：
 
 ~~~html
 <!-- 1) 粘到 index.html 的 </style> 前 -->

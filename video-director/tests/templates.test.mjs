@@ -54,24 +54,23 @@ test("templates/DIRECTOR.md：§3 有 6 行视觉工艺自检，§1 有材质与
   assert.deepEqual(parseDirector(prose).tokens, []);
 });
 
-test("templates/index.html：材质 / 字阶变量和工具类都在；材质层在 segments 和 brand 之间", () => {
+test("templates/index.html：材质 / 字阶变量和工具类都在；纸纹、暗角默认不放（按内容选，见 visual-craft.md）", () => {
   const html = read("index.html");
   for (const v of ["--vd-shadow-paper", "--vd-grain", "--vd-vignette", "--vd-type-display", "--vd-type-heading", "--vd-type-body", "--vd-type-caption", "--vd-type-label"]) {
     assert.ok(html.includes(v), v);
   }
   for (const c of [".vd-shadow", ".vd-grain", ".vd-vignette"]) assert.ok(html.includes(c), c);
   for (const n of ["head", "audio", "segments", "brand"]) assert.ok(html.includes("<!-- vd:" + n + " --><!-- /vd:" + n + " -->"), n);
-  assert.match(html, /data-vd-material="grain"/);
-  assert.match(html, /data-vd-material="vignette"/);
-  assert.ok(html.indexOf("<!-- /vd:segments -->") < html.indexOf('data-vd-material="grain"'), "材质层要在各段之后");
-  assert.ok(html.indexOf('data-vd-material="vignette"') < html.indexOf("<!-- vd:brand -->"), "材质层要在账号固定元素之前");
+  assert.doesNotMatch(html, /data-vd-material="grain"/);
+  assert.doesNotMatch(html, /data-vd-material="vignette"/);
+  assert.match(html, /visual-craft\.md/);
 });
 
-test("templates/segment.html：有 camera 包裹层和 push-in", () => {
+test("templates/segment.html：不默认整段推镜（拆镜头才有效，见 director-rules.md）", () => {
   const html = read("segment.html");
-  assert.match(html, /data-vd-camera="push-in"/);
-  assert.match(html, /VDACT\.pushIn/);
-  assert.match(html, /\.cam \{ position: absolute; inset: 0/);
+  assert.doesNotMatch(html, /data-vd-camera/);
+  assert.doesNotMatch(html, /VDACT\.pushIn/);
+  assert.doesNotMatch(html, /\.cam \{/);
 });
 
 test("templates/segment-hero.html：好段模板有大标题、主体卡片、胶带和三层投影", () => {

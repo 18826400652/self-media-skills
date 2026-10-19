@@ -6,16 +6,11 @@
       <style>
         /* id 一律加段前缀（如 #s01-stamp），避免和别的段冲突；字体只用 var(--vd-sans) / var(--vd-serif) / var(--vd-mono) */
         #SEG_ID { position: absolute; inset: 0; }
-        /* camera 层：整段内容缓慢推近（1.0 → 1.05）。内容要内缩 4%（x 100–980、y 270–1110），放大后不压安全区 */
-        #SEG_ID .cam { position: absolute; inset: 0; transform-origin: 50% 45%; }
       </style>
       <div id="SEG_ID" data-composition-id="SEG_ID" data-width="1080" data-height="1920">
         <!-- 首段 / 关键段可以先复制 templates/segment-hero.html（大标题 + 主体卡片 + 胶带 + 三层投影），再把文案换成这期的 -->
         <!-- 画面元素。检查标记：data-vd-cue="词"（@词 时要出现的元素）、data-vd-key（非文字的关键图形）、data-vd-allow-safe（故意出界，DIRECTOR.md 写理由） -->
         <!-- 材质：胶带 / 折角 / 手写线用 data-vd-material="tape" 标；整段豁免视觉工艺检查用 data-vd-aesthetic-ok（DIRECTOR.md 写理由） -->
-        <div class="cam" data-vd-camera="push-in">
-          <!-- 画面元素放这里；内容内缩 4% -->
-        </div>
       </div>
       <script>
         (() => {
@@ -23,7 +18,6 @@
           const at = (w) => VD.at(w, SEG);   // 相对本段开头的秒数
           const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out", immediateRender: false } });
           // 入场前状态用 gsap.set 给出；每个动作锚定到 @词：tl.fromTo(el, {...}, {...}, at("编一套"))
-          VDACT.pushIn(tl, ".cam", VD.seg[SEG].duration);
           window.__timelines[SEG] = tl;
         })();
       </script>
