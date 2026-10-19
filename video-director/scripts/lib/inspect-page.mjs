@@ -48,6 +48,24 @@ function collect() {
   const area = (b) => Math.max(0, b[2] - b[0]) * Math.max(0, b[3] - b[1]);
   const onScreen = (b) => b[2] > 0 && b[3] > 0 && b[0] < innerWidth && b[1] < innerHeight;
   const ownText = (e) => [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+  const alphaOf = (c) => {
+    const m = c.match(/rgba?\(([^)]+)\)/);
+    if (!m) return 1;
+    const p = m[1].split(",");
+    return p.length > 3 ? Number(p[3]) : 1;
+  };
+  // 这个元素自己画东西（背景、边框、图片、SVG、直接文字）；不算子元素
+  const paints = (e, cs = getComputedStyle(e)) => {
+    if (e instanceof SVGElement) return true;
+    if (["IMG", "CANVAS", "VIDEO"].includes(e.tagName) || ownText(e)) return true;
+    return (cs.backgroundColor !== "transparent" && alphaOf(cs.backgroundColor) > 0.05) || cs.backgroundImage !== "none" || parseFloat(cs.borderTopWidth) > 0;
+  };
+  // 计算后的 transform 是 matrix(a,b,c,d,e,f)；只处理 2D 旋转，matrix3d 当 0
+  const rotOf = (t) => {
+    if (!t || t === "none") return 0;
+    const m = t.match(/^matrix\(([^,]+),\s*([^,]+)/);
+    return m ? Math.round((Math.atan2(Number(m[2]), Number(m[1])) * 180) / Math.PI) : 0;
+  };
   const selOf = (e) => {
     if (e.id) return `#${e.id}`;
     const host = e.parentElement?.closest("[id]");
@@ -55,6 +73,8 @@ function collect() {
   };
   const all = [...document.body.querySelectorAll("*")].filter((e) => !["SCRIPT", "STYLE", "LINK", "META"].includes(e.tagName));
   const elements = [];
+  const blocks = [];
+  const texts = [];
   const sig = [];
   for (const e of all) {
     if (inBrand(e)) continue;
@@ -62,9 +82,15 @@ function collect() {
     const op = opacityOf(e);
     if (op <= 0.05 || !area(box) || !onScreen(box)) continue;
     const text = ownText(e);
-    sig.push(`${selOf(e)}:${box.map((v) => Math.round(v / 2)).join(",")}:${Math.round(op * 20)}${text ? `:${e.textContent.trim()}` : ""}`);
-    if (text || e.hasAttribute("data-vd-key")) elements.push({ sel: selOf(e), text, key: e.hasAttribute("data-vd-key"), allowSafe: !!e.closest("[data-vd-allow-safe]"), box, opacity: Math.round(op * 100) / 100 });
+    const cs = getComputedStyle(e);
+    const sel = selOf(e);
+    sig.push(`${sel}:${box.map((v) => Math.round(v / 2)).join(",")}:${Math.round(op * 20)}${text ? `:${e.textContent.trim()}` : ""}`);
+    if (paints(e, cs) && !text) blocks.push({ sel, box, opacity: Math.round(op * 100) / 100, shadow: cs.boxShadow, rot: rotOf(cs.transform), bg: cs.backgroundColor, bgImage: cs.backgroundImage !== "none", material: e.closest("[data-vd-material]")?.getAttribute("data-vd-material") ?? null });
+    if (text) texts.push({ sel, box, opacity: Math.round(op * 100) / 100, fontSize: parseFloat(cs.fontSize), fontWeight: Number(cs.fontWeight) || 400, color: cs.color, text: e.textContent.trim().slice(0, 40) });
+    if (text || e.hasAttribute("data-vd-key")) elements.push({ sel, text, key: e.hasAttribute("data-vd-key"), allowSafe: !!e.closest("[data-vd-allow-safe]"), box, opacity: Math.round(op * 100) / 100 });
   }
+  const materials = [...new Set([...document.querySelectorAll("[data-vd-material]")].filter((e) => !inBrand(e)).map((e) => e.getAttribute("data-vd-material")).filter(Boolean))];
+  const aestheticOk = [...new Set([...document.querySelectorAll("[data-vd-aesthetic-ok]")].map((e) => e.id || e.closest("[data-composition-id]")?.id).filter(Boolean))];
   const cueMarks = [...document.querySelectorAll("[data-vd-cue]")].map((e) => {
     const box = boxOf(e);
     return { cue: e.getAttribute("data-vd-cue"), sel: selOf(e), visible: opacityOf(e) >= 0.5 && area(box) > 0 && onScreen(box) };
@@ -72,23 +98,45 @@ function collect() {
   const kick = document.getElementById("bk-label");
   let kicker = { visible: false, occludedBy: null };
   if (kick && opacityOf(kick) > 0.05 && area(boxOf(kick))) {
-    const paints = (e) => {
-      if (e instanceof SVGElement) return true;
-      if (["IMG", "CANVAS", "VIDEO"].includes(e.tagName) || ownText(e)) return true;
-      const cs = getComputedStyle(e);
-      const bg = cs.backgroundColor;
-      return (bg !== "transparent" && !/rgba\(.*,\s*0\)$/.test(bg)) || cs.backgroundImage !== "none" || parseFloat(cs.borderTopWidth) > 0;
-    };
+    const decorative = (e) => !!e.closest("[data-layout-ignore]");
     const r = kick.getBoundingClientRect();
     const pts = [[r.left + 4, r.top + 4], [r.right - 4, r.top + 4], [r.left + 4, r.bottom - 4], [r.right - 4, r.bottom - 4], [(r.left + r.right) / 2, (r.top + r.bottom) / 2]];
     let by = null;
     for (const [x, y] of pts) {
-      const top = document.elementsFromPoint(x, y).find((e) => kick.contains(e) || (paints(e) && opacityOf(e) > 0.05));
+      const top = document.elementsFromPoint(x, y).find((e) => kick.contains(e) || (!decorative(e) && paints(e) && opacityOf(e) > 0.05));
       if (top && !kick.contains(top)) { by = selOf(top); break; }
     }
     kicker = { visible: true, occludedBy: by };
   }
-  return { elements, cueMarks, kicker, sig: sig.join("|") };
+  return { elements, blocks, texts, materials, aestheticOk, cueMarks, kicker, sig: sig.join("|") };
+}
+
+/* 在页面里执行：把截图缩到 1/4，统计鲜艳 / 暗部像素和亮度分布。和 collect 一样必须自包含 */
+function pixels(b64) {
+  return (async () => {
+    const img = new Image();
+    img.src = "data:image/png;base64," + b64;
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = 270;
+    c.height = 480;
+    const ctx = c.getContext("2d");
+    ctx.drawImage(img, 0, 0, 270, 480);
+    const d = ctx.getImageData(0, 0, 270, 480).data;
+    let vivid = 0, dark = 0, n = 0, sum = 0, sum2 = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i] / 255, g = d[i + 1] / 255, b = d[i + 2] / 255;
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+      n++;
+      if (mx - mn > 0.35 && l > 0.15 && l < 0.92) vivid++;
+      if (l < 0.25) dark++;
+      sum += l;
+      sum2 += l * l;
+    }
+    const mean = sum / n;
+    const pct = (x) => Math.round((x / n) * 10000) / 100;
+    return { vivid: pct(vivid), dark: pct(dark), meanL: Math.round(mean * 10000) / 100, stdL: Math.round(Math.sqrt(sum2 / n - mean * mean) * 10000) / 100 };
+  })();
 }
 
 /** 找 Chrome：CHROME_PATH 写错时给中文错误（puppeteer 自己报的是英文） */
@@ -127,6 +175,8 @@ export async function openPage({ html, root }) {
       duration,
       frame: async (t) => { await seek(t); return page.evaluate(collect); },
       shot: (path) => page.screenshot({ path, type: "png" }),
+      shot64: () => page.screenshot({ type: "png", encoding: "base64" }),
+      pixels: (b64) => page.evaluate(pixels, b64),
       close,
     };
   } catch (err) {

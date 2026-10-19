@@ -56,3 +56,48 @@ test("openPage：CHROME_PATH 指向不存在的文件 → 中文错误", async (
     if (old === undefined) delete process.env.CHROME_PATH; else process.env.CHROME_PATH = old;
   }
 });
+
+test("openPage：blocks 带绘制信息；texts 带字号 / 字重 / 颜色；材质标记和段豁免可读", { skip: !chrome && "没有 Chrome" }, async () => {
+  const html = HTML.replace('<div id="host-brand-captions"', `
+  <div id="subj" style="position:absolute;left:200px;top:500px;width:400px;height:700px;background:#fff;box-shadow:0 1px 0 #fff inset, 0 0 0 2px #000, 24px 40px 60px rgba(0,0,0,.2)"></div>
+  <div id="seg-01" data-vd-aesthetic-ok style="position:absolute;inset:0"></div>
+  <div id="deco" data-layout-ignore data-vd-material="grain" style="position:absolute;inset:0;background:rgba(0,0,0,.1)"></div>
+  <div id="host-brand-captions"`);
+  const page = await openPage({ html, root: project({}) });
+  try {
+    const f = await page.frame(1.5);
+    const subj = f.blocks.find((b) => b.sel === "#subj");
+    assert.ok(subj, "绘制块要进 blocks");
+    assert.match(subj.shadow, /rgba|rgb/);
+    assert.equal(subj.rot, 0);
+    assert.equal(subj.material, null);
+    const deco = f.blocks.find((b) => b.sel === "#deco");
+    assert.equal(deco.material, "grain");
+    const t = f.texts.find((x) => x.sel === "#b");
+    assert.ok(t, "文字要进 texts");
+    assert.ok(t.fontSize > 0);
+    assert.deepEqual(f.materials, ["grain"]);
+    assert.deepEqual(f.aestheticOk, ["seg-01"]);
+  } finally { await page.close(); }
+});
+
+test("openPage：data-layout-ignore 装饰不挡栏目标签；不带的照报", { skip: !chrome && "没有 Chrome" }, async () => {
+  const deco = (attr) => '<div id="deco" ' + attr + ' style="position:absolute;inset:0;background:rgba(0,0,0,.1)"></div>';
+  const okPage = await openPage({ html: HTML.replace('<div id="host-brand-captions"', deco("data-layout-ignore") + '<div id="host-brand-captions"'), root: project({}) });
+  try { assert.equal((await okPage.frame(1.5)).kicker.occludedBy, null); } finally { await okPage.close(); }
+  const badPage = await openPage({ html: HTML.replace('<div id="host-brand-captions"', deco("") + '<div id="host-brand-captions"'), root: project({}) });
+  try { assert.equal((await badPage.frame(1.5)).kicker.occludedBy, "#deco"); } finally { await badPage.close(); }
+});
+
+test("openPage：shot64 返回 base64，pixels 返回色度 / 暗部比例", { skip: !chrome && "没有 Chrome" }, async () => {
+  const page = await openPage({ html: HTML, root: project({}) });
+  try {
+    const b64 = await page.shot64();
+    assert.ok(b64.length > 100);
+    const px = await page.pixels(b64);
+    assert.ok(px.vivid >= 0 && px.vivid <= 100);
+    assert.ok(px.dark >= 0 && px.dark <= 100);
+    assert.ok(px.meanL >= 0 && px.meanL <= 100);
+    assert.ok(px.stdL >= 0);
+  } finally { await page.close(); }
+});
