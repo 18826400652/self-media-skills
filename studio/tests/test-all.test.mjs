@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { findSuites, testAll } from "../scripts/lib/test-all.mjs";
+import { findSuites, nodeTestArgs, testAll } from "../scripts/lib/test-all.mjs";
 
 function write(root, rel, text) {
   mkdirSync(dirname(join(root, rel)), { recursive: true });
@@ -71,4 +71,8 @@ test("st test <套件…>：只跑点名的；点了不存在的报错并列出�
   assert.equal(r.code, 0);
   assert.doesNotMatch(r.text, /bad/);
   assert.throws(() => run(root, { only: ["nope"] }), /没有这个套件：nope[\s\S]*good/);
+});
+
+test("st test：node --test 强制 TAP reporter，Node 24 的 spec 输出也能数通过数", () => {
+  assert.deepEqual(nodeTestArgs(["tests/a.test.mjs"]), ["--test", "--test-reporter=tap", "tests/a.test.mjs"]);
 });
