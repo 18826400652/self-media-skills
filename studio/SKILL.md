@@ -65,7 +65,7 @@ st confirm series <系列名> "用户原话"           # 系列说明聊完、�
 | `st series add <系列名> [--label 显示名] [--unit 期] [--type practical\|concept]` | 登记新系列（账号方向要先确认），用模板建 `<系列>.md` |
 | `st confirm series <系列名> "原话"` | 系列说明聊完、用户通过后记下，记在登记表这个系列的 `confirmed`；没填完拒绝 |
 | `st init <目录> [--account …] [--audience …] [--lead …]` | 建新的作品项目；已有的文件不覆盖。老项目补新版骨架里的东西：`st init . --update`（只补缺的文件、CLAUDE.md 缺的节、.gitignore 缺的行） |
-| `st review [--since 天数] [--out 文件]` | 汇总最近的工具问题（命令报错、翻了工具包源码的地方、`07-复盘/工具问题.md`）和偏好候选（各期确认节点说过的话），默认 7 天 |
+| `st review [--since 天数] [--out 文件]` | 汇总最近的工具问题（命令报错、翻了工具包源码的地方、`07-复盘/工具问题.md`）、各期 `qa-douyin.json` 的视觉工艺指标和偏好候选（各期确认节点说过的话），默认 7 天 |
 | `st test [套件…] [--strict]` | 跑工具包里全部（或点名的）测试套件并汇总；缺依赖的跳过并说怎么装，`--strict` 时跳过也算失败（CI 用） |
 | `st install [--deps]` | 软链 skill 和命令到这个工具包；同名的真实目录不动 |
 | `st version` | 工具包版本（项目 `studio.json` 的 `toolkit` 可以写 `">=1.0.0"`） |

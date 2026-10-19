@@ -5,7 +5,7 @@
 //   4. 各期 run.json 里确认节点的修改意见和旧原话：挑出长期偏好记进 00-规划/偏好.md
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { TOOLKIT_DIR } from "./project.mjs";
 
 const DAY = 86400000;
@@ -123,10 +123,47 @@ function runFiles(dir, depth = 0) {
   });
 }
 
+function worksDir(root) {
+  try { return JSON.parse(readFileSync(join(root, "studio.json"), "utf8")).works ?? "04-作品"; } catch { return "04-作品"; }
+}
+
+/** 各期成片的视觉工艺指标；只读 qa-douyin.json，旧工程没有 craft 就跳过 */
+function craftSection(root, sinceMs, sinceDays) {
+  const works = worksDir(root);
+  const rows = [];
+  for (const f of runFiles(join(root, works))) {
+    const dir = dirname(f);
+    const qa = join(dir, "抖音", "qa-douyin.json");
+    if (!existsSync(qa)) continue;
+    const mtime = statSync(qa).mtimeMs;
+    if (mtime < sinceMs) continue;
+    let j;
+    try { j = JSON.parse(readFileSync(qa, "utf8")); } catch { continue; }
+    const c = j.craft;
+    if (!c || !Array.isArray(c.segments) || !c.segments.length) continue;
+    const scales = c.segments.map((s) => s.cluster).filter((x) => x !== null && x !== undefined);
+    const counts = Object.values(c.counts ?? {}).reduce((a, b) => a + b, 0);
+    rows.push({
+      ep: relative(join(root, works), dir),
+      at: mtime,
+      first: c.first ? Math.round(c.first.maxFont) + "px / " + (c.first.cluster === null || c.first.cluster === undefined ? "—" : c.first.cluster.toFixed(1) + "%") : "—",
+      cluster: scales.length ? Math.min(...scales).toFixed(1) + "–" + Math.max(...scales).toFixed(1) + "%" : "—",
+      gap: Math.max(...c.segments.map((s) => s.gap ?? 0)) + "px",
+      material: (c.material?.score ?? "—") + "/4",
+      variety: c.variety ? c.variety.centered + "/" + c.variety.total : "—",
+      n: counts,
+    });
+  }
+  rows.sort((a, b) => b.at - a.at);
+  const out = ["## 视觉工艺（最近 " + sinceDays + " 天的成片）", ""];
+  if (!rows.length) return [...out, "没有带视觉工艺指标的 qa-douyin.json（旧工程先重跑 vd qa）。"];
+  out.push("| 期 | 首帧 | 主体簇 | 空白带 | 材质 | 构图 | ⚠ |", "|---|---|---|---|---|---|---|");
+  for (const r of rows.slice(0, 10)) out.push("| " + r.ep + " | " + r.first + " | " + r.cluster + " | " + r.gap + " | " + r.material + " | " + r.variety + " | " + r.n + " |");
+  return out;
+}
+
 function prefSection(root) {
-  const works = (() => {
-    try { return JSON.parse(readFileSync(join(root, "studio.json"), "utf8")).works ?? "04-作品"; } catch { return "04-作品"; }
-  })();
+  const works = worksDir(root);
   const said = [];
   for (const f of runFiles(join(root, works))) {
     let run;
@@ -150,6 +187,7 @@ export function review(root, { sinceDays = 7, home = homedir(), toolkit = TOOLKI
     ...logSection(root, sinceMs), "",
     ...sourceSection(root, home, sinceMs, toolkit), "",
     ...notesSection(root), "",
+    ...craftSection(root, sinceMs, sinceDays), "",
     ...prefSection(root), "",
   ].join("\n");
 }
