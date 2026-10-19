@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# hyperframes 渲染用的 ffmpeg 包装（vd render 通过 HYPERFRAMES_FFMPEG_PATH 指向这里）。
+# hyperframes 把截图转色彩时用 scale=…:flags=neighbor；FFmpeg 8.0 在 1080 宽时这条快速路径会把最右 8 列变成黑色。
+# 加上 accurate_rnd 走精确路径，其余参数原样交给真正的 ffmpeg（VD_REAL_FFMPEG，默认 PATH 里的 ffmpeg）。
+set -euo pipefail
+real="${VD_REAL_FFMPEG:-$(command -v ffmpeg)}"
+args=()
+for a in "$@"; do
+  a="${a//flags=neighbor+accurate_rnd/flags=neighbor}"
+  args+=("${a//flags=neighbor/flags=neighbor+accurate_rnd}")
+done
+exec "$real" "${args[@]}"

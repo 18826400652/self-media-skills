@@ -8,14 +8,34 @@ export const voiceListFile = (paths) => paths.map((p) => `file '${p.replaceAll("
 
 const cueKey = (at) => at.replace(/^@/, "");
 
+/** 音效 → 文件和秒数；at 写成 @词 时查 cues，已经是秒数（镜头声明的音效）时原样用 */
 export function resolveSfx(list, cues, sfxDir, exists = existsSync) {
   return list.map((s) => {
     const file = join(sfxDir, `${s.name}.mp3`);
     if (!exists(file)) throw new Error(`音效 ${s.name} 不存在：${file}（可用的见 ${sfxDir}）`);
-    const at = cues[cueKey(s.at)];
+    const at = typeof s.at === "number" ? s.at : cues[cueKey(s.at)];
     if (at === undefined) throw new Error(`sfx 的 ${s.at} 没有算出时间（先确认这个词在口播里）`);
-    return { file, at, volume: s.volume ?? 1 };
+    return { name: s.name, file, at, volume: s.volume ?? 1 };
   });
+}
+
+const r3 = (x) => Math.round(x * 1000) / 1000;
+
+/** 镜头在 catalog 里声明的音效拍点 → 全片秒数（段和 overlay 都算）；beat 是 vars.cues 的第几拍，没有 cues 的用 at（相对开始） */
+export function shotSfx(segments, catalog) {
+  const byId = new Map((catalog?.components ?? []).map((c) => [c.id, c]));
+  const one = (x) => (byId.get(x.component)?.sfx ?? []).flatMap((s) => {
+    const beats = typeof x.vars?.cues === "string" && !x.vars.cues.trim().startsWith("[") ? x.vars.cues.split("|").map(Number) : [];
+    const rel = s.beat ? beats[s.beat - 1] : s.at;
+    return Number.isFinite(rel) ? [{ name: s.name, at: r3(x.start + rel), volume: s.volume ?? 1 }] : [];
+  });
+  return segments.flatMap((s) => [...(s.component ? one(s) : []), ...(s.overlays ?? []).flatMap(one)]);
+}
+
+/** 导演写的音效 + 镜头的音效；同名且相差 window 秒以内的算重复，保留导演那条 */
+export function mergeSfx(director, shot, window = 0.15) {
+  const dup = (x) => director.some((d) => d.name === x.name && Math.abs(d.at - x.at) <= window);
+  return [...director, ...shot.filter((x) => !dup(x))];
 }
 
 export function mixArgs({ voice, sfx, duration, out }) {
@@ -30,7 +50,7 @@ export function mixArgs({ voice, sfx, duration, out }) {
   return ["-v", "error", "-y", ...inputs, "-filter_complex", fc, "-map", "[out]", "-ar", "44100", out];
 }
 
-export function buildAudio(dir, { vd, cues, lines, total }, config) {
+export function buildAudio(dir, { vd, cues, lines, total }, config, extraSfx = []) {
   const voices = lines.map((l) => join(dir, "assets/voice", `${String(l.line).padStart(2, "0")}.wav`));
   const missing = voices.filter((p) => !existsSync(p));
   if (missing.length) throw new Error(`缺少配音文件：${missing.join("、")}（先跑 vo <工程>）`);
@@ -41,7 +61,7 @@ export function buildAudio(dir, { vd, cues, lines, total }, config) {
     if (cat.status !== 0) throw new Error(`拼接配音失败：${cat.stderr}`);
     mkdirSync(join(dir, "assets/audio"), { recursive: true });
     const duration = Math.round((total + vd.ending.hold) * 1000) / 1000;
-    const sfx = resolveSfx(vd.sfx ?? [], cues, config.sfxDir);
+    const sfx = mergeSfx(resolveSfx(vd.sfx ?? [], cues, config.sfxDir), resolveSfx(extraSfx, cues, config.sfxDir));
     const mix = run("ffmpeg", mixArgs({ voice: join(tmp, "vo.wav"), sfx, duration, out: join(dir, "assets/audio/vo.wav") }));
     if (mix.status !== 0) throw new Error(`混音失败：${mix.stderr}`);
     return { out: "assets/audio/vo.wav", duration };

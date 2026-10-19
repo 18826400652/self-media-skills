@@ -125,3 +125,29 @@ test("beats：不是数组 / 元素不是对象 → 报错", () => {
   const bad = { ...VD, segments: [{ id: "seg-01-hook", lines: [1, 2], beats: "x" }] };
   assert.match(parseDirector(doc(bad)).errors.join("\n"), /beats 必须是数组/);
 });
+
+const withSegs = (segments) => parseDirector(doc({ ...VD, segments })).errors.join("\n");
+
+test("checkVd：shot 是 custom 时 reason、need、candidate 都要写", () => {
+  const e = withSegs([{ id: "a", lines: [1, 2], shot: "custom" }, { id: "b", lines: [3, 3] }]);
+  assert.match(e, /segments\[0\]\.reason/);
+  assert.match(e, /segments\[0\]\.need/);
+  assert.match(e, /segments\[0\]\.candidate/);
+});
+
+test("checkVd：shot 和 component 不能同时写；shot 只能是 dy-shot- 开头或 custom", () => {
+  assert.match(withSegs([{ id: "a", lines: [1, 3], shot: "dy-shot-proof", component: "dy-stamp" }]), /shot 和 component 只能写一个/);
+  assert.match(withSegs([{ id: "a", lines: [1, 3], shot: "dy-stamp" }]), /segments\[0\]\.shot 必须是 dy-shot- 开头的镜头名或 custom/);
+  assert.equal(withSegs([{ id: "a", lines: [1, 3], shot: "dy-shot-proof", vars: {} }]), "");
+});
+
+test("checkVd：overlays 每项 shot 是 dy-shot- 开头、at 写成 @词", () => {
+  const e = withSegs([{ id: "a", lines: [1, 3], shot: "dy-shot-proof", overlays: [{ shot: "dy-stamp", at: "编一套" }] }]);
+  assert.match(e, /segments\[0\]\.overlays\[0\]\.shot 必须是 dy-shot- 开头的镜头名/);
+  assert.match(e, /segments\[0\]\.overlays\[0\]\.at 必须写成 @词/);
+});
+
+test("checkVd：transition 只能是 auto、none 或 pan-left/right/up/down", () => {
+  assert.match(withSegs([{ id: "a", lines: [1, 3], transition: "fade" }]), /segments\[0\]\.transition 只能是 auto\|none\|pan-left\|pan-right\|pan-up\|pan-down/);
+  assert.equal(withSegs([{ id: "a", lines: [1, 3], transition: "pan-up" }]), "");
+});

@@ -55,6 +55,9 @@ export function normalizeAudio(file, { run = spawnSync } = {}) {
   return true;
 }
 
+/** hyperframes 用的 ffmpeg 包装：修掉 FFmpeg 8.0 在 1080 宽时右边 8 列变黑（见脚本注释） */
+export const FFMPEG_WRAPPER = join(SKILL_DIR, "scripts/ffmpeg-accurate");
+
 export function main(argv, { requireBin = requireHf, run = spawnSync } = {}) {
   if (!argv[0] || argv[0].startsWith("--")) {
     console.error("用法：vd render <视频目录> [--sample] [参数]");
@@ -67,7 +70,8 @@ export function main(argv, { requireBin = requireHf, run = spawnSync } = {}) {
   const sample = rest.includes("--sample");
   const out = renderTarget(dir, { sample });
   mkdirSync(join(dir, "renders"), { recursive: true });
-  const r = run(hf, ["render", dir, "-o", out, ...rest.filter((a) => a !== "--sample")], { stdio: "inherit" });
+  const env = { ...process.env, HYPERFRAMES_FFMPEG_PATH: process.env.HYPERFRAMES_FFMPEG_PATH || FFMPEG_WRAPPER };
+  const r = run(hf, ["render", dir, "-o", out, ...rest.filter((a) => a !== "--sample")], { stdio: "inherit", env });
   if (r.status !== 0) return r.status ?? 1;
   normalizeAudio(out, { run });
   const verified = run(process.execPath, [join(SKILL_DIR, "scripts/verify.mjs"), out, "--project", dir], { stdio: "inherit" }).status ?? 1;

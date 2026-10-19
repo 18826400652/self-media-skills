@@ -184,3 +184,34 @@ test("catalogText：每个组件一段：名字、用途、适合、最短时长
   assert.match(found, /dy-vs-compare/);
   assert.match(catalogText(catalog, "没有的词"), /没有和「没有的词」相关的组件/);
 });
+
+test("localArchive：目录里有 registry/registry.json 就返回这个目录", async () => {
+  const { localArchive } = await import("../scripts/lib/components.mjs");
+  const dir = project({ "registry/registry.json": { items: [] } });
+  assert.equal(localArchive(dir), dir);
+});
+
+test("localArchive：没有 registry/registry.json 时报错，说清路径", async () => {
+  const { localArchive } = await import("../scripts/lib/components.mjs");
+  const dir = project({ "x.txt": "" });
+  assert.throws(() => localArchive(dir), (err) => err.message.includes(dir) && err.message.includes("registry/registry.json"));
+});
+
+test("catalogEntry：没有 catalog/catalog.json 时返回 null；有就按 id 找", async () => {
+  const { catalogEntry } = await import("../scripts/lib/components.mjs");
+  assert.equal(catalogEntry(project({ "x.txt": "" }), "dy-a"), null);
+  const dir = project({ "catalog/catalog.json": { components: [{ id: "dy-a", variables: [] }] } });
+  assert.deepEqual(catalogEntry(dir, "dy-a"), { id: "dy-a", variables: [] });
+  assert.equal(catalogEntry(dir, "dy-b"), null);
+});
+
+test("projectCatalog：本地组件库优先；否则按锁文件的提交号读缓存；都没有返回空目录", async () => {
+  const { projectCatalog } = await import("../scripts/lib/components.mjs");
+  const local = project({ "catalog/catalog.json": { components: [{ id: "dy-local" }] } });
+  assert.deepEqual(projectCatalog(project({}), local, "/nowhere").components.map((c) => c.id), ["dy-local"]);
+  const sha = "a".repeat(40);
+  const cache = project({ [`${sha}/catalog/catalog.json`]: { components: [{ id: "dy-cached" }] } });
+  const dir = project({ "components.lock.json": { repo: REPO, sha } });
+  assert.deepEqual(projectCatalog(dir, null, cache).components.map((c) => c.id), ["dy-cached"]);
+  assert.deepEqual(projectCatalog(project({}), null, cache), { components: [] });
+});

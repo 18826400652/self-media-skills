@@ -16,9 +16,11 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
-import { REPO, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, recordingProblem, writeLock } from "./lib/components.mjs";
-import { buildAudio } from "./lib/audio.mjs";
-import { findProjectRoot, loadConfig } from "./lib/config.mjs";
+import { REPO, projectCatalog, catalogEntry, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, localArchive, recordingProblem, textProblems, writeLock } from "./lib/components.mjs";
+import { buildAudio, shotSfx } from "./lib/audio.mjs";
+import { recordLedger } from "./lib/ledger.mjs";
+import { parseArgs, reviewPack } from "./lib/review-pack.mjs";
+import { findProjectRoot, loadConfig, localDykitDir } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
@@ -29,21 +31,23 @@ import { coreEntry, requireCore, requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
 
-const USAGE = "用法：vd init|cues|build|check|qa|render|verify|measure|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
+const USAGE = "用法：vd init|cues|build|check|qa|render|verify|measure|review-pack|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
 const SCRIPTS = fileURLToPath(new URL(".", import.meta.url));
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
 /** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
-export function installAll(dir, built, { update = false, only = null } = {}, overrides = {}) {
-  const deps = { ensureLock, fetchArchive, installComponent, writeLock, componentInfo, probeLen, ...overrides };
-  const segs = built.segments.filter((s) => s.component && (!only || only.includes(s.id)));
-  const names = [...new Set(segs.map((s) => s.component))];
+export function installAll(dir, built, { update = false, only = null, local = null } = {}, overrides = {}) {
+  const deps = { ensureLock, fetchArchive, installComponent, writeLock, componentInfo, catalogEntry, probeLen, ...overrides };
+  const wanted = built.segments.filter((s) => !only || only.includes(s.id));
+  const segs = wanted.filter((s) => s.component);
+  const names = [...new Set([...segs.map((s) => s.component), ...wanted.flatMap((s) => (s.overlays ?? []).map((o) => o.component))])];
   if (!names.length) {
     if (update) console.log("◇ 本次构建没有用到组件，--update-components 没有效果");
     return [];
   }
-  const { sha, changed } = deps.ensureLock(dir, { update });
-  const repo = deps.fetchArchive(sha, CACHE);
+  if (local) console.log(`◇ 组件来自本地 ${local}（不锁版本，只用于磨组件）`);
+  const { sha, changed } = local ? { sha: "local", changed: false } : deps.ensureLock(dir, { update });
+  const repo = local ? localArchive(local) : deps.fetchArchive(sha, CACHE);
   const files = [...new Set(names.flatMap((n) => deps.installComponent(repo, n, dir)))];
   const unfit = segs.filter((s) => typeof s.duration === "number").map((s) => fitProblem({ name: s.component, segId: s.id, segDuration: s.duration, ...deps.componentInfo(repo, s.component, dir) })).filter(Boolean);
   if (unfit.length) throw new Error(`有 ${unfit.length} 个组件段撑不满：\n  - ${unfit.join("\n  - ")}`);
@@ -51,6 +55,9 @@ export function installAll(dir, built, { update = false, only = null } = {}, ove
     const w = recordingProblem({ segId: s.id, src: s.vars.src, recLen: deps.probeLen(join(dir, s.vars.src)), segDuration: s.duration, html: deps.componentInfo(repo, s.component, dir).html });
     if (w) console.warn(`⚠ ${w}`);
   }
+  const texts = [...segs, ...wanted.flatMap((s) => (s.overlays ?? []).map((o) => ({ ...o, id: s.id })))]
+    .flatMap((x) => textProblems({ segId: x.id, vars: x.vars, catalogEntry: deps.catalogEntry(repo, x.component) }));
+  for (const w of texts) console.warn(`⚠ ${w}`);
   // 下载、安装都成功才写锁文件：失败时还停在旧版本
   if (changed) {
     deps.writeLock(dir, sha);
@@ -88,6 +95,11 @@ const COMMANDS = {
   verify(file, rest = []) {
     return spawnSync(process.execPath, [join(SCRIPTS, "verify.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;
   },
+  "review-pack"(file, rest = [], { reviewPack: pack = reviewPack } = {}) {
+    const out = pack(parseArgs([file, ...rest]));
+    console.log(`✓ 评审素材包：${out}（contact.jpg 总览、full/ 原尺寸帧、strip-*.jpg 连拍、spec.json 规格）`);
+    return 0;
+  },
   measure(file, rest = [], { run = spawnSync } = {}) {
     return run(process.execPath, [join(SCRIPTS, "measure.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;
   },
@@ -110,8 +122,10 @@ const COMMANDS = {
     const full = Math.round((built.total + vd.ending.hold) * 1000) / 1000;
     const duration = sample ? Math.round((built.cues[vd.sample.end.slice(1)] + vd.sample.tail) * 1000) / 1000 : full;
     const only = sample ? vd.sample.segments : null;
-    buildAudio(dir, built, config);
-    installAll(dir, built, { update: rest.includes("--update-components"), only });
+    const local = localDykitDir(config);
+    installAll(dir, built, { update: rest.includes("--update-components"), only, local });
+    const used = built.segments.filter((s) => !only || only.includes(s.id));
+    buildAudio(dir, built, config, shotSfx(used, projectCatalog(dir, local, CACHE)));
     if (!existsSync(join(dir, "assets/gsap.min.js"))) cpSync(config.gsap, join(dir, "assets/gsap.min.js"));
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {
@@ -167,8 +181,9 @@ const COMMANDS = {
   },
   check(dir, _rest, config = loadConfig(findProjectRoot(dir)), { requireBin = requireHf } = {}) {
     const bin = requireBin();
-    const { parsed } = load(dir);
+    const { parsed, built } = load(dir);
     console.log(candidatesText(parsed.candidates));
+    for (const c of recordLedger({ root: findProjectRoot(dir), projectDir: dir, segments: built.segments, ...(config.shotLedger ? { ledgerRel: config.shotLedger } : {}) })) console.log(`◇ 镜头候选台账：${c}`);
     const r = run(bin, ["check", "."], { cwd: dir });
     process.stdout.write(r.stdout);
     if (r.status !== 0) { console.error(r.stderr); return 1; }

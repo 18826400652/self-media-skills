@@ -52,6 +52,12 @@ export function ensureLock(dir, { update = false } = {}, runFn = run) {
   return { sha, changed: sha !== lock?.sha };
 }
 
+/** 本地组件库（磨组件时用）：校验目录里有 registry/registry.json，原样返回 */
+export function localArchive(dir) {
+  if (!existsSync(join(dir, "registry/registry.json"))) throw new Error(`本地组件库 ${dir} 里没有 registry/registry.json：VD_DYKIT_DIR 或配置 dykitDir 要指向 hyperframes 仓库根目录`);
+  return dir;
+}
+
 /** 下载并解包到 cacheRoot/<sha>；先解到临时目录，成功后再改名，失败不留半截 */
 export function fetchArchive(sha, cacheRoot, runFn = run) {
   const dest = join(cacheRoot, sha);
@@ -146,6 +152,21 @@ export function componentInfo(archiveDir, name, projectDir) {
   return { html, minDuration };
 }
 
+/** 组件库目录里某个组件的条目；没有这个组件或还没生成 catalog（本地磨组件时）返回 null */
+export function catalogEntry(archiveDir, name) {
+  const p = join(archiveDir, "catalog/catalog.json");
+  if (!existsSync(p)) return null;
+  const catalog = JSON.parse(readFileSync(p, "utf8"));
+  return catalog.components.find((c) => c.id === name) ?? null;
+}
+
+/** 这个工程用的组件库目录（读镜头的音效拍点用）：本地组件库优先，其次锁定版本的缓存；都没有时为空 */
+export function projectCatalog(dir, local, cacheRoot) {
+  const root = local ?? (readLock(dir) ? join(cacheRoot, readLock(dir).sha) : null);
+  const p = root && join(root, "catalog/catalog.json");
+  return p && existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : { components: [] };
+}
+
 /** 组件目录（catalog/catalog.json）→ 给人和 Claude 看的列表；query 按名字、用途、适合场景筛 */
 export function catalogText(catalog, query = "") {
   const q = query.trim().toLowerCase();
@@ -157,4 +178,15 @@ export function catalogText(catalog, query = "") {
     const vars = (c.variables ?? []).map((v) => `    ${v.id} ${v.label ?? ""} = ${JSON.stringify(v.default ?? "")}`);
     return [`${c.id}（${c.kind ?? "?"}）：${c.purpose ?? ""}`, ...(meta ? [`  ${meta}`] : []), ...(vars.length ? ["  变量：", ...vars] : [])].join("\n");
   }).join("\n\n");
+}
+
+/** 文本变量超过镜头声明的 maxChars：去掉 HTML 后按字算，| 隔开的每项分别算 */
+export function textProblems({ segId, vars = {}, catalogEntry }) {
+  const out = [];
+  for (const v of catalogEntry?.variables ?? []) {
+    if (!(v.maxChars > 0) || typeof vars[v.id] !== "string") continue;
+    const longest = Math.max(...vars[v.id].split("|").map((x) => [...x.replace(/<[^>]*>/g, "").trim()].length));
+    if (longest > v.maxChars) out.push(`${segId} 的 ${v.id} 有 ${longest} 字，这个镜头最多 ${v.maxChars} 字：删字或拆段`);
+  }
+  return out;
 }

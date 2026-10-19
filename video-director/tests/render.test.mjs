@@ -76,3 +76,28 @@ test("vd render：verify 失败仍返回非 0", () => {
     assert.equal(main([dir], { requireBin: () => "hf", run }), 1);
   } finally { console.warn = orig; }
 });
+
+import { spawnSync as spawnSync2 } from "node:child_process";
+import { FFMPEG_WRAPPER } from "../scripts/render.mjs";
+import { project } from "./helpers.mjs";
+
+test("ffmpeg 包装：-vf 里的 flags=neighbor 加上 accurate_rnd（右边 8 列不再变黑），已经有的不重复加，其他参数原样", () => {
+  const r = spawnSync2(FFMPEG_WRAPPER, ["-i", "-", "-vf", "scale=in_range=pc:flags=neighbor,format=gbrp,scale=out_range=tv:flags=neighbor+accurate_rnd", "out.mp4"], { encoding: "utf8", env: { ...process.env, VD_REAL_FFMPEG: "/bin/echo" } });
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout.trim(), "-i - -vf scale=in_range=pc:flags=neighbor+accurate_rnd,format=gbrp,scale=out_range=tv:flags=neighbor+accurate_rnd out.mp4");
+});
+
+test("vd render：调 hyperframes 时 HYPERFRAMES_FFMPEG_PATH 指向包装脚本；用户自己设过的不覆盖", async () => {
+  const { main } = await import("../scripts/render.mjs");
+  const dir = project({ "抖音/x": "" });
+  const seen = [];
+  const run = (cmd, args, opts) => { seen.push(opts?.env?.HYPERFRAMES_FFMPEG_PATH); return { status: 1 }; };
+  const orig = process.env.HYPERFRAMES_FFMPEG_PATH;
+  try {
+    delete process.env.HYPERFRAMES_FFMPEG_PATH;
+    main([join(dir, "抖音")], { requireBin: () => "hf", run });
+    process.env.HYPERFRAMES_FFMPEG_PATH = "/my/ffmpeg";
+    main([join(dir, "抖音")], { requireBin: () => "hf", run });
+  } finally { if (orig === undefined) delete process.env.HYPERFRAMES_FFMPEG_PATH; else process.env.HYPERFRAMES_FFMPEG_PATH = orig; }
+  assert.deepEqual(seen, [FFMPEG_WRAPPER, "/my/ffmpeg"]);
+});

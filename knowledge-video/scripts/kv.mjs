@@ -18,7 +18,7 @@ import { parseScript } from "./lib/shared/script-md.mjs";
 import { detectStatus, isEvidenceFilled, isScriptFilled } from "./lib/status.mjs";
 import { DRAFT_KEYS, GATE_LABEL as P_GATE_LABEL, doneBlocker, gateBlocker, GATES, practicalStatus } from "./lib/practical.mjs";
 import { FINAL_RE } from "./lib/video.mjs";
-import { collectPracticalFacts, defaultRunners, fingerprint, gateFileHashes, newestHtml, templateHashes } from "./lib/practical-facts.mjs";
+import { shotQueue, collectPracticalFacts, defaultRunners, fingerprint, gateFileHashes, newestHtml, templateHashes } from "./lib/practical-facts.mjs";
 
 export const FILES = { brief: "brief.md", research: "research.json", script: "抖音/SCRIPT.md", qa: "qa.json", run: "run.json" };
 const USAGE = "用法：kv check|brief|status <作品目录>\n      kv init <作品目录> [--fresh] [--unsettled 说明]\n      kv gate <作品目录> <节点> [--edit] \"用户原话\"\n      kv done <作品目录> <wechat|xiaohongshu|douyin>";
@@ -179,7 +179,7 @@ const writeRun = (dir, run) => writeFileSync(join(dir, FILES.run), JSON.stringif
 
 function practicalFacts(dir, run) {
   const cfg = loadConfig(dir);
-  return collectPracticalFacts(dir, run, { ...defaultRunners(), experienceDir: join(cfg.root, cfg.experienceDir) });
+  return { ...collectPracticalFacts(dir, run, { ...defaultRunners(), experienceDir: join(cfg.root, cfg.experienceDir) }), shotQueue: shotQueue(cfg.root, dir) };
 }
 
 /** 读 run.json；实用类目录没有 run.json 时报错（不能当概念科普处理） */
@@ -271,6 +271,7 @@ function printPracticalStatus(dir, run) {
     console.log(` ${r.done ? "✓" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}${r.note ? `  ${r.note}` : ""}`);
   }
   console.log(`下一步：${s.next}`);
+  if (s.remind) console.log(`◇ ${s.remind}`);
   if (run.unsettled) console.log(`⚠ 这期是 ${run.unsettled.at} 用 st new --先不定 开的（当时：${run.unsettled.note}）：选题关没有定好的标准可对照，st doctor 看现在定了没有`);
   return 0;
 }

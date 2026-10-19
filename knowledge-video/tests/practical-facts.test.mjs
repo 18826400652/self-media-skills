@@ -299,3 +299,14 @@ test("确认节点：老 run.json 里按原文算的指纹照样认；失效时�
   assert.equal(g.stale, true);
   assert.deepEqual(g.changed, [`${D}/DIRECTOR.md`]);
 });
+
+test("shotQueue：台账里 queued 且出现过这期的候选；台账不存在时为空", async () => {
+  const { shotQueue } = await import("../scripts/lib/practical-facts.mjs");
+  const root = episode({ "00-规划/镜头候选.json": { version: 1, items: [
+    { name: "dy-shot-diff", status: "queued", episodes: [{ work: "04-作品/a/01" }, { work: "04-作品/a/02" }] },
+    { name: "dy-shot-map", status: "once", episodes: [{ work: "04-作品/a/02" }] },
+    { name: "dy-shot-old", status: "queued", episodes: [{ work: "04-作品/a/00" }] },
+  ] } });
+  assert.deepEqual(shotQueue(root, join(root, "04-作品/a/02")), ["dy-shot-diff"]);
+  assert.deepEqual(shotQueue(episode({}), "/x"), []);
+});

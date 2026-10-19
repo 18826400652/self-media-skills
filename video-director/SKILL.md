@@ -56,8 +56,8 @@ vd init 抖音
 | `vd init <目录>` | 建空的导演工程；目录不为空时报错 |
 | `vd cues <工程> [--check]` | 校验 DIRECTOR.md，把所有 @词 换算成秒数写进 `cues.js`，并打印出来；`--check` 只校验不写文件。正文里 `@词` 加不加反引号都算锚点（只有写法说明里的 `` `@词` `` 不算）；屏幕文字里的普通 @ 写成 `\@`；段 HTML（`compositions/frames/*.html`、`index.html`）里 `at("词")` 用到 DIRECTOR.md 没写的词直接报错 |
 | `vd qa <工程>` | 抖音专用检查：在每个 @词 落定时刻（@词 后 0.8 秒）和每段结尾截图，查出画面、安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；每 0.5 秒比一次，连续 2 秒只有背景、没有文字或 `data-vd-key` 元素（✗，纯图形的关键画面要加 `data-vd-key`），2 秒不动（⚠），一段里所有截图的内容都在 y 770 以上（⚠ 画面挤在上方，段尾收起来的转场不算）。被 overflow 裁掉的部分不算。视觉工艺 ⚠：主体簇、首帧字号、字阶层级、内容区空白带、材质件数、构图变化（只报 ⚠，不改 `passed`），终端打印一行"视觉工艺：…"，详细指标写进 `qa-douyin.json` 的 `craft`。结果 `qa-douyin.json`（样片构建时写 `qa-douyin-sample.json`，只查装了的段），总览 `snapshots/cues-sheet.jpg`。DIRECTOR.md 改了 @词或分段还没 `vd build` 时直接报错 |
-| `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲（说法里自动带上视频时长；vd 以前取的 `bgm.wav` 比视频短会重新取，还是短就循环补齐；自己放的 `bgm.mp3` 不替换、太短时循环成 `bgm-loop.wav`）、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
-| `vd render <工程> [--sample]` | 渲染到 `<工程>/renders/`（`--sample` 出 `sample.mp4`）；完成后把整片响度标准化到 -14 LUFS（两遍 loudnorm，失败只打 ⚠、保留原片），再自动 `vd verify` 和 `vd measure`（写 `<工程>/measure.json`；measure 失败只打 ⚠） |
+| `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲（说法里自动带上视频时长；vd 以前取的 `bgm.wav` 比视频短会重新取，还是短就循环补齐；自己放的 `bgm.mp3` 不替换、太短时循环成 `bgm-loop.wav`）、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止。环境变量 `VD_DYKIT_DIR=<本地 hyperframes 仓库>`（或配置 `dykitDir`）时用本地组件库、不锁版本，只用于磨组件 |
+| `vd render <工程> [--sample]` | 渲染到 `<工程>/renders/`（`--sample` 出 `sample.mp4`）；调 hyperframes 时用 `scripts/ffmpeg-accurate` 包装 ffmpeg（FFmpeg 8.0 在 1080 宽时会把最右 8 列转成黑色，自己设了 `HYPERFRAMES_FFMPEG_PATH` 就用你的）；完成后把整片响度标准化到 -14 LUFS（两遍 loudnorm，失败只打 ⚠、保留原片），再自动 `vd verify` 和 `vd measure`（写 `<工程>/measure.json`；measure 失败只打 ⚠） |
 | `vd verify <成片.mp4> [--project <工程>]` | 成片自检：帧数、时长、声音、响度（-14 ±1 LUFS，真峰值 ≤ -1）、尺寸、黑屏 |
 | `vd measure <成片.mp4> [--json] [--out 文件]` | 量注意力指标：时长、内容区静态率、变化率（次/分）、最长静止（秒）、响度。目标：最长静止 ≤3 秒、变化率 ≥12 次/分（静态率只记录）。`st review` 汇总各期的 `measure.json` |
 | `vd check <工程>` | 校验 DIRECTOR.md + 列出组件候选 + `hyperframes check` |
@@ -91,6 +91,15 @@ dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独�
 - 配色怎么套：`palette.accent` 是荧光笔底色；组件里当文字、描边用的强调色取 `accent`、`alert`、`ink` 里第一个在底色上看得清的（对比度 ≥ 3:1）。纸面 + 荧光黄的配色下，组件强调色会是 `alert` 红——如果本片红色代表「错的」，用组件前想清楚会不会混淆
 - 字体：机器块可写 `"fonts": { "title": "serif" | "sans", "body": "serif" | "sans" }`，默认标题宋体、正文黑体
 - 旧工程的 `index.html` 要用组件时，在 `<script src="cues.js"></script>` 下一行加 `<!-- vd:head --><!-- /vd:head -->`
+
+## 缺镜头时（出现两次才磨）
+
+每段先选镜头（`director-rules.md` 第 18 条）。镜头库里没有合适的：
+
+1. 这一期先手写：机器块写 `"shot": "custom"` + `reason` / `need` / `candidate`，一期最多 1 段；同一期还缺第二种就用最接近的镜头凑合。
+2. `vd check` 自动把它记进项目的镜头候选台账（默认 `00-规划/镜头候选.json`，可在 `video-director.config.json` 的 `shotLedger` 改）。写 candidate 前先读台账，同一类需求用已有的名字。
+3. 同一个候选在另一期又出现 → 台账标 queued，这期照常手写出片；复盘时 `kv status` 提醒，用户同意后按磨镜头流程做，"典型"那组内容用这两期手写段的真实内容。
+4. 入库后台账改成 done、记上镜头 id；用户不做就改成 dropped，不再提醒。
 
 ## 组件候选（让组件库越用越全）
 

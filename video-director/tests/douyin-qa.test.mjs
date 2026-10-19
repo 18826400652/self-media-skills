@@ -160,3 +160,31 @@ test("qaTimes：beats 加 @词-0.2 和 +0.3 两个采样点", () => {
   assert.ok(labels.includes("beat-before:stamp:@写错了"));
   assert.ok(labels.includes("beat-after:stamp:@写错了"));
 });
+
+import { checkShotCounts, checkZooms } from "../scripts/lib/douyin-qa.mjs";
+
+const zf = (zoom) => ({ t: 2, label: "@本周重点", cue: "本周重点", data: { zooms: [{ cue: "本周重点", sel: "#line", box: [100, 400, 900, 520], fontPx: 48, ...zoom }] } });
+
+test("checkZooms：推近点的字小于 37px 是 ✗", () => {
+  const [e] = checkZooms([zf({ fontPx: 30 })]);
+  assert.equal(e.level, "error");
+  assert.equal(e.kind, "zoom-target");
+  assert.match(e.msg, /@本周重点.*#line.*30px.*37px/);
+});
+
+test("checkZooms：推近点出了内容区（x 60–1020、y 230–1150）是 ✗；在里面且够大不报；别的 @词 的截图不查", () => {
+  assert.match(checkZooms([zf({ box: [100, 1100, 900, 1300] })])[0].msg, /内容区/);
+  assert.deepEqual(checkZooms([zf({})]), []);
+  assert.deepEqual(checkZooms([{ ...zf({ fontPx: 10 }), cue: "别的", label: "@别的" }]), []);
+});
+
+test("checkShotCounts：custom 段超过 1 个、花字超过 3 个（段和 overlay 合计）都打 ⚠", () => {
+  const segs = [
+    { id: "a", custom: { reason: "r" }, overlays: [{ component: "dy-shot-punch" }, { component: "dy-shot-punch" }] },
+    { id: "b", custom: { reason: "r" }, overlays: [{ component: "dy-shot-punch" }] },
+    { id: "c", component: "dy-shot-punch", overlays: [] },
+  ];
+  const w = checkShotCounts(segs);
+  assert.deepEqual(w.map((x) => [x.level, x.kind]), [["warn", "custom-count"], ["warn", "punch-count"]]);
+  assert.deepEqual(checkShotCounts([{ id: "a", custom: {}, overlays: [] }]), []);
+});

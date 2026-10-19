@@ -5,6 +5,8 @@ const BLOCK = /```json vd\s*\n([\s\S]*?)\n```/g;
 const TOKEN = /(?<!\\)@([^\s@#，。、：；！？,.;:!?"'`「」『』“”‘’（）()\[\]【】<>|]+)(?:#(\d+))?/g;
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 const COMPONENT = /^dy-[a-z0-9-]+$/;
+const SHOT = /^dy-shot-[a-z0-9-]+$/;
+export const TRANSITIONS = ["auto", "none", "pan-left", "pan-right", "pan-up", "pan-down"];
 const BEAT_ACTIONS = ["enter", "move", "stamp", "highlight", "mask", "count", "zoom", "exit"];
 
 export function parseDirector(md) {
@@ -46,6 +48,23 @@ function parseCandidates(md) {
   return out;
 }
 
+/** 段的镜头字段：shot（dy-shot-… 或 custom）、custom 的三项说明、transition、overlays */
+function checkShot(s, at) {
+  const e = [];
+  if (s.shot !== undefined) {
+    if (s.component !== undefined) e.push(`${at} 的 shot 和 component 只能写一个`);
+    if (s.shot !== "custom" && !SHOT.test(s.shot)) e.push(`${at}.shot 必须是 dy-shot- 开头的镜头名或 custom`);
+    if (s.shot === "custom") for (const k of ["reason", "need", "candidate"]) if (!String(s[k] ?? "").trim()) e.push(`${at}.${k} 不能为空（custom 段要写清 reason、need、candidate）`);
+  }
+  if (s.transition !== undefined && !TRANSITIONS.includes(s.transition)) e.push(`${at}.transition 只能是 ${TRANSITIONS.join("|")}`);
+  if (s.overlays !== undefined && !Array.isArray(s.overlays)) e.push(`${at}.overlays 必须是数组`);
+  (Array.isArray(s.overlays) ? s.overlays : []).forEach((o, j) => {
+    if (!SHOT.test(o?.shot ?? "")) e.push(`${at}.overlays[${j}].shot 必须是 dy-shot- 开头的镜头名`);
+    if (!/^@\S/.test(o?.at ?? "")) e.push(`${at}.overlays[${j}].at 必须写成 @词`);
+  });
+  return e;
+}
+
 function checkVd(vd) {
   const e = [];
   for (const k of ["bg", "ink", "muted", "accent", "alert"]) if (!HEX.test(vd.palette?.[k] ?? "")) e.push(`palette.${k} 必须是 #RRGGBB`);
@@ -54,6 +73,7 @@ function checkVd(vd) {
   if (!Array.isArray(vd.segments) || !vd.segments.length) e.push("segments 不能为空");
   (Array.isArray(vd.segments) ? vd.segments : []).forEach((s, i) => {
     if (s.component !== undefined && !COMPONENT.test(s.component)) e.push(`segments[${i}].component 必须是 dykit 组件名（dy-开头）`);
+    e.push(...checkShot(s, `segments[${i}]`));
     if (s.vars !== undefined && (typeof s.vars !== "object" || s.vars === null || Array.isArray(s.vars))) e.push(`segments[${i}].vars 必须是对象`);
     if (s.beats !== undefined && !Array.isArray(s.beats)) e.push(`segments[${i}].beats 必须是数组`);
     (Array.isArray(s.beats) ? s.beats : []).forEach((b, j) => {

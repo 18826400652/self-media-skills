@@ -52,6 +52,7 @@
           // 需要时：把下面的 at("词") 换成 DIRECTOR.md 里的 @词。
           // tl.fromTo(".hero-card", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, immediateRender: false }, at("词"));
           // tl.fromTo(".hero-headline", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, immediateRender: false }, at("词"));
+          VDACT.panInOut(tl, document.getElementById(SEG), VD.seg[SEG].duration);   // 段与段之间的平移转场（vd build 写在宿主上，没有就不动）
           window.__timelines[SEG] = tl;
         })();
       </script>

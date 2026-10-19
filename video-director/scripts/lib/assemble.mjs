@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { ACTIONS_JS } from "./actions.mjs";
 import { writeFonts } from "./fonts.mjs";
 import { CAPTION } from "./douyin-qa.mjs";
+import { transitionPlan } from "./transitions.mjs";
 
 const esc = (s) => String(s).replaceAll("&", "&amp;").replaceAll("'", "&#39;").replaceAll("<", "&lt;");
 const vars = (o) => `data-variable-values='${esc(JSON.stringify(o))}'`;
@@ -87,10 +88,20 @@ export function applyHead(html, hasComponents) {
   return replaceBlock(html, "head", headBlock(hasComponents) + actionsBlock());
 }
 
+const motion = (s) => ({ ...(s.enter ? { enter: s.enter } : {}), ...(s.exit ? { exit: s.exit } : {}) });
+const motionAttrs = (s) => (s.enter ? `data-vd-enter="${s.enter}" ` : "") + (s.exit ? `data-vd-exit="${s.exit}" ` : "");
+
+/** 段宿主（组件段用 custom 主题；enter/exit 来自 transitionPlan）+ 段里的 overlay 宿主（track 30 起） */
 export function segmentHosts(segments, only = null, palette = null, fonts = {}) {
-  return "\n" + segments.filter((s) => !only || only.includes(s.id)).map((s, i) => s.component
-    ? host(s.component, `compositions/${s.component}.html`, s.start, s.duration, 2 + i, `data-theme="custom" ${vars(s.vars ?? {})} `, s.id, `${customVars(palette, fonts)};${SAFE_BOTTOM}`)
-    : host(s.id, `compositions/frames/${s.id}.html`, s.start, s.duration, 2 + i)).join("");
+  const used = segments.filter((s) => !only || only.includes(s.id));
+  const theme = () => `${customVars(palette, fonts)};${SAFE_BOTTOM}`;
+  const segs = used.map((s, i) => s.component
+    ? host(s.component, `compositions/${s.component}.html`, s.start, s.duration, 2 + i, `data-theme="custom" ${vars({ ...(s.vars ?? {}), ...motion(s) })} `, s.id, theme())
+    : host(s.id, `compositions/frames/${s.id}.html`, s.start, s.duration, 2 + i, motionAttrs(s)));
+  let track = 30;
+  const overlays = used.flatMap((s) => (s.overlays ?? []).map((o, j) =>
+    host(o.component, `compositions/${o.component}.html`, o.start, o.duration, track++, `data-theme="custom" ${vars(o.vars ?? {})} `, `${s.id}-ov${j}`, theme())));
+  return "\n" + [...segs, ...overlays].join("");
 }
 
 export function brandHosts({ vd, groups, lines, duration }) {
@@ -125,7 +136,9 @@ export function assemble(dir, built, config, { only = null, duration, music = nu
   const used = built.segments.filter((s) => !only || only.includes(s.id));
   html = applyHead(html, used.some((s) => s.component));
   html = replaceBlock(html, "audio", audioHosts({ duration, music }));
-  html = replaceBlock(html, "segments", segmentHosts(built.segments, only, built.vd.palette, built.vd.fonts) + "    ");
+  const plan = new Map(transitionPlan(built.segments).map((p) => [p.id, p]));
+  const timed = built.segments.map((s) => ({ ...s, ...plan.get(s.id) }));
+  html = replaceBlock(html, "segments", segmentHosts(timed, only, built.vd.palette, built.vd.fonts) + "    ");
   html = replaceBlock(html, "brand", brandHosts({ vd: built.vd, groups, lines: built.lines, duration }) + "    ");
   writeFileSync(idx, setRootDuration(html, duration));
 }

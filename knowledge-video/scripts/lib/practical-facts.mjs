@@ -2,7 +2,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
 import { isScriptFilled } from "./status.mjs";
 import { FINAL_RE } from "./video.mjs";
 
@@ -227,6 +227,16 @@ function recordStep(dir) {
   if (!existsSync(p)) return no("没有 发布记录.md");
   const body = readFileSync(p, "utf8").match(/### 置顶评论[^\n]*\n+```[^\n]*\n([\s\S]*?)```/)?.[1]?.trim() ?? "";
   return body && !body.startsWith("（") ? ok() : no("置顶评论原文还没填");
+}
+
+/** 镜头候选台账（video-director 写的）里 queued、且出现过这期的候选名；台账路径可在 video-director.config.json 的 shotLedger 里改 */
+export function shotQueue(root, dir) {
+  const cfg = join(root, "video-director.config.json");
+  const rel = (existsSync(cfg) && JSON.parse(readFileSync(cfg, "utf8")).shotLedger) || "00-规划/镜头候选.json";
+  const p = join(root, rel);
+  if (!existsSync(p)) return [];
+  const work = relative(root, dir);
+  return (JSON.parse(readFileSync(p, "utf8")).items ?? []).filter((x) => x.status === "queued" && x.episodes?.some((e) => e.work === work)).map((x) => x.name);
 }
 
 function retroStep(dir, experienceDir) {
