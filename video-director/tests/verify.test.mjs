@@ -13,3 +13,10 @@ test("verify.evaluate：帧数、时长、声音、尺寸逐项判断", async ()
   assert.match(msgs, /✗没有声音流/);
   assert.match(msgs, /⚠有 1 段纯黑画面/);
 });
+
+test("verify.evaluate：响度离 -14 太远或真峰值过高 → ⚠", async () => {
+  const { evaluate } = await import("../scripts/verify.mjs");
+  const streams = [{ codec_type: "video", codec_name: "h264", width: 1080, height: 1920, avg_frame_rate: "30/1" }, { codec_type: "audio", duration: "10" }];
+  const items = evaluate({ streams, packets: 300, duration: 10, volume: { mean: -20, max: -3 }, expected: {}, blackSpans: [], loudness: { integrated: -21.8, truePeak: -3.4 } });
+  assert.match(items.map((i) => i.level + i.msg).join("\n"), /⚠响度 -21\.8 LUFS/);
+});
