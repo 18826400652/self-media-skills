@@ -201,6 +201,24 @@ function checkTextAll(ep, config, r) {
   if (!hits) r.pass("没有 AI 腔用语");
 }
 
+/** 时长预算表：表头同时有「预算秒」「新信息」才算，避免误读别的表 */
+export function parseBudget(md) {
+  const lines = String(md ?? "").split("\n");
+  const h = lines.findIndex((l) => l.trim().startsWith("|") && l.includes("预算秒") && l.includes("新信息"));
+  if (h < 0) return { found: false, rows: [] };
+  const rows = [];
+  for (const line of lines.slice(h + 1)) {
+    if (!line.trim().startsWith("|")) break;
+    const cells = line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+    if (!cells.length || cells.every((c) => /^:?-+:?$/.test(c))) continue;
+    if (!/^\d+$/.test(cells[0])) continue;
+    rows.push({ frame: Number(cells[0]), content: cells[1] ?? "", chars: Number(cells[2]), speech: Number(cells[3]), visual: Number(cells[4]), budget: Number(cells[5]), info: cells[6] ?? "" });
+  }
+  return { found: true, rows };
+}
+
+const round1 = (x) => Math.round(x * 10) / 10;
+
 function checkPlatforms(ep, config, r) {
   const f = config.platformFiles;
   const read = (key) => (f[key] && existsSync(join(ep, f[key])) ? readFileSync(join(ep, f[key]), "utf8") : null);
@@ -236,6 +254,28 @@ function checkPlatforms(ep, config, r) {
     }
     if (lines.length && !lines.some((l) => SPOKEN_MARKERS.test(l.text))) {
       r.warn("抖音口播整段没有语气词或反问（吧、呢、其实、结果……），听起来可能像念稿", f.douyinScript);
+    }
+    const budget = parseBudget(douyin);
+    if (!budget.found) {
+      r.warn("抖音 SCRIPT.md 没有时长预算表（每帧写清预算秒和新信息）", f.douyinScript);
+    } else {
+      const frames = new Set(lines.map((l) => l.frame));
+      const rows = new Map(budget.rows.map((x) => [x.frame, x]));
+      for (const n of frames) if (!rows.has(n)) r.warn(`抖音第 ${n} 帧在时长预算表里没有行`, f.douyinScript);
+      for (const row of budget.rows) {
+        if (!frames.has(row.frame)) r.warn(`时长预算表第 ${row.frame} 帧不在 SCRIPT 里`, f.douyinScript);
+        if (!row.info) r.warn(`抖音第 ${row.frame} 帧没有写新信息`, f.douyinScript);
+        if (!Number.isFinite(row.budget) || row.budget <= 0) r.warn(`抖音第 ${row.frame} 帧的预算秒不是正数`, f.douyinScript);
+      }
+      const total = budget.rows.reduce((s, x) => s + (Number.isFinite(x.budget) ? x.budget : 0), 0);
+      const metaPath = join(ep, "抖音/audio_meta.json");
+      if (existsSync(metaPath)) {
+        try {
+          const meta = JSON.parse(readFileSync(metaPath, "utf8"));
+          const actual = (meta.voices ?? []).reduce((s, v) => s + (Number(v.duration_s) || 0), 0);
+          if (actual > 0 && Math.abs(total - actual) / actual > 0.2) r.warn(`抖音时长预算 ${round1(total)}s 和配音 ${round1(actual)}s 差 ${Math.round((Math.abs(total - actual) / actual) * 100)}%`, f.douyinScript);
+        } catch { /* audio_meta 坏了留给 vo 报 */ }
+      }
     }
   }
 }

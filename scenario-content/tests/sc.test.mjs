@@ -167,3 +167,39 @@ test("skill 自带的 templates/母稿.md 和内置必需小节一致（SKILL.md
   const dir = ep({ "母稿.md": own.replace(/\{\{[^}]+\}\}/g, "X").replace(/^（[^\n]*）$/gm, "这里是正文。") });
   assert.deepEqual(runChecks(dir, loadConfig(dir)).filter((i) => i.file === "母稿.md" && i.level === "✗"), []);
 });
+
+test("parseBudget：只认同时有「预算秒」「新信息」的表", async () => {
+  const { parseBudget } = await import("../scripts/sc.mjs");
+  const md = [
+    "| 帧 | 内容 | 字数 | 口播秒 | 画面最短秒 | 预算秒 | 新信息 |",
+    "|---|---|---|---|---|---|---|",
+    "| 1 | 结果 + 代价 | 35 | 7.8 | 6.5 | 8.0 | 成品、十秒 |",
+    "",
+    "## 钩子 (Frame 1)",
+  ].join("\n");
+  const b = parseBudget(md);
+  assert.equal(b.found, true);
+  assert.deepEqual(b.rows[0], { frame: 1, content: "结果 + 代价", chars: 35, speech: 7.8, visual: 6.5, budget: 8, info: "成品、十秒" });
+  assert.equal(parseBudget("| 画面 | 建议组件名 | 变量 |").found, false);
+});
+
+test("runChecks：没有预算表、某帧没写新信息、预算和配音差太多 → warn", async () => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const script = (table) => ["## 钩子 (Frame 1)", "", "    说个偷懒的事。", ""].join("\n") + table;
+  const conf = { "scenario-content.config.json": JSON.stringify({ platformFiles: { douyinScript: "抖音/SCRIPT.md" } }) };
+  const noTable = ep({ ...conf, "抖音/SCRIPT.md": script("") });
+  assert.match(runChecks(noTable, loadConfig(noTable)).map((i) => i.msg).join("\n"), /没有时长预算表/);
+
+  const emptyInfo = ep({
+    ...conf,
+    "抖音/SCRIPT.md": script(["| 帧 | 内容 | 字数 | 口播秒 | 画面最短秒 | 预算秒 | 新信息 |", "|---|---|---|---|---|---|---|", "| 1 | 结果 | 10 | 2.2 | 2 | 2.4 | |"].join("\n")),
+  });
+  assert.match(runChecks(emptyInfo, loadConfig(emptyInfo)).map((i) => i.msg).join("\n"), /第 1 帧没有写新信息/);
+
+  const mismatch = ep({
+    ...conf,
+    "抖音/SCRIPT.md": script(["| 帧 | 内容 | 字数 | 口播秒 | 画面最短秒 | 预算秒 | 新信息 |", "|---|---|---|---|---|---|---|", "| 1 | 结果 | 10 | 2.2 | 2 | 40 | 成品 |"].join("\n")),
+    "抖音/audio_meta.json": JSON.stringify({ voices: [{ frame: 1, duration_s: 5 }] }),
+  });
+  assert.match(runChecks(mismatch, loadConfig(mismatch)).map((i) => i.msg).join("\n"), /预算 40s 和配音 5s 差/);
+});
