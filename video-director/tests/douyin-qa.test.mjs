@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { analyzeCraft, checkComposition, checkCraft, checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "../scripts/lib/douyin-qa.mjs";
+import { analyzeCraft, checkComposition, checkCraft, checkCues, checkFrame, craftCounts, craftSummary, emptyWindows, qaTimes, stillWindows, summarize } from "../scripts/lib/douyin-qa.mjs";
 
 const built = {
   cues: { 钩子: 1, 小票: 5.5, "小票#2": 9 },
@@ -257,4 +257,25 @@ test("qaTimes：首帧 0.8 秒排在最前；0.8 秒没有构建的段就不加"
   assert.deepEqual(qaTimes(built, 12).inspect[0], { t: 0.8, label: "首帧", seg: "s1" });
   const late = qaTimes({ cues: {}, segments: [{ id: "s3", start: 10, duration: 5 }], total: 15 }, 15);
   assert.ok(!late.inspect.some((x) => x.label === "首帧"));
+});
+
+test("craftCounts：只数 craft-*，按类汇总", () => {
+  const issues = [
+    { kind: "craft-type" }, { kind: "craft-type" }, { kind: "craft-subject" }, { kind: "still" },
+  ];
+  assert.deepEqual(craftCounts(issues), { type: 2, hierarchy: 0, hook: 0, subject: 1, gap: 0, material: 0, variety: 0 });
+});
+
+test("craftSummary：有指标时返回两行；空 craft 返回 null", () => {
+  const craft = {
+    first: { maxFont: 46, cluster: 35.2 },
+    segments: [{ maxFont: 46, cluster: 35.2, gap: 70, id: "s1" }],
+    material: { score: 1 },
+    variety: { centered: 8, total: 9 },
+    counts: { type: 2, hierarchy: 0, hook: 0, subject: 0, gap: 0, material: 1, variety: 1 },
+  };
+  const s = craftSummary(craft);
+  assert.match(s.metrics, /首帧 46px/);
+  assert.match(s.counts, /字阶 2/);
+  assert.equal(craftSummary({ segments: [] }), null);
 });

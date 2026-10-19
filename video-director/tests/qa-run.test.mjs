@@ -86,4 +86,6 @@ test("douyinQa：视觉工艺只给 warn，不影响 passed；返回 craft 指�
   assert.equal(r.passed, true);
   assert.ok(r.issues.some((i) => i.kind === "craft-type" && i.level === "warn"));
   assert.equal(r.craft.first.maxFont, 46);
+  assert.equal(r.craft.counts.type, 1);
+  assert.equal(r.craft.counts.material, 1);
 });

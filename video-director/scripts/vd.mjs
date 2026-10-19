@@ -22,6 +22,7 @@ import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
+import { craftSummary } from "./lib/douyin-qa.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
 import { requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
@@ -143,15 +144,10 @@ const COMMANDS = {
     writeFileSync(join(dir, out), JSON.stringify({ passed: r.passed, issues: r.issues.map(({ level, msg }) => ({ level, msg })), shots: r.shots, craft: r.craft }, null, 2) + "\n");
     const sheet = run("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", "snapshots/cues/*.png", "-vf", `scale=270:-1,tile=6x${Math.ceil(r.shots.length / 6)}:padding=6:color=0x444444`, "-frames:v", "1", "snapshots/cues-sheet.jpg"], { cwd: dir });
     if (sheet.status !== 0) console.warn(`⚠ 总览图没拼成：${sheet.stderr.trim()}`);
-    if (r.craft?.segments?.length) {
-      const s = r.craft.segments;
-      const fonts = s.map((x) => x.maxFont).filter(Boolean);
-      const clusters = s.map((x) => x.cluster).filter((x) => x !== null);
-      if (fonts.length && clusters.length) {
-        const f = r.craft.first;
-        const head = f ? Math.round(f.maxFont) + "px / 簇 " + (f.cluster === null ? "—" : f.cluster.toFixed(1) + "%") : "—";
-        console.log("视觉工艺：首帧 " + head + " · 段内字号 " + Math.round(Math.min(...fonts)) + "–" + Math.round(Math.max(...fonts)) + "px · 主体簇 " + Math.min(...clusters).toFixed(1) + "–" + Math.max(...clusters).toFixed(1) + "% · 空白带 " + Math.max(...s.map((x) => x.gap)) + "px · 材质 " + r.craft.material.score + "/4 · 构图 " + r.craft.variety.centered + "/" + r.craft.variety.total + " 段居中");
-      }
+    const summary = craftSummary(r.craft);
+    if (summary) {
+      console.log(summary.metrics);
+      console.log("视觉工艺告警：" + summary.counts);
     }
     for (const i of r.issues) console.log(`${i.level === "error" ? "✗" : "⚠"} ${i.msg}`);
     console.log(`${r.passed ? "✓" : "✗"} 抖音专用检查（${sample ? `样片 ${segments.map((s) => s.id).join("、")}` : "整片"}，结果 ${out}）：${r.shots.length} 个时间点，${r.issues.filter((i) => i.level === "error").length} 个 ✗（截图总览 snapshots/cues-sheet.jpg，按 DIRECTOR.md 逐条看）`);

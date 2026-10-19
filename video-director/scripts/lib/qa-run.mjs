@@ -2,7 +2,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cuesJs } from "./assemble.mjs";
-import { analyzeCraft, checkComposition, checkCraft, checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
+import { analyzeCraft, checkComposition, checkCraft, checkCues, checkFrame, craftCounts, emptyWindows, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
 
 /** 这次构建装了哪些段：index.html 里有 host-<段id> 的（样片只装几段） */
 export function presentSegments(html, segments) {
@@ -74,11 +74,12 @@ export async function douyinQa(built, page, shotDir) {
   }
   const empty = emptyWindows(sigs).map((w) => ({ level: "error", kind: "empty", sel: "", t: w.from, msg: `${w.from}–${w.to} 秒画面上只有背景（没有文字或 data-vd-key 元素）：这段没内容` }));
   const errors = summarize([...frames.flatMap(checkFrame), ...checkCues(frames, built.cues), ...empty]);
-  const craft = analyzeCraft(frames);
+  const craftIssues = checkCraft(frames);
+  const craft = { ...analyzeCraft(frames), counts: craftCounts(craftIssues) };
   const warns = [
     ...stillWindows(sigs).map((w) => ({ level: "warn", kind: "still", sel: "", t: w.from, msg: `${w.from}–${w.to} 秒画面没有变化（任意 2 秒内要有东西在动）` })),
     ...checkComposition(frames),
-    ...checkCraft(frames),
+    ...craftIssues,
   ];
   return { passed: errors.length === 0, issues: [...errors, ...warns], shots, craft };
 }

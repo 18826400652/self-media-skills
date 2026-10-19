@@ -274,3 +274,47 @@ export function checkCraft(frames) {
   }
   return out;
 }
+
+// 视觉工艺告警的类别：键是 kind，值是 [counts 的键, 中文名]
+const CRAFT_KINDS = {
+  "craft-type": ["type", "字阶"],
+  "craft-hierarchy": ["hierarchy", "层级"],
+  "craft-hook": ["hook", "首帧"],
+  "craft-subject": ["subject", "主体"],
+  "craft-gap": ["gap", "空白"],
+  "craft-material": ["material", "材质"],
+  "craft-variety": ["variety", "构图"],
+};
+
+/** 按类数 craft 告警；没有的类别是 0 */
+export function craftCounts(issues) {
+  const out = { type: 0, hierarchy: 0, hook: 0, subject: 0, gap: 0, material: 0, variety: 0 };
+  for (const i of issues) {
+    const k = CRAFT_KINDS[i.kind];
+    if (k) out[k[0]] += 1;
+  }
+  return out;
+}
+
+/** vd qa 的两行摘要：指标行 + 分类计数行；没有可展示的指标返回 null */
+export function craftSummary(craft) {
+  if (!craft?.segments?.length) return null;
+  const s = craft.segments;
+  const fonts = s.map((x) => x.maxFont).filter(Boolean);
+  const clusters = s.map((x) => x.cluster).filter((x) => x !== null);
+  if (!fonts.length || !clusters.length) return null;
+  const f = craft.first;
+  const head = f ? Math.round(f.maxFont) + "px / 簇 " + (f.cluster === null ? "—" : f.cluster.toFixed(1) + "%") : "—";
+  const metrics = "视觉工艺：首帧 " + head +
+    " · 段内字号 " + Math.round(Math.min(...fonts)) + "–" + Math.round(Math.max(...fonts)) + "px" +
+    " · 主体簇 " + Math.min(...clusters).toFixed(1) + "–" + Math.max(...clusters).toFixed(1) + "%" +
+    " · 空白带 " + Math.max(...s.map((x) => x.gap)) + "px" +
+    " · 材质 " + craft.material.score + "/4" +
+    " · 构图 " + craft.variety.centered + "/" + craft.variety.total + " 段居中";
+  const counts = Object.entries(CRAFT_KINDS)
+    .map(([, [key, label]]) => [label, craft.counts?.[key] ?? 0])
+    .filter(([, n]) => n > 0)
+    .map(([label, n]) => label + " " + n)
+    .join(" · ") || "0 条";
+  return { metrics, counts };
+}
