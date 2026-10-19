@@ -203,3 +203,19 @@ test("runChecks：没有预算表、某帧没写新信息、预算和配音差�
   });
   assert.match(runChecks(mismatch, loadConfig(mismatch)).map((i) => i.msg).join("\n"), /预算 40s 和配音 5s 差/);
 });
+
+test("claimOverlap：封面大字和第一句的共同双字词", async () => {
+  const { claimOverlap } = await import("../scripts/sc.mjs");
+  assert.ok(claimOverlap("周报不用憋了", "这份周报我一个字没写") >= 1);
+  assert.equal(claimOverlap("周报不用憋了", "今天教你做视频"), 0);
+});
+
+test("runChecks：封面和第一句没有共同关键词 → warn", async () => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const dir = ep({
+    "scenario-content.config.json": JSON.stringify({ platformFiles: { douyinScript: "抖音/SCRIPT.md" } }),
+    "抖音/封面.md": "# 周报不用憋了<br>十秒出稿\n",
+    "抖音/SCRIPT.md": ["## 钩子 (Frame 1)", "", "**重点词:** 视频", "", "    今天教你做视频。", ""].join("\n"),
+  });
+  assert.match(runChecks(dir, loadConfig(dir)).map((i) => i.msg).join("\n"), /封面大字和第一句没有共同关键词/);
+});

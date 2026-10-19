@@ -218,6 +218,28 @@ export function parseBudget(md) {
 }
 
 const round1 = (x) => Math.round(x * 10) / 10;
+const HAN_ONLY = /[^\u4e00-\u9fa5]/g;
+
+/** 封面第一个 # 标题，去掉 <br> 和标点，只留汉字 */
+export function coverClaim(md) {
+  const line = String(md ?? "").match(/^#\s+(.+)$/m)?.[1] ?? "";
+  return line.replace(/<br\s*\/?>/gi, "").replace(HAN_ONLY, "");
+}
+
+function bigrams(s) {
+  const out = new Set();
+  for (let i = 0; i + 1 < s.length; i++) out.add(s.slice(i, i + 2));
+  return out;
+}
+
+/** 两段中文的公共双字词数量 */
+export function claimOverlap(a, b) {
+  const A = bigrams(String(a ?? "").replace(HAN_ONLY, ""));
+  const B = bigrams(String(b ?? "").replace(HAN_ONLY, ""));
+  let n = 0;
+  for (const x of A) if (B.has(x)) n++;
+  return n;
+}
 
 function checkPlatforms(ep, config, r) {
   const f = config.platformFiles;
@@ -275,6 +297,13 @@ function checkPlatforms(ep, config, r) {
           const actual = (meta.voices ?? []).reduce((s, v) => s + (Number(v.duration_s) || 0), 0);
           if (actual > 0 && Math.abs(total - actual) / actual > 0.2) r.warn(`抖音时长预算 ${round1(total)}s 和配音 ${round1(actual)}s 差 ${Math.round((Math.abs(total - actual) / actual) * 100)}%`, f.douyinScript);
         } catch { /* audio_meta 坏了留给 vo 报 */ }
+      }
+    }
+    const coverPath = join(ep, "抖音/封面.md");
+    if (lines.length && existsSync(coverPath)) {
+      const claim = coverClaim(readFileSync(coverPath, "utf8"));
+      if (claim && claimOverlap(claim, lines[0].keywords.join("") + lines[0].text) === 0) {
+        r.warn("封面大字和第一句没有共同关键词（点进来会货不对板）", "抖音/封面.md");
       }
     }
   }
