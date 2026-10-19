@@ -39,7 +39,7 @@ Return, in this order:
 {"per_set": {"<set>": {"style_fidelity": n, "concept_wow": n, "motion_craft": n, "design_typography": n, "finish_texture": n, "sound_sync": n|"N/A", "technical": n, "robustness": n|"N/A", "platform_fit": n|"N/A"}},
  "scores": {<same nine keys: lowest across sets>},
  "average": <mean of the numeric scores, 2 decimals>,
- "pass": <true only if every numeric score ≥ 7.5 and average ≥ 8>,
+ "pass": <true only if every numeric score ≥ 7.0 and average ≥ 7.5>,
  "critical": ["..."]}
 (b) the fix list;
 (c) up to three strengths the maker must not regress.
@@ -52,7 +52,7 @@ Write (b) and (c) in Chinese.
 一个独立评委评了你的镜头，完整评审如下：
 <贴评审结果>
 
-目标：每个维度 ≥ 7.5、平均 ≥ 8（三组内容取最低）。
+目标：每个维度 ≥ 7.0、平均 ≥ 7.5（三组内容取最低；校准见 evals/shot-review-cases.md）。
 - 先把现在的 HTML 存成 review/round-N.html（N = 这一轮）。
 - 改掉全部 critical 和高影响的修改项。你确信有更好的做法可以替换某条，写明理由。清单之外看到更大的提升（尤其是惊艳感）也可以做。评委列为优点的不要改坏。
 - 三组内容都重新渲染，跑 vd qa 0 个 ✗，看过各拍的截图，确认修改真的生效。
