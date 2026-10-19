@@ -42,3 +42,14 @@ test("templates/DIRECTOR.md：说明文字里没有被当成 @词 的字（全�
   const prose = read("DIRECTOR.md").replace(/```json[\s\S]*?```/, "").split("\n").filter((l) => !l.includes("（待填")).join("\n");
   assert.deepEqual(parseDirector(prose).tokens, []);
 });
+
+test("templates/DIRECTOR.md：§3 有 6 行视觉工艺自检，§1 有材质与视觉规范", () => {
+  const md = read("DIRECTOR.md");
+  for (const k of ["视觉工艺 · 主体", "视觉工艺 · 材质", "视觉工艺 · 字阶", "视觉工艺 · 空白带", "视觉工艺 · 色彩锚点", "视觉工艺 · 构图变化"]) {
+    assert.ok(md.includes(k), "缺少 " + k);
+  }
+  assert.match(md, /- \*\*材质与光影\*\*/);
+  assert.match(md, /- \*\*视觉规范\*\*/);
+  const prose = md.replace(/```json[\s\S]*?```/, "").split("\n").filter((l) => !l.includes("（待填")).join("\n");
+  assert.deepEqual(parseDirector(prose).tokens, []);
+});
