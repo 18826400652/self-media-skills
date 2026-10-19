@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { addMusic, alignMusic, parseResolved, pickBeat, resolveMusic } from "../scripts/lib/music.mjs";
+import { SKILL_DIR } from "../scripts/lib/hyperframes.mjs";
+import { addMusic, alignMusic, carve, parseResolved, pickBeat, resolveMusic } from "../scripts/lib/music.mjs";
 import { project } from "./helpers.mjs";
 
 const BEATS = [{ time: 0.007, strength: 1 }, { time: 14.0, strength: 0.6 }, { time: 16.596, strength: 0.857 }, { time: 17.0, strength: 0.857 }, { time: 29.5, strength: 1 }];
@@ -138,4 +139,21 @@ test("loopArgs：短配乐循环时每个接缝 2 秒淡入淡出，份数够铺
   assert.deepEqual(a.slice(-3), ["-t", "112", "out.wav"]);
   const short = loopArgs("in.wav", "out.wav", 3, 60);
   assert.ok(short.includes("-stream_loop"));
+});
+test("carve：用 vd 自己装的 @hyperframes/core 做避让（--core），工程里不装依赖", () => {
+  const dir = project({ "index.html": "" });
+  const calls = [];
+  const fake = (cmd, args) => { calls.push({ cmd, args }); return { status: 0, stdout: "", stderr: "" }; };
+  carve(dir, fake);
+  assert.equal(calls.length, 1, "只跑一次 carve，没有 npm");
+  const { cmd, args } = calls[0];
+  assert.equal(cmd, "node");
+  assert.match(args[0], /hyperframes-audio\/scripts\/carve\.mjs$/);
+  assert.deepEqual(args.slice(1, 7), ["--comp", "index.html", "--bed", "music", "--voice", "vo"]);
+  assert.deepEqual(args.slice(7), ["--core", SKILL_DIR], "指到 vd 里那份 core，不读工程里的");
+});
+
+test("carve：避让失败时抛错，带外部命令的 stderr", () => {
+  const dir = project({ "index.html": "" });
+  assert.throws(() => carve(dir, () => ({ status: 1, stdout: "", stderr: "boom" })), /人声避让失败：boom/);
 });

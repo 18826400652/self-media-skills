@@ -17,13 +17,13 @@ description: >
 ```bash
 ln -s <skill 目录> ~/.claude/skills/video-director
 ln -s <skill 目录>/bin/vd ~/.local/bin/vd
-cd <skill 目录> && npm ci                            # hyperframes、字体、GSAP、puppeteer-core 都装在 vd 自己的 node_modules（st install --deps 会装）
+cd <skill 目录> && npm ci                            # hyperframes、@hyperframes/core、字体、GSAP、puppeteer-core 都装在 vd 自己的 node_modules（st install --deps 会装）
 echo 'export NODE_USE_ENV_PROXY=1' >> ~/.bashrc       # 走代理时 Node 才能联网
 curl -fsSL https://static.heygen.ai/cli/install.sh | bash   # 配乐用的 heygen CLI（先看一遍脚本）
 HEYGEN_NO_BROWSER=1 heygen auth login --oauth         # 浏览器授权，走免费额度（API Key 会扣钱包）
 ```
 
-项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）；`hfVersion` 不用写（hyperframes 装在 vd 自己的 `node_modules`，写了且不一致会报错）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。工程里的 `@hyperframes/core` 由 `vd build` 自动装。
+项目根目录要有 `video-director.config.json`：`brandDir`（账号固定元素）、`sfxDir`（音效库）；`hfVersion` 不用写（hyperframes 装在 vd 自己的 `node_modules`，写了且不一致会报错）；选填 `fontsDir`、`gsap`（要换字体包或 GSAP 时才写，默认用 vd 自带的：`npm ci` 装的 fontsource 字体 Noto Sans SC、Noto Serif SC、JetBrains Mono 和 GSAP，`vd build` 生成进工程的 `assets/fonts/`）。视频工程里不装 `@hyperframes/core`：`vd qa` 打包页面和人声避让都用 vd 自己 `node_modules` 里那份（和 hyperframes 同版本，一处升级）。
 
 ## 流程（一期的抖音部分）
 

@@ -1,5 +1,5 @@
 // 配乐：HeyGen 曲库取曲 → 节拍对位（重拍落在指定的词上）→ 人声避让
-import { requireHf } from "./hyperframes.mjs";
+import { requireCore, requireHf, SKILL_DIR } from "./hyperframes.mjs";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -109,16 +109,10 @@ export function alignMusic(dir, { src, drop, duration }, runFn = run, { warn = c
   return pick.mediaStart;
 }
 
-/** 工程里没有 @hyperframes/core 就装上（人声避让、vd qa 打包都要用） */
-export function ensureCore(dir, hfVersion, runFn = run) {
-  if (existsSync(join(dir, "node_modules/@hyperframes/core"))) return;
-  const i = runFn("npm", ["i", "-D", "--no-audit", "--no-fund", `@hyperframes/core@${hfVersion}`], { cwd: dir });
-  if (i.status !== 0) throw new Error(`安装 @hyperframes/core 失败：${i.stderr}`);
-}
-
-export function carve(dir, hfVersion, runFn = run) {
-  ensureCore(dir, hfVersion, runFn);
-  const c = runFn("node", [CARVE, "--comp", "index.html", "--bed", "music", "--voice", "vo"], { cwd: dir });
+/** 人声避让：用 vd 自己装的 @hyperframes/core（--core），工程里不装依赖 */
+export function carve(dir, runFn = run) {
+  requireCore();
+  const c = runFn("node", [CARVE, "--comp", "index.html", "--bed", "music", "--voice", "vo", "--core", SKILL_DIR], { cwd: dir });
   if (c.status !== 0) throw new Error(`人声避让失败：${c.stderr || c.stdout}`);
 }
 

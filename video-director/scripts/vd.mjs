@@ -21,9 +21,9 @@ import { findProjectRoot, loadConfig } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
-import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
+import { addMusic, alignMusic, carve, probeLen, resolveMusic } from "./lib/music.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
-import { requireHf } from "./lib/hyperframes.mjs";
+import { coreEntry, requireCore, requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
 
@@ -113,7 +113,7 @@ const COMMANDS = {
       addMusic(vd.music, {
         resolveMusic: () => resolveMusic(dir, vd.music.intent, undefined, { duration }),
         alignMusic: (src) => alignMusic(dir, { src, drop: built.cues[vd.music.drop.slice(1)], duration }),
-        carve: () => carve(dir, config.hfVersion),
+        carve: () => carve(dir),
         assemble: (music) => assemble(dir, built, config, { only, duration, music }),
       });
     }
@@ -127,16 +127,15 @@ const COMMANDS = {
     const { chromePath, openPage } = await import("./lib/inspect-page.mjs").catch((err) => {
       throw new Error(`vd qa 需要 puppeteer-core：在 video-director 技能目录跑 npm i（${err.message}）`);
     });
-    chromePath(); // 先确认有 Chrome，再读工程、装依赖
-    const config = loadConfig(findProjectRoot(dir));
+    chromePath(); // 先确认有 Chrome，再读工程
     const { built } = load(dir);
     const stale = staleBuild(dir, built) ?? buildProblem(dir);
     if (stale) throw new Error(stale);
     const segments = presentSegments(readFileSync(join(dir, "index.html"), "utf8"), built.segments);
     const sample = segments.length < built.segments.length;
     const out = sample ? "qa-douyin-sample.json" : "qa-douyin.json";
-    ensureCore(dir, config.hfVersion);
-    const { bundleToSingleHtml } = await import(pathToFileURL(join(dir, "node_modules/@hyperframes/core/dist/compiler/index.js")).href);
+    requireCore(); // 打包器在 vd 自己那份 @hyperframes/core 里
+    const { bundleToSingleHtml } = await import(pathToFileURL(coreEntry()).href);
     const page = await openPage({ html: await bundleToSingleHtml(dir), root: dir });
     let r;
     try { r = await douyinQa({ ...built, segments }, page, join(dir, "snapshots/cues")); } finally { await page.close(); }
