@@ -1,5 +1,7 @@
 # 镜头库 Implementation Plan
 
+> **状态（2026-10-20，用户决定收尾）**：第 0 阶段（Task 1–8）完成；第 1 阶段只做完 Task 9（`dy-shot-proof`，四轮评审未过线，按第 4 版入库，待改清单在 hyperframes `docs/shots/dy-shot-proof/SHOT.md`）。多轮独立评审太耗订阅额度、评委间波动约 ±0.75，收益低，用户决定停在这里合并。Task 10–14 不做；剩下的镜头按"出现两次才磨"随用随长，入库改为用户看样片确认。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让 vd 能用 `dy-shot-*` 镜头（含叠加、平移转场、镜头自带音效拍点、缺镜头台账），并按独立评审磨出 4 个核心镜头，用它们重做第 1 期验证方向。

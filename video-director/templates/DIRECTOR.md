@@ -87,9 +87,8 @@
   "palette": { "bg": "#F1ECE2", "ink": "#1C1A17", "muted": "#6E675C", "accent": "#FFD84D", "alert": "#D2372A" },
   "fonts": { "title": "serif", "body": "sans" },
   "segments": [
-    { "id": "seg-01-hook", "lines": [1, 2], "shot": "dy-shot-transform", "vars": { "headline": "……", "inputs": "……|……", "cues": "@词|@词|@词" } },
-    { "id": "seg-02-proof", "lines": [3, 3], "shot": "dy-shot-proof", "vars": { "src": "assets/……png", "notes": "标签::10,20,30,8", "cues": "@词" },
-      "overlays": [{ "shot": "dy-shot-stamp", "at": "@词", "vars": { "mode": "stamp-only", "stamp": "编的" } }] }
+    { "id": "seg-01-hook", "lines": [1, 2], "shot": "custom", "reason": "……", "need": "……", "candidate": "dy-shot-……" },
+    { "id": "seg-02-proof", "lines": [3, 3], "shot": "dy-shot-proof", "vars": { "src": "assets/……png", "ratio": 1.778, "labels": "……|……", "boxes": "10,20,30,2|12,60,40,2", "textPx": 40, "cues": "@词|@词" } }
   ],
   "sfx": [{ "name": "pop", "at": "@词", "volume": 0.6 }],
   "music": { "intent": "light curious lo-fi explainer, clear steady beat", "drop": "@词", "volume": 0.4 },
