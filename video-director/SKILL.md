@@ -2,7 +2,7 @@
 name: video-director
 description: >
   视频导演：已写好的口播稿 + vo 的配音 → 导演脚本 DIRECTOR.md → 按内容设计风格的 HyperFrames 视频工程（每段一个子画面，
-  账号固定元素：栏目标签、字幕、结尾），带配乐重拍对位和人声避让。提供 vd 命令：vd init、vd cues、vd build [--sample] [--no-music]、vd qa（抖音专用检查）、vd render、vd verify、vd check、vd components（列组件）；不认识的子命令透传给 hyperframes。
+  账号固定元素：栏目标签、字幕、结尾），带配乐重拍对位和人声避让。提供 vd 命令：vd init、vd cues、vd build [--sample] [--no-music]、vd qa（抖音专用检查）、vd render、vd verify、vd measure（注意力指标）、vd check、vd components（列组件）；不认识的子命令透传给 hyperframes。
   当用户要「按导演脚本做视频」「做抖音视频」「渲染」「验片」，或作品目录里有 DIRECTOR.md 时使用。配音用 voiceover（vo）。
 ---
 
@@ -57,8 +57,9 @@ vd init 抖音
 | `vd cues <工程> [--check]` | 校验 DIRECTOR.md，把所有 @词 换算成秒数写进 `cues.js`，并打印出来；`--check` 只校验不写文件。正文里 `@词` 加不加反引号都算锚点（只有写法说明里的 `` `@词` `` 不算）；屏幕文字里的普通 @ 写成 `\@`；段 HTML（`compositions/frames/*.html`、`index.html`）里 `at("词")` 用到 DIRECTOR.md 没写的词直接报错 |
 | `vd qa <工程>` | 抖音专用检查：在每个 @词 落定时刻（@词 后 0.8 秒）和每段结尾截图，查出画面、安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；每 0.5 秒比一次，连续 2 秒只有背景、没有文字或 `data-vd-key` 元素（✗，纯图形的关键画面要加 `data-vd-key`），2 秒不动（⚠），一段里所有截图的内容都在 y 770 以上（⚠ 画面挤在上方，段尾收起来的转场不算）。被 overflow 裁掉的部分不算。视觉工艺 ⚠：主体簇、首帧字号、字阶层级、内容区空白带、材质件数、构图变化（只报 ⚠，不改 `passed`），终端打印一行"视觉工艺：…"，详细指标写进 `qa-douyin.json` 的 `craft`。结果 `qa-douyin.json`（样片构建时写 `qa-douyin-sample.json`，只查装了的段），总览 `snapshots/cues-sheet.jpg`。DIRECTOR.md 改了 @词或分段还没 `vd build` 时直接报错 |
 | `vd build <工程> [--sample] [--no-music] [--update-components]` | 拼配音 + 混音效 → 安装用到的 dykit 组件 → 写 `index.html` 的 `vd:head` / `vd:audio` / `vd:segments` / `vd:brand` 四块 → 配乐取曲（说法里自动带上视频时长；vd 以前取的 `bgm.wav` 比视频短会重新取，还是短就循环补齐；自己放的 `bgm.mp3` 不替换、太短时循环成 `bgm-loop.wav`）、重拍对位、人声避让 → `hyperframes check`。`--sample` 只装样片的段，到 `sample.end` 为止 |
-| `vd render <工程> [--sample]` | 渲染到 `<工程>/renders/`（`--sample` 出 `sample.mp4`），完成后自动 `vd verify` |
-| `vd verify <成片.mp4> [--project <工程>]` | 成片自检：帧数、时长、声音、尺寸、黑屏 |
+| `vd render <工程> [--sample]` | 渲染到 `<工程>/renders/`（`--sample` 出 `sample.mp4`）；完成后把整片响度标准化到 -14 LUFS（两遍 loudnorm，失败只打 ⚠、保留原片），再自动 `vd verify` 和 `vd measure`（写 `<工程>/measure.json`；measure 失败只打 ⚠） |
+| `vd verify <成片.mp4> [--project <工程>]` | 成片自检：帧数、时长、声音、响度（-14 ±1 LUFS，真峰值 ≤ -1）、尺寸、黑屏 |
+| `vd measure <成片.mp4> [--json] [--out 文件]` | 量注意力指标：时长、内容区静态率、变化率（次/分）、最长静止（秒）、响度。目标：最长静止 ≤3 秒、变化率 ≥12 次/分（静态率只记录）。`st review` 汇总各期的 `measure.json` |
 | `vd check <工程>` | 校验 DIRECTOR.md + 列出组件候选 + `hyperframes check` |
 | `vd components <工程> [关键词]` | 列出 dykit 组件（用途、适合、时长、节拍、变量和默认值），关键词按名字、用途、适合场景筛 |
 | `vd <其他子命令> …` | 不认识的子命令透传给 hyperframes：`vd lint`、`vd preview`、`vd snapshot`、`vd doctor` 等 |
@@ -73,6 +74,7 @@ vd init 抖音
 - 时间只用 `at("词")`（相对本段开头的秒数），不写死数字；词必须在 DIRECTOR.md 里以 `@词` 出现过。
 - 元素 id 加段前缀；栏目标签和字幕不要自己画（账号固定元素会画）。
 - 写完在这段每个 @词 的时间点截图看一遍（`references/director-rules.md` 第 11–17 条）。
+- 超过 6 秒的段拆成 3–4 个全屏镜头，按 `@词` 切（`references/director-rules.md` 第 8a 条）；要查"动作真的动了"，在 DIRECTOR.md 机器块这段写 `beats`（`[{"at":"@词","action":"stamp","el":"#s01-stamp"}]`，action 只能是 enter / move / stamp / highlight / mask / count / zoom / exit），元素上标 `data-vd-beat="stamp:@词"`，`vd qa` 在动作前后各截一帧，没动报 ⚠。
 - 按 `references/visual-craft.md` 的 6 层定数值：首帧字号 ≥96px、主体簇 ≥35%、段内 max/主体 ≥1.6、内容区最大空白带 ≤250px、材质 ≥2 件；写完对照第 7 节自检表。
 
 ## 用 dykit 组件

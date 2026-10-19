@@ -219,3 +219,19 @@ test("runChecks：封面和第一句没有共同关键词 → warn", async () =>
   });
   assert.match(runChecks(dir, loadConfig(dir)).map((i) => i.msg).join("\n"), /封面大字和第一句没有共同关键词/);
 });
+
+test("runChecks：配音和封面跟着 douyinScript 所在目录找，不写死「抖音/」", async () => {
+  const { runChecks, loadConfig } = await import("../scripts/sc.mjs");
+  const table = ["| 帧 | 内容 | 字数 | 口播秒 | 画面最短秒 | 预算秒 | 新信息 |", "|---|---|---|---|---|---|---|", "| 1 | 结果 | 10 | 2.2 | 2 | 40 | 成品 |"].join("\n");
+  const dir = ep({
+    "scenario-content.config.json": JSON.stringify({ platformFiles: { douyinScript: "douyin/SCRIPT.md" } }),
+    "douyin/SCRIPT.md": ["## 钩子 (Frame 1)", "", "**重点词:** 视频", "", "    今天教你做视频。", ""].join("\n") + table,
+    "douyin/audio_meta.json": JSON.stringify({ voices: [{ frame: 1, duration_s: 5 }] }),
+    "douyin/封面.md": "# 周报不用憋了\n",
+  });
+  const items = runChecks(dir, loadConfig(dir));
+  const msgs = items.map((i) => i.msg).join("\n");
+  assert.match(msgs, /预算 40s 和配音 5s 差/);
+  assert.match(msgs, /封面大字和第一句没有共同关键词/);
+  assert.ok(items.some((i) => i.file === "douyin/封面.md"));
+});

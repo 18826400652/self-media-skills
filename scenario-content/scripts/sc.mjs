@@ -290,7 +290,7 @@ function checkPlatforms(ep, config, r) {
         if (!Number.isFinite(row.budget) || row.budget <= 0) r.warn(`抖音第 ${row.frame} 帧的预算秒不是正数`, f.douyinScript);
       }
       const total = budget.rows.reduce((s, x) => s + (Number.isFinite(x.budget) ? x.budget : 0), 0);
-      const metaPath = join(ep, "抖音/audio_meta.json");
+      const metaPath = join(ep, dirname(f.douyinScript), "audio_meta.json");
       if (existsSync(metaPath)) {
         try {
           const meta = JSON.parse(readFileSync(metaPath, "utf8"));
@@ -299,11 +299,12 @@ function checkPlatforms(ep, config, r) {
         } catch { /* audio_meta 坏了留给 vo 报 */ }
       }
     }
-    const coverPath = join(ep, "抖音/封面.md");
+    const coverRel = join(dirname(f.douyinScript), "封面.md");
+    const coverPath = join(ep, coverRel);
     if (lines.length && existsSync(coverPath)) {
       const claim = coverClaim(readFileSync(coverPath, "utf8"));
       if (claim && claimOverlap(claim, lines[0].keywords.join("") + lines[0].text) === 0) {
-        r.warn("封面大字和第一句没有共同关键词（点进来会货不对板）", "抖音/封面.md");
+        r.warn("封面大字和第一句没有共同关键词（点进来会货不对板）", coverRel);
       }
     }
   }

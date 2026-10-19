@@ -116,7 +116,7 @@ sc check <作品目录>
 - `benchCdpPort`：`sc bench` 连接的浏览器远程调试端口，默认 9333。浏览器要先登录抖音、小红书（小红书不登录看不到搜索结果）。依赖 `browser-harness` 命令
 - `feynmanCheck`：费曼检查文件名，默认 `费曼检查.md`；设为 `null` 关闭这一关
 - `rec`：`sc rec` / `sc rec-flow` 的配置，从 `scenario-content.config.json` 往上找：`cdpPort`、`devtoolsActivePort`（浏览器连接）、`hide`（录屏时隐藏的页面元素选择器，如沉浸式翻译的弹窗）、`theme`（`sc rec` 的页面主题，如 `dark`）、`flowTheme`（`sc rec-flow` 的页面主题）
-- `platformFiles`：各平台文件相对作品目录的路径，用于长度检查；不存在的文件会跳过。抖音口播只认 HyperFrames 的 SCRIPT.md 写法，和 vo、kv 用同一套解析（`scripts/lib/shared/script-md.mjs`）：`##` 或 `###` 标题带 `(Frame N)` 开一帧，口播行用 4 个以上空格或 Tab 缩进、一行一句，`**Emotion:**` 写情感。文件有内容却一句口播都没读到时给 ⚠（旧的分镜表写法已不支持）；一帧写了几个情感（配音用最后一个）、情感没单独一行（不生效）也给 ⚠。
+- `platformFiles`：各平台文件相对作品目录的路径，用于长度检查；不存在的文件会跳过。抖音口播只认 HyperFrames 的 SCRIPT.md 写法，和 vo、kv 用同一套解析（`scripts/lib/shared/script-md.mjs`）：`##` 或 `###` 标题带 `(Frame N)` 开一帧，口播行用 4 个以上空格或 Tab 缩进、一行一句，`**Emotion:**` 写情感。文件有内容却一句口播都没读到时给 ⚠（旧的分镜表写法已不支持）；一帧写了几个情感（配音用最后一个）、情感没单独一行（不生效）也给 ⚠。抖音 SCRIPT.md 还要有一张时长预算表（表头含「预算秒」和「新信息」，每帧一行，写法见 content-repurpose 的 `references/douyin.md`），缺表、缺行、某帧没写新信息、预算合计和配音（同目录 `audio_meta.json`）差 20% 以上都给 ⚠；同目录有 `封面.md` 时，封面第一个 `#` 标题和第一句没有共同的双字词也给 ⚠（点进来会货不对板）。
 
 ## 文件
 
