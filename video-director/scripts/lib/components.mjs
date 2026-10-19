@@ -160,6 +160,13 @@ export function catalogEntry(archiveDir, name) {
   return catalog.components.find((c) => c.id === name) ?? null;
 }
 
+/** 这个工程用的组件库目录（读镜头的音效拍点用）：本地组件库优先，其次锁定版本的缓存；都没有时为空 */
+export function projectCatalog(dir, local, cacheRoot) {
+  const root = local ?? (readLock(dir) ? join(cacheRoot, readLock(dir).sha) : null);
+  const p = root && join(root, "catalog/catalog.json");
+  return p && existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : { components: [] };
+}
+
 /** 组件目录（catalog/catalog.json）→ 给人和 Claude 看的列表；query 按名字、用途、适合场景筛 */
 export function catalogText(catalog, query = "") {
   const q = query.trim().toLowerCase();

@@ -16,8 +16,8 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
-import { REPO, catalogEntry, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, localArchive, recordingProblem, textProblems, writeLock } from "./lib/components.mjs";
-import { buildAudio } from "./lib/audio.mjs";
+import { REPO, projectCatalog, catalogEntry, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, localArchive, recordingProblem, textProblems, writeLock } from "./lib/components.mjs";
+import { buildAudio, shotSfx } from "./lib/audio.mjs";
 import { findProjectRoot, loadConfig, localDykitDir } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
@@ -115,8 +115,10 @@ const COMMANDS = {
     const full = Math.round((built.total + vd.ending.hold) * 1000) / 1000;
     const duration = sample ? Math.round((built.cues[vd.sample.end.slice(1)] + vd.sample.tail) * 1000) / 1000 : full;
     const only = sample ? vd.sample.segments : null;
-    buildAudio(dir, built, config);
-    installAll(dir, built, { update: rest.includes("--update-components"), only, local: localDykitDir(config) });
+    const local = localDykitDir(config);
+    installAll(dir, built, { update: rest.includes("--update-components"), only, local });
+    const used = built.segments.filter((s) => !only || only.includes(s.id));
+    buildAudio(dir, built, config, shotSfx(used, projectCatalog(dir, local, CACHE)));
     if (!existsSync(join(dir, "assets/gsap.min.js"))) cpSync(config.gsap, join(dir, "assets/gsap.min.js"));
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {

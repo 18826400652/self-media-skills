@@ -204,3 +204,14 @@ test("catalogEntry：没有 catalog/catalog.json 时返回 null；有就按 id �
   assert.deepEqual(catalogEntry(dir, "dy-a"), { id: "dy-a", variables: [] });
   assert.equal(catalogEntry(dir, "dy-b"), null);
 });
+
+test("projectCatalog：本地组件库优先；否则按锁文件的提交号读缓存；都没有返回空目录", async () => {
+  const { projectCatalog } = await import("../scripts/lib/components.mjs");
+  const local = project({ "catalog/catalog.json": { components: [{ id: "dy-local" }] } });
+  assert.deepEqual(projectCatalog(project({}), local, "/nowhere").components.map((c) => c.id), ["dy-local"]);
+  const sha = "a".repeat(40);
+  const cache = project({ [`${sha}/catalog/catalog.json`]: { components: [{ id: "dy-cached" }] } });
+  const dir = project({ "components.lock.json": { repo: REPO, sha } });
+  assert.deepEqual(projectCatalog(dir, null, cache).components.map((c) => c.id), ["dy-cached"]);
+  assert.deepEqual(projectCatalog(project({}), null, cache), { components: [] });
+});
