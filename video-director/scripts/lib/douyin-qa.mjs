@@ -161,14 +161,34 @@ function maxCluster(f) {
 }
 
 function maxGap(f) {
-  const rows = new Uint8Array((CONTENT.bottom - CONTENT.top) / 5);
+  const rowCount = (CONTENT.bottom - CONTENT.top) / 5;
+  const spans = Array.from({ length: rowCount }, () => []);
   // 全屏背景块不算内容：否则它一行一行把整个内容区涂满，空白带永远是 0
   const blocks = (f.data?.blocks ?? []).filter((b) => areaOf(b.box) < 0.9 * W * H);
   for (const e of [...blocks, ...(f.data?.texts ?? [])]) {
     if (!visible(e)) continue;
     const [x1, y1, x2, y2] = e.box;
-    if (x2 <= CONTENT.left || x1 >= CONTENT.right) continue;
-    for (let y = Math.max(CONTENT.top, Math.floor(y1 / 5) * 5); y < Math.min(CONTENT.bottom, y2); y += 5) rows[(y - CONTENT.top) / 5] = 1;
+    const l = Math.max(x1, CONTENT.left), r = Math.min(x2, CONTENT.right);
+    if (r <= l) continue;
+    const from = Math.max(CONTENT.top, Math.floor(y1 / 5) * 5);
+    const to = Math.min(CONTENT.bottom, y2);
+    for (let y = from; y < to; y += 5) spans[(y - CONTENT.top) / 5].push([l, r]);
+  }
+  // 一行至少被 10% 内容宽覆盖才算“有内容”：20px 的小标签不能把 415px 的洞填掉
+  const minRow = 0.1 * (CONTENT.right - CONTENT.left);
+  const rows = new Uint8Array(rowCount);
+  for (let i = 0; i < rowCount; i++) {
+    const xs = spans[i].sort((a, b) => a[0] - b[0]);
+    let total = 0, curL = null, curR = null;
+    for (const [l, r] of xs) {
+      if (curL === null) { curL = l; curR = r; continue; }
+      if (l <= curR) { curR = Math.max(curR, r); continue; }
+      total += curR - curL;
+      curL = l;
+      curR = r;
+    }
+    if (curL !== null) total += curR - curL;
+    rows[i] = total >= minRow ? 1 : 0;
   }
   let best = 0, bestAt = CONTENT.top, run = 0;
   for (let i = 0; i < rows.length; i++) {
@@ -223,11 +243,13 @@ export function analyzeCraft(frames) {
     cluster: firstCluster ? firstCluster.ratio : null,
   } : null;
   const allBlocks = frames.flatMap((f) => f.data?.blocks ?? []);
-  const shadow = allBlocks.some((b) => String(b.shadow ?? "").split(/rgba?[(]/g).length - 1 >= 2);
+  // 材质分只认主体面积：2.2% 的便利贴旋转/投影不该给整片材质加分
+  const mainBlocks = allBlocks.filter((b) => areaOf(b.box) >= 0.05 * W * H);
+  const shadow = mainBlocks.some((b) => String(b.shadow ?? "").split(/rgba?[(]/g).length - 1 >= 2);
   const materials = new Set(frames.flatMap((f) => f.data?.materials ?? []));
   const grain = materials.has("grain");
   const vignette = materials.has("vignette");
-  const rotation = allBlocks.some((b) => Math.abs(b.rot ?? 0) >= 3 && Math.abs(b.rot ?? 0) <= 8) || materials.has("tape");
+  const rotation = mainBlocks.some((b) => Math.abs(b.rot ?? 0) >= 3 && Math.abs(b.rot ?? 0) <= 8) || materials.has("tape");
   const flags = { shadow, grain, vignette, rotation };
   const missing = Object.entries(flags).filter(([, v]) => !v).map(([k]) => MATERIAL_NAMES[k]);
   const material = { ...flags, score: Object.values(flags).filter(Boolean).length, missing };

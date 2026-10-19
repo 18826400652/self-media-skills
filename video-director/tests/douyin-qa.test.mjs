@@ -279,3 +279,31 @@ test("craftSummary：有指标时返回两行；空 craft 返回 null", () => {
   assert.match(s.counts, /字阶 2/);
   assert.equal(craftSummary({ segments: [] }), null);
 });
+
+test("checkCraft：20px 的小元素填不掉 415px 的空白带；200px 才算", () => {
+  const hole = (w) => shot("s1", 1, {
+    blocks: [
+      block({ box: [100, 300, 900, 700] }),
+      block({ box: [100, 1115, 900, 1150] }),
+      block({ box: [500, 900, 500 + w, 910] }),
+    ],
+    texts: [text({ fontSize: 64 })],
+  });
+  assert.ok(kinds([hole(20)]).includes("craft-gap"));
+  assert.ok(!kinds([hole(200)]).includes("craft-gap"));
+});
+
+test("checkCraft：2.2% 的旋转块不给材质分；10% 的给", () => {
+  const small = shot("s1", 1, { blocks: [block({ box: [100, 300, 200, 500], rot: -4 })], texts: [text({ fontSize: 64 })] });
+  const big = shot("s1", 1, { blocks: [block({ box: [100, 300, 400, 900], rot: -4 })], texts: [text({ fontSize: 64 })] });
+  assert.equal(analyzeCraft([small]).material.rotation, false);
+  assert.equal(analyzeCraft([big]).material.rotation, true);
+});
+
+test("checkCraft：2.2% 的多层投影不给材质分；10% 的给", () => {
+  const shadow = "0 1px 0 rgba(255,255,255,.9) inset, 0 0 0 2px rgba(0,0,0,.9), 24px 40px 60px rgba(0,0,0,.2)";
+  const small = shot("s1", 1, { blocks: [block({ box: [100, 300, 200, 500], shadow })], texts: [text({ fontSize: 64 })] });
+  const big = shot("s1", 1, { blocks: [block({ box: [100, 300, 400, 900], shadow })], texts: [text({ fontSize: 64 })] });
+  assert.equal(analyzeCraft([small]).material.shadow, false);
+  assert.equal(analyzeCraft([big]).material.shadow, true);
+});
