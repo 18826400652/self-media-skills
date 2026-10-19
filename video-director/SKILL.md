@@ -10,7 +10,7 @@ description: >
 
 **原则：风格从内容里长出来；每个动作锚定到口播里的词；账号只固定栏目标签、字幕、结尾三处。**
 
-设计文档：`docs/superpowers/specs/2026-10-14-video-director-design.md`。导演规则：`references/director-rules.md`（写脚本、做画面时逐条对照）。
+设计文档：`docs/superpowers/specs/2026-10-14-video-director-design.md`。导演规则：`references/director-rules.md`（叙事、节奏、版面、HyperFrames 的坑）。视觉工艺：`references/visual-craft.md`（构图、材质、色彩、字阶、动效、声音的数值规则和自检表）。
 
 ## 安装（第一次用）
 
