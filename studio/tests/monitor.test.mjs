@@ -176,3 +176,20 @@ test("review：没有带 craft 的 qa-douyin.json 时说清楚", () => {
   const text = review(root, { sinceDays: 7, home: mkdtempSync(join(tmpdir(), "st-home-")) });
   assert.match(text, /没有带视觉工艺指标/);
 });
+
+test("review：列出各期的注意力指标（时长 / 静态率 / 变化率 / 响度）", () => {
+  const root = project();
+  const ep = join(root, "04-作品/AI办公/01-群聊");
+  writeFileSync(join(ep, "run.json"), "{}");
+  writeFileSync(join(ep, "抖音/measure.json"), JSON.stringify({
+    at: new Date().toISOString(),
+    duration: 75.4,
+    video: { staticRatio: 0.42, changeRate: 14.3, longestStill: 2 },
+    loudness: { integrated: -14.1, truePeak: -1.4 },
+  }));
+  const text = review(root, { sinceDays: 7, home: mkdtempSync(join(tmpdir(), "st-home-")) });
+  assert.match(text, /## 注意力指标/);
+  assert.match(text, /75\.4s/);
+  assert.match(text, /42%/);
+  assert.match(text, /-14\.1 LUFS/);
+});

@@ -162,6 +162,30 @@ function craftSection(root, sinceMs, sinceDays) {
   return out;
 }
 
+/** 各期的注意力指标；只读 抖音/measure.json（vd render 或 vd measure 写的） */
+function attentionSection(root, sinceMs, sinceDays) {
+  const works = worksDir(root);
+  const rows = [];
+  for (const f of runFiles(join(root, works))) {
+    const dir = dirname(f);
+    const p = join(dir, "抖音", "measure.json");
+    if (!existsSync(p)) continue;
+    const mtime = statSync(p).mtimeMs;
+    if (mtime < sinceMs) continue;
+    let j;
+    try { j = JSON.parse(readFileSync(p, "utf8")); } catch { continue; }
+    rows.push({ ep: relative(join(root, works), dir), at: mtime, duration: j.duration, staticRatio: j.video?.staticRatio, changeRate: j.video?.changeRate, longestStill: j.video?.longestStill, integrated: j.loudness?.integrated });
+  }
+  rows.sort((a, b) => b.at - a.at);
+  const out = ["## 注意力指标（最近 " + sinceDays + " 天）", ""];
+  if (!rows.length) return [...out, "没有 measure.json（先 vd render 或 vd measure）。"];
+  const fmt = (x, d = 1) => (Number.isFinite(x) ? Number(x.toFixed(d)).toString() : "—");
+  const pct = (x) => (Number.isFinite(x) ? Math.round(x * 100) + "%" : "—");
+  out.push("| 期 | 时长 | 静态率 | 变化 | 最长静止 | 响度 |", "|---|---|---|---|---|---|");
+  for (const r of rows.slice(0, 10)) out.push("| " + r.ep + " | " + fmt(r.duration) + "s | " + pct(r.staticRatio) + " | " + fmt(r.changeRate) + "/分 | " + fmt(r.longestStill) + "s | " + fmt(r.integrated) + " LUFS |");
+  return out;
+}
+
 function prefSection(root) {
   const works = worksDir(root);
   const said = [];
@@ -188,6 +212,7 @@ export function review(root, { sinceDays = 7, home = homedir(), toolkit = TOOLKI
     ...sourceSection(root, home, sinceMs, toolkit), "",
     ...notesSection(root), "",
     ...craftSection(root, sinceMs, sinceDays), "",
+    ...attentionSection(root, sinceMs, sinceDays), "",
     ...prefSection(root), "",
   ].join("\n");
 }
