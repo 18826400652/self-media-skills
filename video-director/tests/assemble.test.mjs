@@ -133,3 +133,19 @@ test("applyHead：旧工程没有 vd:head 标记、也没用组件时照常构�
 test("customVars：正文色和底色对比度都不够时报中文错误，指出该改哪个颜色", () => {
   assert.throws(() => customVars({ ...PAL, ink: "#E8E2D6", alert: "#F7D9D2" }, {}), /palette\.ink.*palette\.bg.*对比度/);
 });
+
+test("segmentHosts：镜头段的 enter/exit 写进变量；手写段写成 data-vd-enter / data-vd-exit", () => {
+  const segs = [{ id: "a", start: 0, duration: 3.6, component: "dy-shot-proof", vars: { src: "x.png" }, exit: "pan-left:0.6", enter: null },
+    { id: "b", start: 3, duration: 3, enter: "pan-left:0.6", exit: null }];
+  const [comp, frame] = segmentHosts(segs, null, PAL).trim().split("\n");
+  assert.match(comp, /&quot;exit&quot;:&quot;pan-left:0.6&quot;|"exit":"pan-left:0.6"/);
+  assert.doesNotMatch(comp, /enter/);
+  assert.match(frame, /data-vd-enter="pan-left:0.6"/);
+  assert.doesNotMatch(frame, /data-vd-exit/);
+});
+
+test("segmentHosts：overlay 各占一个宿主，track 从 30 起，用 custom 主题和变量", () => {
+  const segs = [{ id: "a", start: 0, duration: 5, component: "dy-shot-proof", vars: {}, overlays: [{ component: "dy-shot-stamp", start: 2, duration: 3, vars: { stamp: "编的" } }] }];
+  const h = segmentHosts(segs, null, PAL);
+  assert.match(h, /id="host-a-ov0" class="clip" data-composition-id="dy-shot-stamp" data-composition-src="compositions\/dy-shot-stamp.html" data-start="2" data-duration="3" data-track-index="30" [^>]*data-theme="custom" data-variable-values=.{"stamp":"编的"}/);
+});

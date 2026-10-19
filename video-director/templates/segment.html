@@ -18,6 +18,7 @@
           const at = (w) => VD.at(w, SEG);   // 相对本段开头的秒数
           const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out", immediateRender: false } });
           // 入场前状态用 gsap.set 给出；每个动作锚定到 @词：tl.fromTo(el, {...}, {...}, at("编一套"))
+          VDACT.panInOut(tl, document.getElementById(SEG), VD.seg[SEG].duration);   // 段与段之间的平移转场（vd build 写在宿主上，没有就不动）
           window.__timelines[SEG] = tl;
         })();
       </script>
