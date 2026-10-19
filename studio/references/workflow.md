@@ -285,7 +285,7 @@ kv status 04-作品/<系列>/NN-<简称>
      vd qa 抖音                  # 抖音专用检查，结果 qa-douyin-sample.json，总览 snapshots/cues-sheet.jpg
      vd render 抖音 --sample     # 出 抖音/renders/sample.mp4
      ```
-     `vd qa` 在每个 @词 落定时刻（@词后 0.8 秒）和每段结尾截图，查：安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；2 秒不动（⚠）
+     `vd qa` 在每个 @词 落定时刻（@词后 0.8 秒）和每段结尾截图，查：安全区（顶 200 / 右 160（y 760 往下）/ 底 480）、字幕带 y 1180–1440、栏目标签被挡、`data-vd-cue` 元素看不见（✗）；2 秒不动（⚠）；视觉工艺 ⚠（主体簇、首帧字号、字阶、空白带、材质、构图变化；不改 passed）
 - **确认 ③b**：样片给用户看。通过后 `kv gate <作品> sample "用户原话"`
 - **kv 判定**：有 `抖音/renders/sample.mp4`；`抖音/qa-douyin-sample.json` 存在且 `passed: true`；确认 ③b 通过，而且之后样片没换
 
