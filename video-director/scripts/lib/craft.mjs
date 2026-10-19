@@ -91,6 +91,12 @@ function maxGap(f) {
   return { gap: best, at: bestAt };
 }
 
+/** 单帧落点：最大字号 + 最大主体簇占比（首帧检查用） */
+export function frameCraft(f) {
+  const c = maxCluster(f);
+  return { maxFont: frameMax(f), cluster: c ? c.ratio : 0 };
+}
+
 /** 汇总视觉工艺指标；旧工程没有 blocks/texts 时返回空结构 */
 export function analyzeCraft(frames) {
   const usable = frames.filter((f) => (f.data?.blocks?.length ?? 0) || (f.data?.texts?.length ?? 0));

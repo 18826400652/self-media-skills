@@ -26,7 +26,7 @@ test("douyinQa：每个落定时刻截一张图；画面一直在变 → 通过"
   const page = fakePage((t) => ({ ...blank, sig: String(t) }));
   const r = await douyinQa(built, page, join(dir, "snapshots/cues"));
   assert.equal(r.passed, true);
-  assert.deepEqual(r.shots.map((s) => [s.t, s.label, s.file]), [[0.8, "首帧", "snapshots/cues/01.png"], [1.8, "@钩子", "snapshots/cues/02.png"], [3.7, "s1 结尾", "snapshots/cues/03.png"]]);
+  assert.deepEqual(r.shots.map((s) => [s.t, s.label, s.file]), [[0.05, "开场", "snapshots/cues/01.png"], [0.8, "首帧", "snapshots/cues/02.png"], [1.8, "@钩子", "snapshots/cues/03.png"], [3.7, "s1 结尾", "snapshots/cues/04.png"]]);
   assert.ok(existsSync(join(dir, "snapshots/cues/01.png")));
   assert.ok(page.seen.includes(0) && page.seen.includes(3.5), "grid 也取了");
 });
@@ -35,7 +35,7 @@ test("douyinQa：有 ✗ 不通过；2 秒不动只给 ⚠，不影响通过", a
   const dir = project({});
   const bad = await douyinQa(built, fakePage(() => ({ ...blank, sig: "x", elements: [{ sel: "#t", text: true, key: false, allowSafe: false, box: [100, 100, 300, 160], opacity: 1 }] })), join(dir, "a"));
   assert.equal(bad.passed, false);
-  assert.ok(bad.issues.some((i) => i.level === "error" && /#t 进了顶部 200 像素.*（共 3 处）/.test(i.msg)));
+  assert.ok(bad.issues.some((i) => i.level === "error" && /#t 进了顶部 200 像素.*（共 4 处）/.test(i.msg)));
   assert.ok(bad.issues.some((i) => i.level === "warn" && /0–3\.5 秒画面没有变化/.test(i.msg)));
   const still = await douyinQa(built, fakePage(() => ({ ...blank, sig: "x" })), join(dir, "b"));
   assert.equal(still.passed, true);

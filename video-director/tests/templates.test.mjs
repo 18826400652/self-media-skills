@@ -75,4 +75,5 @@ test("templates/segment-hero.html：好段模板有大标题、主体卡片、�
   assert.match(html, /rotate\(-3deg\)/);
   assert.match(html, /860px/);
   assert.match(html, /data-composition-id="SEG_ID"/);
+  assert.match(html, /data-vd-proof/);
 });

@@ -32,7 +32,8 @@
         }
       </style>
       <div id="SEG_ID" data-composition-id="SEG_ID" data-width="1080" data-height="1920">
-        <div class="hero-card">
+        <!-- data-vd-proof：这张卡片就是「证据」（成品截图 / 录屏 / 对比卡），首帧检查靠它 -->
+        <div class="hero-card" data-vd-proof>
           <div class="hero-tape" data-vd-material="tape"></div>
           <div class="hero-eyebrow">（这期栏目）</div>
           <div class="hero-title">（卡片标题）</div>
@@ -47,7 +48,8 @@
           const SEG = "SEG_ID";
           const at = (w) => VD.at(w, SEG);   // 相对本段开头的秒数
           const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out", immediateRender: false } });
-          // 入场：把下面的 at("词") 换成 DIRECTOR.md 里的 @词；卡片和标题各落一次
+          // 卡片和标题默认 0.0s 就在画面上，不再做入场（首帧要画面先行）；只给次要元素锚 @词。
+          // 需要时：把下面的 at("词") 换成 DIRECTOR.md 里的 @词。
           // tl.fromTo(".hero-card", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, immediateRender: false }, at("词"));
           // tl.fromTo(".hero-headline", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, immediateRender: false }, at("词"));
           window.__timelines[SEG] = tl;

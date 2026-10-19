@@ -1,5 +1,5 @@
 // 抖音专用检查（纯函数）：按 @词 落定时刻查出画面、安全区、字幕带、栏目标签遮挡、@词 元素可见；每 0.5 秒比画面签名查 2 秒不动
-import { W, H } from "./craft.mjs";
+import { W, H, frameCraft } from "./craft.mjs";
 const TOL = 2;
 const SAFE = { top: 200, right: 160, bottom: 480 }; // 平台界面占的边（director-rules 第 11 条）
 const RIGHT_FROM = 760; // 右侧按钮列（头像、点赞、评论、收藏、分享）从这里往下；上半屏内容可以用到 x 1020
@@ -20,7 +20,9 @@ export function qaTimes(built, duration) {
     if (t < duration) inspect.push({ t, label: `@${cue}`, cue, seg: seg.id });
   }
   for (const s of segs) if (s.end <= duration) inspect.push({ t: r2(s.end - SEG_TAIL), label: `${s.id} 结尾`, seg: s.id });
-  // 首帧（0.8 秒，入场基本落定；还没进第一段就不加）
+  // 开场（0.05 秒：第一帧，画面还没开始演）+ 首帧（0.8 秒，入场基本落定）
+  const open = segs.find((s) => s.start <= 0.05 && 0.05 < s.end);
+  if (open && 0.05 < duration) inspect.push({ t: 0.05, label: "开场", seg: open.id });
   const first = segs.find((s) => s.start <= 0.8 && 0.8 < s.end);
   if (first && 0.8 < duration && !inspect.some((x) => x.t === 0.8)) inspect.push({ t: 0.8, label: "首帧", seg: first.id });
   inspect.sort((a, b) => a.t - b.t);
@@ -64,6 +66,19 @@ export function checkComposition(frames) {
     const low = Math.round(v.low);
     return { level: "warn", kind: "composition", sel: seg, t: v.t, msg: `${seg} 整段内容最低只到 y ${low}，字幕带上方一直空着 ${CAPTION.top - 30 - low} 像素：画面挤在上方，放大或往下铺（主要内容铺到 y 1150 左右）` };
   });
+}
+
+/** 0.0s 开场：要有 ≥96px 的字、≥30% 的主体簇、可见的证据元素；全部 warn */
+export function checkFirstFrame(frames) {
+  const f = frames.find((x) => x.label === "开场");
+  if (!f) return [];
+  const { maxFont, cluster } = frameCraft(f);
+  const proof = (f.data?.elements ?? []).some((e) => e.proof && (e.opacity ?? 1) > 0.05 && e.box[2] > e.box[0] && e.box[3] > e.box[1]);
+  const out = [];
+  if (maxFont < 96) out.push({ level: "warn", kind: "attention-first-font", sel: "", t: f.t, msg: `首帧最大字号 ${Math.round(maxFont)}px（<96）：第一秒没有落点` });
+  if (cluster < 30) out.push({ level: "warn", kind: "attention-first-cluster", sel: "", t: f.t, msg: `首帧主体簇 ${cluster.toFixed(1)}%（<30）：第一秒没有主体` });
+  if (!proof) out.push({ level: "warn", kind: "attention-first-proof", sel: "", t: f.t, msg: "首帧没有可见的证据元素：给成品截图 / 录屏加 data-vd-proof" });
+  return out;
 }
 
 export function checkCues(frames, cues) {

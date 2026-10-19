@@ -135,7 +135,8 @@ test("checkCraft：所有 issue 都是 warn", () => {
 });
 
 test("qaTimes：首帧 0.8 秒排在最前；0.8 秒没有构建的段就不加", () => {
-  assert.deepEqual(qaTimes(built, 12).inspect[0], { t: 0.8, label: "首帧", seg: "s1" });
+  assert.deepEqual(qaTimes(built, 12).inspect[0], { t: 0.05, label: "开场", seg: "s1" });
+  assert.deepEqual(qaTimes(built, 12).inspect[1], { t: 0.8, label: "首帧", seg: "s1" });
   const late = qaTimes({ cues: {}, segments: [{ id: "s3", start: 10, duration: 5 }], total: 15 }, 15);
   assert.ok(!late.inspect.some((x) => x.label === "首帧"));
 });
@@ -239,4 +240,12 @@ test("checkCraft：42px 标题 + 32px 正文 → 层级报", () => {
 test("checkCraft：只有一种字号 → 层级报（没有层级）", () => {
   const f = shot("s1", 1, { texts: [text({ fontSize: 64 })] });
   assert.ok(checkCraft([f]).some((i) => i.kind === "craft-hierarchy"));
+});
+
+test("frameCraft：返回这一帧的最大字号和主体簇占比", async () => {
+  const { frameCraft } = await import("../scripts/lib/craft.mjs");
+  const f = { data: { texts: [{ box: [80, 300, 900, 460], fontSize: 104, opacity: 1 }], blocks: [{ box: [100, 280, 980, 1180], opacity: 1 }] } };
+  const r = frameCraft(f);
+  assert.equal(r.maxFont, 104);
+  assert.ok(r.cluster > 30 && r.cluster < 60);
 });
