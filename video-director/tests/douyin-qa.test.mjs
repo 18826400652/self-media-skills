@@ -212,10 +212,11 @@ test("checkCraft：内容区空白带 415px → craft-gap；240px 不报", () =>
 });
 
 test("checkCraft：9 段里 7 段中心在 ±5% 宽内 → craft-variety；只有 5 段不报", () => {
-  const one = (id, x) => shot(id, 1, { blocks: [block({ box: [x - 100, 300, x + 100, 1100] })], texts: [text({ fontSize: 64 })] });
-  const seven = [540, 540, 540, 540, 540, 540, 540, 200, 900].map((x, i) => one("s" + i, x));
+  const sizes = [200, 300, 400];
+  const one = (id, x, w) => shot(id, 1, { blocks: [block({ box: [x - w / 2, 300, x + w / 2, 1100] })], texts: [text({ fontSize: 64 })] });
+  const seven = [540, 540, 540, 540, 540, 540, 540, 200, 900].map((x, i) => one("s" + i, x, sizes[i % 3]));
   assert.ok(kinds(seven).includes("craft-variety"));
-  const five = [540, 540, 540, 540, 540, 200, 300, 900, 950].map((x, i) => one("s" + i, x));
+  const five = [540, 540, 540, 540, 540, 200, 300, 900, 950].map((x, i) => one("s" + i, x, sizes[i % 3]));
   assert.ok(!kinds(five).includes("craft-variety"));
 });
 
@@ -317,4 +318,25 @@ test("checkCraft：阈值可以从第二个参数覆盖", () => {
   assert.ok(checkCraft([f], { typeFloor: 100 }).some((i) => i.kind === "craft-type"));
   assert.ok(!checkCraft([f]).some((i) => i.kind === "craft-gap"));
   assert.ok(checkCraft([f], { gapMax: 100 }).some((i) => i.kind === "craft-gap"));
+});
+
+test("checkCraft：9 段主体大小都一样 → craft-variety 报\"大小\"", () => {
+  const frames = [100, 200, 300, 400, 500, 600, 700, 800, 900].map((x, i) => shot("s" + i, 1, { blocks: [block({ box: [x - 260, 300, x + 260, 1100] })], texts: [text({ fontSize: 64 })] }));
+  const msg = checkCraft(frames).find((i) => i.kind === "craft-variety")?.msg ?? "";
+  assert.match(msg, /大小/);
+});
+
+test("checkCraft：9 段中心都在 540、大小有变化 → 只报\"中心\"", () => {
+  const sizes = [200, 300, 400];
+  const frames = Array.from({ length: 9 }, (_, i) => shot("s" + i, 1, { blocks: [block({ box: [540 - sizes[i % 3] / 2, 300, 540 + sizes[i % 3] / 2, 1100] })], texts: [text({ fontSize: 64 })] }));
+  const msg = checkCraft(frames).find((i) => i.kind === "craft-variety")?.msg ?? "";
+  assert.match(msg, /中心/);
+  assert.doesNotMatch(msg, /大小/);
+});
+
+test("checkCraft：中心分开 + 大小分开 → 不报 craft-variety", () => {
+  const sizes = [200, 300, 400];
+  const xs = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+  const frames = xs.map((x, i) => shot("s" + i, 1, { blocks: [block({ box: [x - sizes[i % 3] / 2, 300, x + sizes[i % 3] / 2, 1100] })], texts: [text({ fontSize: 64 })] }));
+  assert.ok(!checkCraft(frames).some((i) => i.kind === "craft-variety"));
 });

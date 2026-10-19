@@ -198,7 +198,7 @@ function maxGap(f) {
 export function analyzeCraft(frames) {
   const usable = frames.filter((f) => (f.data?.blocks?.length ?? 0) || (f.data?.texts?.length ?? 0));
   if (!usable.length) {
-    return { first: null, segments: [], material: { shadow: false, grain: false, vignette: false, rotation: false, score: 0, missing: Object.values(MATERIAL_NAMES) }, variety: { total: 0, centered: 0, centers: [] }, color: [] };
+    return { first: null, segments: [], material: { shadow: false, grain: false, vignette: false, rotation: false, score: 0, missing: Object.values(MATERIAL_NAMES) }, variety: { total: 0, centered: 0, centers: [], scales: [], scaleBands: 0, scaleCv: 0 }, color: [] };
   }
   const bySeg = new Map();
   for (const f of frames) {
@@ -249,10 +249,16 @@ export function analyzeCraft(frames) {
   const missing = Object.entries(flags).filter(([, v]) => !v).map(([k]) => MATERIAL_NAMES[k]);
   const material = { ...flags, score: Object.values(flags).filter(Boolean).length, missing };
   const centers = segments.map((s) => s.center).filter((x) => x !== null);
-  const variety = { total: centers.length, centered: 0, centers };
+  const scales = segments.map((s) => s.cluster).filter((x) => x !== null);
+  const variety = { total: centers.length, centered: 0, centers, scales, scaleBands: 0, scaleCv: 0 };
   if (centers.length) {
     const mid = median(centers);
     variety.centered = centers.filter((x) => Math.abs(x - mid) <= 0.05 * W).length;
+  }
+  if (scales.length) {
+    const mean = scales.reduce((a, b) => a + b, 0) / scales.length;
+    variety.scaleCv = mean ? Math.sqrt(scales.reduce((a, b) => a + (b - mean) ** 2, 0) / scales.length) / mean : 0;
+    variety.scaleBands = new Set(scales.map((x) => Math.floor(x / 5))).size;
   }
   const color = frames.map((f) => ({ t: f.t, ...(f.data?.px ?? {}) })).filter((x) => x.vivid !== undefined);
   return { first, segments, material, variety, color };
@@ -285,10 +291,20 @@ export function checkCraft(frames, craft = {}) {
   if (frames.some((f) => (f.data?.blocks?.length ?? 0) > 0) && m.material.score < o.materialMin) {
     add("craft-material", "", t0, "全片材质 " + m.material.score + "/4（" + m.material.missing.map((x) => x + "×").join(" ") + "）：像线框，不像实景");
   }
-  if (m.variety.total >= 3 && (m.variety.centered / m.variety.total) * 100 >= o.variety) {
-    const mid = median(m.variety.centers);
-    const lo = Math.round(mid - 0.05 * W), hi = Math.round(mid + 0.05 * W);
-    add("craft-variety", "", t0, m.variety.total + " 段里 " + m.variety.centered + " 段主体中心在 x " + lo + "–" + hi + "（±5% 宽）：构图雷同");
+  const centerBad = m.variety.total >= 3 && (m.variety.centered / m.variety.total) * 100 >= o.variety;
+  const scaleBad = m.variety.scales.length >= 3 && (m.variety.scaleCv < o.scaleCv || m.variety.scaleBands < 3);
+  if (centerBad || scaleBad) {
+    const parts = [];
+    if (centerBad) {
+      const mid = median(m.variety.centers);
+      const lo = Math.round(mid - 0.05 * W), hi = Math.round(mid + 0.05 * W);
+      parts.push(m.variety.total + " 段里 " + m.variety.centered + " 段主体中心在 x " + lo + "–" + hi + "（±5% 宽）：构图雷同");
+    }
+    if (scaleBad) {
+      const lo = Math.round(Math.min(...m.variety.scales)), hi = Math.round(Math.max(...m.variety.scales));
+      parts.push("主体大小都在 " + lo + "–" + hi + "%（" + m.variety.scaleBands + " 个档 / 变化 " + Math.round(m.variety.scaleCv * 100) + "%）：景别没有变化");
+    }
+    add("craft-variety", "", t0, parts.join("；"));
   }
   return out;
 }
