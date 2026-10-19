@@ -19,6 +19,14 @@
 按意思分段（不是一句一帧）。每段：包含哪几句、起止时间、画面、每个动作的 `@词`、和下一段怎么连（由哪个元素连起来）。
 功能性的画面（步骤、对比、数字、手机录屏框……）先查 dykit 组件库（hyperframes 仓库的 `catalog/catalog.json`），有就写「用组件 dy-…」，机器块里给这段写 `component` 和 `vars`；要跟着口播一拍拍出现，`vars` 里写 `cues`（`|` 隔开的 `@词`，对应 catalog 里这个组件的 `beats`）。
 
+每段再列一张 beat 表（写进机器块的 `beats`，段 HTML 里用 `data-vd-beat` 标在元素上，值是「动作:锚点」）：
+
+| `@词` | 动作 | 元素 |
+|---|---|---|
+| `@词` | stamp | #s01-stamp |
+
+动作只能是 enter / move / stamp / highlight / mask / count / zoom / exit。
+
 ### 段 1 · （名字）（第 ? 句）
 
 （待填）

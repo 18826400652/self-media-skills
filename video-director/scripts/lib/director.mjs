@@ -5,6 +5,7 @@ const BLOCK = /```json vd\s*\n([\s\S]*?)\n```/g;
 const TOKEN = /(?<!\\)@([^\s@#，。、：；！？,.;:!?"'`「」『』“”‘’（）()\[\]【】<>|]+)(?:#(\d+))?/g;
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 const COMPONENT = /^dy-[a-z0-9-]+$/;
+const BEAT_ACTIONS = ["enter", "move", "stamp", "highlight", "mask", "count", "zoom", "exit"];
 
 export function parseDirector(md) {
   const errors = [];
@@ -54,6 +55,14 @@ function checkVd(vd) {
   (Array.isArray(vd.segments) ? vd.segments : []).forEach((s, i) => {
     if (s.component !== undefined && !COMPONENT.test(s.component)) e.push(`segments[${i}].component 必须是 dykit 组件名（dy-开头）`);
     if (s.vars !== undefined && (typeof s.vars !== "object" || s.vars === null || Array.isArray(s.vars))) e.push(`segments[${i}].vars 必须是对象`);
+    if (s.beats !== undefined && !Array.isArray(s.beats)) e.push(`segments[${i}].beats 必须是数组`);
+    (Array.isArray(s.beats) ? s.beats : []).forEach((b, j) => {
+      const at = `segments[${i}].beats[${j}]`;
+      if (typeof b !== "object" || b === null || Array.isArray(b)) { e.push(`${at} 必须是对象`); return; }
+      if (!/^@\S/.test(b.at ?? "")) e.push(`${at}.at 必须写成 @词`);
+      if (!BEAT_ACTIONS.includes(b.action)) e.push(`${at}.action 只能是 ${BEAT_ACTIONS.join("|")}`);
+      if (!b.el) e.push(`${at}.el 不能为空`);
+    });
   });
   for (const k of ["title", "body"]) if (vd.fonts?.[k] !== undefined && !["serif", "sans"].includes(vd.fonts[k])) e.push(`fonts.${k} 只能是 serif 或 sans`);
   (vd.sfx ?? []).forEach((s, i) => { if (!/^@\S/.test(s.at ?? "")) e.push(`sfx[${i}].at 必须写成 @词`); });

@@ -20,6 +20,21 @@ export function qaTimes(built, duration) {
     if (t < duration) inspect.push({ t, label: `@${cue}`, cue, seg: seg.id });
   }
   for (const s of segs) if (s.end <= duration) inspect.push({ t: r2(s.end - SEG_TAIL), label: `${s.id} 结尾`, seg: s.id });
+  // beats：每个动作前后各一帧，用来查「有没有真的动」
+  for (const s of built.vd?.segments ?? []) {
+    const seg = segs.find((x) => x.id === s.id);
+    if (!seg) continue;
+    for (const b of s.beats ?? []) {
+      const cue = String(b.at).replace(/^@/, "");
+      const at = built.cues[cue];
+      if (at === undefined) continue;
+      const key = `${b.action}:${b.at}`;
+      const before = r2(Math.max(seg.start, at - 0.2));
+      const after = r2(Math.min(seg.end - 0.05, at + 0.3));
+      if (before < duration) inspect.push({ t: before, label: `beat-before:${key}`, beat: { cue, action: b.action }, seg: s.id });
+      if (after < duration) inspect.push({ t: after, label: `beat-after:${key}`, beat: { cue, action: b.action }, seg: s.id });
+    }
+  }
   // 开场（0.05 秒：第一帧，画面还没开始演）+ 首帧（0.8 秒，入场基本落定）
   const open = segs.find((s) => s.start <= 0.05 && 0.05 < s.end);
   if (open && 0.05 < duration) inspect.push({ t: 0.05, label: "开场", seg: open.id });
@@ -66,6 +81,26 @@ export function checkComposition(frames) {
     const low = Math.round(v.low);
     return { level: "warn", kind: "composition", sel: seg, t: v.t, msg: `${seg} 整段内容最低只到 y ${low}，字幕带上方一直空着 ${CAPTION.top - 30 - low} 像素：画面挤在上方，放大或往下铺（主要内容铺到 y 1150 左右）` };
   });
+}
+
+/** 每个 beat 的标记要存在、落定时看得见、和 0.2 秒前比有变化；全部 warn */
+export function checkBeats(frames, segments = []) {
+  const out = [];
+  for (const seg of segments) {
+    for (const b of seg.beats ?? []) {
+      const key = `${b.action}:${b.at}`;
+      const after = frames.find((f) => f.label === `beat-after:${key}`);
+      const before = frames.find((f) => f.label === `beat-before:${key}`);
+      const el = after?.data?.elements?.find((e) => e.beat === key);
+      if (!el) { out.push({ level: "warn", kind: "beat-missing", sel: seg.id, t: after?.t ?? 0, msg: `${seg.id} 的 beat ${key} 没有 data-vd-beat 标记（或没截到）` }); continue; }
+      if ((el.opacity ?? 1) <= 0.05) { out.push({ level: "warn", kind: "beat-hidden", sel: el.sel, t: after.t, msg: `${seg.id} 的 beat ${key} 落定时看不见` }); continue; }
+      const prev = before?.data?.elements?.find((e) => e.sel === el.sel);
+      if (prev && prev.box.every((v, i) => v === el.box[i]) && Math.abs((prev.opacity ?? 1) - (el.opacity ?? 1)) < 0.05) {
+        out.push({ level: "warn", kind: "beat-still", sel: el.sel, t: after.t, msg: `${seg.id} 的 beat ${key} 没有动（box 和 opacity 都没变）` });
+      }
+    }
+  }
+  return out;
 }
 
 /** 0.0s 开场：要有 ≥96px 的字、≥30% 的主体簇、可见的证据元素；全部 warn */

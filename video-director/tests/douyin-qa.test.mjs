@@ -140,3 +140,23 @@ test("checkFirstFrame：有 104px 字、足够主体簇和 visible 的 data-vd-p
   const f = { label: "开场", data: { texts: [{ box: [80, 300, 900, 460], fontSize: 104, opacity: 1 }], blocks: [{ box: [100, 280, 980, 1180], opacity: 1 }], elements: [{ proof: true, box: [100, 280, 980, 1180], opacity: 1 }] } };
   assert.deepEqual(checkFirstFrame([f]), []);
 });
+
+test("checkBeats：没标记 / 看不见 / 没变化 → warn；正常 → 空", async () => {
+  const { checkBeats } = await import("../scripts/lib/douyin-qa.mjs");
+  const segs = [{ id: "s1", beats: [{ at: "@写错了", action: "stamp", el: "#stamp" }] }];
+  const frame = (label, elements) => ({ t: 1, label, seg: "s1", beat: { cue: "写错了", action: "stamp" }, data: { elements } });
+  const before = frame("beat-before:stamp:@写错了", [{ sel: "#stamp", beat: "stamp:@写错了", box: [0, 0, 10, 10], opacity: 0 }]);
+  const after = frame("beat-after:stamp:@写错了", [{ sel: "#stamp", beat: "stamp:@写错了", box: [0, 0, 200, 200], opacity: 1 }]);
+  assert.deepEqual(checkBeats([before, after], segs), []);
+  assert.match(checkBeats([], segs)[0].msg, /没有 data-vd-beat/);
+  const stillBefore = frame("beat-before:stamp:@写错了", [{ sel: "#stamp", beat: "stamp:@写错了", box: [0, 0, 10, 10], opacity: 1 }]);
+  const stillAfter = frame("beat-after:stamp:@写错了", [{ sel: "#stamp", beat: "stamp:@写错了", box: [0, 0, 10, 10], opacity: 1 }]);
+  assert.match(checkBeats([stillBefore, stillAfter], segs).map((i) => i.msg).join("\n"), /没有动/);
+});
+
+test("qaTimes：beats 加 @词-0.2 和 +0.3 两个采样点", () => {
+  const b = { cues: { 写错了: 2 }, segments: [{ id: "s1", start: 0, duration: 5 }], total: 5, vd: { segments: [{ id: "s1", beats: [{ at: "@写错了", action: "stamp", el: "#x" }] }] } };
+  const labels = qaTimes(b, 5).inspect.map((x) => x.label);
+  assert.ok(labels.includes("beat-before:stamp:@写错了"));
+  assert.ok(labels.includes("beat-after:stamp:@写错了"));
+});

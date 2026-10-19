@@ -110,3 +110,18 @@ test("parseDirector：组件 vars 的 cues 用「|」隔开几个 @词，每个�
   const p = parseDirector(doc(vd, "说到 @根本没这条。"));
   assert.deepEqual(p.tokens.map((t) => [t.text, t.nth]), [["根本没这条", 1], ["编一套", 1], ["资料", 2]]);
 });
+
+test("beats：at 必须是 @词，action 在枚举里，el 不能为空", () => {
+  const ok = { ...VD, segments: [{ id: "seg-01-hook", lines: [1, 2], beats: [{ at: "@编一套", action: "stamp", el: "#s1-stamp" }] }] };
+  assert.deepEqual(parseDirector(doc(ok)).errors, []);
+  const bad = { ...VD, segments: [{ id: "seg-01-hook", lines: [1, 2], beats: [{ at: "2.8", action: "闪", el: "" }] }] };
+  const e = parseDirector(doc(bad)).errors.join("\n");
+  assert.match(e, /beats\[0\]\.at 必须写成 @词/);
+  assert.match(e, /beats\[0\]\.action 只能是/);
+  assert.match(e, /beats\[0\]\.el 不能为空/);
+});
+
+test("beats：不是数组 / 元素不是对象 → 报错", () => {
+  const bad = { ...VD, segments: [{ id: "seg-01-hook", lines: [1, 2], beats: "x" }] };
+  assert.match(parseDirector(doc(bad)).errors.join("\n"), /beats 必须是数组/);
+});

@@ -91,6 +91,7 @@ function collect() {
       const item = { sel, text, key: e.hasAttribute("data-vd-key"), allowSafe: !!e.closest("[data-vd-allow-safe]"), box, opacity: Math.round(op * 100) / 100 };
       // 只有标了才加这个字段：旧 fixture 的 deepEqual 不受影响
       if (e.hasAttribute("data-vd-proof")) item.proof = true;
+      if (e.hasAttribute("data-vd-beat")) item.beat = e.getAttribute("data-vd-beat");
       elements.push(item);
     }
   }
