@@ -162,7 +162,9 @@ function maxCluster(f) {
 
 function maxGap(f) {
   const rows = new Uint8Array((CONTENT.bottom - CONTENT.top) / 5);
-  for (const e of [...(f.data?.blocks ?? []), ...(f.data?.texts ?? [])]) {
+  // 全屏背景块不算内容：否则它一行一行把整个内容区涂满，空白带永远是 0
+  const blocks = (f.data?.blocks ?? []).filter((b) => areaOf(b.box) < 0.9 * W * H);
+  for (const e of [...blocks, ...(f.data?.texts ?? [])]) {
     if (!visible(e)) continue;
     const [x1, y1, x2, y2] = e.box;
     if (x2 <= CONTENT.left || x1 >= CONTENT.right) continue;
