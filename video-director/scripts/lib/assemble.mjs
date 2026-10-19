@@ -1,6 +1,7 @@
 // 写 cues.js、复制品牌子画面和字体、替换 index.html 的 vd 标记块
 import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ACTIONS_JS } from "./actions.mjs";
 import { writeFonts } from "./fonts.mjs";
 import { CAPTION } from "./douyin-qa.mjs";
 
@@ -70,6 +71,11 @@ export function customVars(p, fonts = {}) {
     `--hf-custom-on-accent:${onColor(accent)};--hf-custom-on-alert:${onColor(alert)};--hf-custom-on-highlight:${onColor(p.accent)}`;
 }
 
+/** 动作库：段里调 VDACT.pushIn / stamp / highlight 等（每个工程都注入） */
+export function actionsBlock() {
+  return `\n    <script>${ACTIONS_JS}</script>\n    `;
+}
+
 /** 有组件段落时在 <head> 引入 dykit 的样式和工具脚本 */
 export function headBlock(hasComponents) {
   return hasComponents ? `\n    <link rel="stylesheet" href="assets/dykit/dykit.css" />\n    <script src="assets/dykit/hf-kit.js"></script>\n    ` : "";
@@ -78,7 +84,7 @@ export function headBlock(hasComponents) {
 /** 写 vd:head 块；旧工程没有这个标记、也没用组件时原样返回 */
 export function applyHead(html, hasComponents) {
   if (!hasComponents && !html.includes("<!-- vd:head -->")) return html;
-  return replaceBlock(html, "head", headBlock(hasComponents));
+  return replaceBlock(html, "head", headBlock(hasComponents) + actionsBlock());
 }
 
 export function segmentHosts(segments, only = null, palette = null, fonts = {}) {

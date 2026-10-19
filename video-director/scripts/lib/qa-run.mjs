@@ -2,7 +2,8 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { cuesJs } from "./assemble.mjs";
-import { checkComposition, checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
+import { analyzeCraft, checkCraft, craftCounts } from "./craft.mjs";
+import { checkBeats, checkComposition, checkCues, checkFirstFrame, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "./douyin-qa.mjs";
 
 /** 这次构建装了哪些段：index.html 里有 host-<段id> 的（样片只装几段） */
 export function presentSegments(html, segments) {
@@ -50,7 +51,7 @@ export function buildProblem(dir) {
   return changed.length ? `${changed.join("、")} 在上次 vd build 之后改过：先重新 vd build` : null;
 }
 
-export async function douyinQa(built, page, shotDir) {
+export async function douyinQa(built, page, shotDir, { craft: craftOpts } = {}) {
   const { inspect, grid } = qaTimes(built, page.duration);
   rmSync(shotDir, { recursive: true, force: true });
   mkdirSync(shotDir, { recursive: true });
@@ -59,8 +60,12 @@ export async function douyinQa(built, page, shotDir) {
   for (const [i, x] of inspect.entries()) {
     const data = await page.frame(x.t);
     const name = `${String(i + 1).padStart(2, "0")}.png`;
-    await page.shot(join(shotDir, name));
-    frames.push({ ...x, data });
+    // 截图一次，同时拿 base64 做像素统计；没有 shot64 的旧 page（测试替身）退回 shot
+    const b64 = page.shot64 ? await page.shot64() : null;
+    if (b64) writeFileSync(join(shotDir, name), Buffer.from(b64, "base64"));
+    else await page.shot(join(shotDir, name));
+    const px = b64 && page.pixels ? await page.pixels(b64) : null;
+    frames.push({ ...x, data: { ...data, px } });
     shots.push({ t: x.t, label: x.label, file: `snapshots/cues/${name}` });
   }
   const sigs = [];
@@ -70,9 +75,14 @@ export async function douyinQa(built, page, shotDir) {
   }
   const empty = emptyWindows(sigs).map((w) => ({ level: "error", kind: "empty", sel: "", t: w.from, msg: `${w.from}–${w.to} 秒画面上只有背景（没有文字或 data-vd-key 元素）：这段没内容` }));
   const errors = summarize([...frames.flatMap(checkFrame), ...checkCues(frames, built.cues), ...empty]);
+  const craftIssues = checkCraft(frames, craftOpts);
+  const craft = { ...analyzeCraft(frames), counts: craftCounts(craftIssues) };
   const warns = [
+    ...checkFirstFrame(frames),
+    ...checkBeats(frames, built.vd?.segments ?? []),
     ...stillWindows(sigs).map((w) => ({ level: "warn", kind: "still", sel: "", t: w.from, msg: `${w.from}–${w.to} 秒画面没有变化（任意 2 秒内要有东西在动）` })),
     ...checkComposition(frames),
+    ...craftIssues,
   ];
-  return { passed: errors.length === 0, issues: [...errors, ...warns], shots };
+  return { passed: errors.length === 0, issues: [...errors, ...warns], shots, craft };
 }

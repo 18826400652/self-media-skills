@@ -61,3 +61,18 @@ test("hfBin：指向 video-director 自己装的 hyperframes", async () => {
   const { hfBin } = await import("../scripts/lib/hyperframes.mjs");
   assert.match(hfBin(), /video-director\/node_modules\/\.bin\/hyperframes$/);
 });
+
+test("loadConfig：craft 阈值有默认值，可以只覆盖一项", () => {
+  const c = loadConfig(project({ "video-director.config.json": CFG }), V);
+  assert.equal(c.craft.typeFloor, 64);
+  assert.equal(c.craft.gapMax, 250);
+  const d = loadConfig(project({ "video-director.config.json": { ...CFG, craft: { typeFloor: 100 } } }), V);
+  assert.equal(d.craft.typeFloor, 100);
+  assert.equal(d.craft.typeRatio, 1.6);
+});
+
+test("loadConfig：craft 非法值给中文错误", () => {
+  assert.throws(() => loadConfig(project({ "video-director.config.json": { ...CFG, craft: { typeFloor: "big" } } }), V), /craft\.typeFloor 必须是正数/);
+  assert.throws(() => loadConfig(project({ "video-director.config.json": { ...CFG, craft: { nope: 1 } } }), V), /craft\.nope 不认识/);
+  assert.throws(() => loadConfig(project({ "video-director.config.json": { ...CFG, craft: { hookCluster: 150 } } }), V), /不能超过 100/);
+});

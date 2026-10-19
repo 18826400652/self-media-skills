@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize, checkComposition } from "../scripts/lib/douyin-qa.mjs";
+import { checkComposition, checkCues, checkFrame, emptyWindows, qaTimes, stillWindows, summarize } from "../scripts/lib/douyin-qa.mjs";
 
 const built = {
   cues: { 钩子: 1, 小票: 5.5, "小票#2": 9 },
@@ -13,7 +13,7 @@ const frame = (data, t = 1.8, label = "@钩子") => ({ t, label, data: { element
 test("qaTimes：@词 后 0.8 秒（不超过本段结尾前 0.05 秒）+ 每段结尾前 0.3 秒，按时间排序", () => {
   const { inspect } = qaTimes(built, 12);
   assert.deepEqual(inspect.map((x) => [x.t, x.label]), [
-    [1.8, "@钩子"], [4.7, "s1 结尾"], [6.3, "@小票"], [9.7, "s2 结尾"], [9.8, "@小票#2"],
+    [0.05, "开场"], [0.8, "首帧"], [1.8, "@钩子"], [4.7, "s1 结尾"], [6.3, "@小票"], [9.7, "s2 结尾"], [9.8, "@小票#2"],
   ].sort((a, b) => a[0] - b[0]));
   assert.equal(inspect.find((x) => x.label === "@小票#2").cue, "小票#2");
 });
@@ -25,7 +25,7 @@ test("qaTimes：@词 在本段最后 0.8 秒内时，截在段结尾前 0.05 秒
 
 test("qaTimes：样片时长之外的 @词 和段不查；grid 每 0.5 秒，只到口播结束", () => {
   const r = qaTimes(built, 6);
-  assert.deepEqual(r.inspect.map((x) => x.label), ["@钩子", "s1 结尾"]);
+  assert.deepEqual(r.inspect.map((x) => x.label), ["开场", "首帧", "@钩子", "s1 结尾"]);
   assert.deepEqual(r.grid, [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5]);
   assert.equal(qaTimes(built, 30).grid.at(-1), 9.5);
 });
@@ -83,7 +83,7 @@ test("summarize：同一元素同类问题合并成一条，写次数和第一�
 test("qaTimes：样片段不相邻时，只查构建了的段（中间没构建的段不截图、不进 grid）", () => {
   const b = { cues: { 甲: 1, 乙: 7, 丙: 11 }, segments: [{ id: "s1", start: 0, duration: 5 }, { id: "s3", start: 10, duration: 5 }], total: 15 };
   const r = qaTimes(b, 15);
-  assert.deepEqual(r.inspect.map((x) => x.label), ["@甲", "s1 结尾", "@丙", "s3 结尾"]);
+  assert.deepEqual(r.inspect.map((x) => x.label), ["开场", "首帧", "@甲", "s1 结尾", "@丙", "s3 结尾"]);
   assert.ok(!r.grid.some((t) => t >= 5 && t < 10), "没构建的 5–10 秒不比画面");
   assert.ok(r.grid.includes(4.5) && r.grid.includes(10));
 });
@@ -123,4 +123,40 @@ test("checkComposition：一段里所有截图（@词 时刻和结尾）的内�
   assert.equal(out.length, 1);
   assert.equal(out[0].level, "warn");
   assert.match(out[0].msg, /seg-01 整段内容最低只到 y 670.*字幕带上方一直空着 480 像素/);
+});
+
+
+test("checkFirstFrame：0.0s 缺大字 / 缺证据 / 主体太小 → warn，不报 error", async () => {
+  const { checkFirstFrame } = await import("../scripts/lib/douyin-qa.mjs");
+  const f = { label: "开场", data: { texts: [{ box: [80, 300, 900, 460], fontSize: 46, opacity: 1 }], blocks: [{ box: [100, 280, 400, 500], opacity: 1 }], elements: [] } };
+  const items = checkFirstFrame([f]);
+  assert.ok(items.length >= 2);
+  assert.ok(items.every((i) => i.level === "warn"));
+  assert.match(items.map((i) => i.msg).join("\n"), /首帧最大字号 46px/);
+});
+
+test("checkFirstFrame：有 104px 字、足够主体簇和 visible 的 data-vd-proof → 不报", async () => {
+  const { checkFirstFrame } = await import("../scripts/lib/douyin-qa.mjs");
+  const f = { label: "开场", data: { texts: [{ box: [80, 300, 900, 460], fontSize: 104, opacity: 1 }], blocks: [{ box: [100, 280, 980, 1180], opacity: 1 }], elements: [{ proof: true, box: [100, 280, 980, 1180], opacity: 1 }] } };
+  assert.deepEqual(checkFirstFrame([f]), []);
+});
+
+test("checkBeats：没标记 / 看不见 / 没变化 → warn；正常 → 空", async () => {
+  const { checkBeats } = await import("../scripts/lib/douyin-qa.mjs");
+  const segs = [{ id: "s1", beats: [{ at: "@写错了", action: "stamp", el: "#stamp" }] }];
+  const frame = (label, elements) => ({ t: 1, label, seg: "s1", beat: { cue: "写错了", action: "stamp" }, data: { elements } });
+  const before = frame("beat-before:stamp:@写错了", [{ sel: "#stamp", beat: "stamp:@写错了", box: [0, 0, 10, 10], opacity: 0 }]);
+  const after = frame("beat-after:stamp:@写错了", [{ sel: "#stamp", beat: "stamp:@写错了", box: [0, 0, 200, 200], opacity: 1 }]);
+  assert.deepEqual(checkBeats([before, after], segs), []);
+  assert.match(checkBeats([], segs)[0].msg, /没有 data-vd-beat/);
+  const stillBefore = frame("beat-before:stamp:@写错了", [{ sel: "#stamp", beat: "stamp:@写错了", box: [0, 0, 10, 10], opacity: 1 }]);
+  const stillAfter = frame("beat-after:stamp:@写错了", [{ sel: "#stamp", beat: "stamp:@写错了", box: [0, 0, 10, 10], opacity: 1 }]);
+  assert.match(checkBeats([stillBefore, stillAfter], segs).map((i) => i.msg).join("\n"), /没有动/);
+});
+
+test("qaTimes：beats 加 @词-0.2 和 +0.3 两个采样点", () => {
+  const b = { cues: { 写错了: 2 }, segments: [{ id: "s1", start: 0, duration: 5 }], total: 5, vd: { segments: [{ id: "s1", beats: [{ at: "@写错了", action: "stamp", el: "#x" }] }] } };
+  const labels = qaTimes(b, 5).inspect.map((x) => x.label);
+  assert.ok(labels.includes("beat-before:stamp:@写错了"));
+  assert.ok(labels.includes("beat-after:stamp:@写错了"));
 });

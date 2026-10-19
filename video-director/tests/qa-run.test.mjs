@@ -16,6 +16,8 @@ function fakePage(dataAt) {
     duration: 5,
     frame: async (t) => { seen.push(t); return dataAt(t); },
     shot: async (path) => { (await import("node:fs")).writeFileSync(path, "png"); },
+    shot64: async () => "png-base64",
+    pixels: async () => ({ vivid: 1.2, dark: 1.0, meanL: 88, stdL: 12 }),
   };
 }
 
@@ -24,7 +26,7 @@ test("douyinQa：每个落定时刻截一张图；画面一直在变 → 通过"
   const page = fakePage((t) => ({ ...blank, sig: String(t) }));
   const r = await douyinQa(built, page, join(dir, "snapshots/cues"));
   assert.equal(r.passed, true);
-  assert.deepEqual(r.shots.map((s) => [s.t, s.label, s.file]), [[1.8, "@钩子", "snapshots/cues/01.png"], [3.7, "s1 结尾", "snapshots/cues/02.png"]]);
+  assert.deepEqual(r.shots.map((s) => [s.t, s.label, s.file]), [[0.05, "开场", "snapshots/cues/01.png"], [0.8, "首帧", "snapshots/cues/02.png"], [1.8, "@钩子", "snapshots/cues/03.png"], [3.7, "s1 结尾", "snapshots/cues/04.png"]]);
   assert.ok(existsSync(join(dir, "snapshots/cues/01.png")));
   assert.ok(page.seen.includes(0) && page.seen.includes(3.5), "grid 也取了");
 });
@@ -33,7 +35,7 @@ test("douyinQa：有 ✗ 不通过；2 秒不动只给 ⚠，不影响通过", a
   const dir = project({});
   const bad = await douyinQa(built, fakePage(() => ({ ...blank, sig: "x", elements: [{ sel: "#t", text: true, key: false, allowSafe: false, box: [100, 100, 300, 160], opacity: 1 }] })), join(dir, "a"));
   assert.equal(bad.passed, false);
-  assert.ok(bad.issues.some((i) => i.level === "error" && /#t 进了顶部 200 像素.*（共 2 处）/.test(i.msg)));
+  assert.ok(bad.issues.some((i) => i.level === "error" && /#t 进了顶部 200 像素.*（共 4 处）/.test(i.msg)));
   assert.ok(bad.issues.some((i) => i.level === "warn" && /0–3\.5 秒画面没有变化/.test(i.msg)));
   const still = await douyinQa(built, fakePage(() => ({ ...blank, sig: "x" })), join(dir, "b"));
   assert.equal(still.passed, true);
@@ -70,4 +72,35 @@ test("buildProblem：没构建过 / 上次检查没过 / 画面在构建后改�
   const later = Date.now() / 1000 + 60;
   utimesSync(join(dir, "compositions/frames/s1.html"), later, later);
   assert.match(buildProblem(dir), /s1\.html.*上次 vd build 之后改过/);
+});
+
+test("douyinQa：视觉工艺只给 warn，不影响 passed；返回 craft 指标", async () => {
+  const dir = project({});
+  const page = fakePage(() => ({
+    ...blank,
+    sig: String(Math.random()),
+    blocks: [{ sel: "#c", box: [100, 300, 500, 800], opacity: 1, shadow: "none", rot: 0, bgImage: false }],
+    texts: [{ sel: "#t", box: [100, 900, 900, 960], opacity: 1, fontSize: 46, fontWeight: 900, color: "rgb(0,0,0)" }],
+  }));
+  const r = await douyinQa(built, page, join(dir, "snapshots/cues"));
+  assert.equal(r.passed, true);
+  assert.ok(r.issues.some((i) => i.kind === "craft-type" && i.level === "warn"));
+  assert.equal(r.craft.first.maxFont, 46);
+  assert.equal(r.craft.counts.type, 1);
+  assert.equal(r.craft.counts.material, 1);
+});
+
+test("douyinQa：craft 阈值从参数传入", async () => {
+  const dir = project({});
+  const page = fakePage(() => ({
+    ...blank,
+    sig: String(Math.random()),
+    blocks: [
+      { sel: "#c", box: [100, 300, 900, 700], opacity: 1, shadow: "none", rot: 0, bgImage: false },
+      { sel: "#d", box: [100, 850, 900, 1150], opacity: 1, shadow: "none", rot: 0, bgImage: false },
+    ],
+    texts: [{ sel: "#t", box: [100, 1400, 900, 1460], opacity: 1, fontSize: 96, fontWeight: 900, color: "rgb(0,0,0)" }],
+  }));
+  const r = await douyinQa(built, page, join(dir, "snapshots/cues"), { craft: { typeFloor: 100 } });
+  assert.ok(r.issues.some((i) => i.kind === "craft-type"));
 });

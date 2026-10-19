@@ -3,6 +3,7 @@
 //   init   建空的导演工程（hyperframes blank + vd 模板）；目录不为空时拒绝
 //   render 渲染到 <工程>/renders/（--sample 出 sample.mp4），完成后自动 verify
 //   verify <成片.mp4> [--project <工程>]：帧数、时长、声音、尺寸、黑屏
+//   measure <成片.mp4> [--json]：时长、内容区静态率 / 变化率 / 最长静止、响度
 //   components  列出 dykit 组件（用途、适合、时长、节拍、变量和默认值）；可跟关键词筛，如 vd components 抖音 对比
 //   cues   DIRECTOR.md 的 @词 → cues.js（只算时间，不改别的文件）；--check 只校验不写文件；段里 at() 用了没写的词报错
 //   build  cues → 音轨 → dykit 组件 → index.html 标记块 → 配乐对位与避让 → hyperframes check
@@ -22,12 +23,13 @@ import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
 import { addMusic, alignMusic, carve, ensureCore, probeLen, resolveMusic } from "./lib/music.mjs";
+import { craftSummary } from "./lib/craft.mjs";
 import { buildProblem, douyinQa, presentSegments, staleBuild, writeBuildStatus } from "./lib/qa-run.mjs";
 import { requireHf } from "./lib/hyperframes.mjs";
 import { initProject } from "./lib/init.mjs";
 import { run } from "./lib/run.mjs";
 
-const USAGE = "用法：vd init|cues|build|check|qa|render|verify|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
+const USAGE = "用法：vd init|cues|build|check|qa|render|verify|measure|components <视频工程目录> [--sample] [--no-music] [--update-components] [--check]；其他子命令透传给 hyperframes";
 const SCRIPTS = fileURLToPath(new URL(".", import.meta.url));
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
@@ -86,6 +88,9 @@ const COMMANDS = {
   verify(file, rest = []) {
     return spawnSync(process.execPath, [join(SCRIPTS, "verify.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;
   },
+  measure(file, rest = [], { run = spawnSync } = {}) {
+    return run(process.execPath, [join(SCRIPTS, "measure.mjs"), file, ...rest], { stdio: "inherit" }).status ?? 1;
+  },
   cues(dir, rest = []) {
     const { built } = load(dir);
     if (rest.includes("--check")) {
@@ -139,10 +144,15 @@ const COMMANDS = {
     const { bundleToSingleHtml } = await import(pathToFileURL(join(dir, "node_modules/@hyperframes/core/dist/compiler/index.js")).href);
     const page = await openPage({ html: await bundleToSingleHtml(dir), root: dir });
     let r;
-    try { r = await douyinQa({ ...built, segments }, page, join(dir, "snapshots/cues")); } finally { await page.close(); }
-    writeFileSync(join(dir, out), JSON.stringify({ passed: r.passed, issues: r.issues.map(({ level, msg }) => ({ level, msg })), shots: r.shots }, null, 2) + "\n");
+    try { r = await douyinQa({ ...built, segments }, page, join(dir, "snapshots/cues"), { craft: config.craft }); } finally { await page.close(); }
+    writeFileSync(join(dir, out), JSON.stringify({ passed: r.passed, issues: r.issues.map(({ level, msg }) => ({ level, msg })), shots: r.shots, craft: r.craft }, null, 2) + "\n");
     const sheet = run("ffmpeg", ["-v", "error", "-y", "-pattern_type", "glob", "-i", "snapshots/cues/*.png", "-vf", `scale=270:-1,tile=6x${Math.ceil(r.shots.length / 6)}:padding=6:color=0x444444`, "-frames:v", "1", "snapshots/cues-sheet.jpg"], { cwd: dir });
     if (sheet.status !== 0) console.warn(`⚠ 总览图没拼成：${sheet.stderr.trim()}`);
+    const summary = craftSummary(r.craft);
+    if (summary) {
+      console.log(summary.metrics);
+      console.log("视觉工艺告警：" + summary.counts);
+    }
     for (const i of r.issues) console.log(`${i.level === "error" ? "✗" : "⚠"} ${i.msg}`);
     console.log(`${r.passed ? "✓" : "✗"} 抖音专用检查（${sample ? `样片 ${segments.map((s) => s.id).join("、")}` : "整片"}，结果 ${out}）：${r.shots.length} 个时间点，${r.issues.filter((i) => i.level === "error").length} 个 ✗（截图总览 snapshots/cues-sheet.jpg，按 DIRECTOR.md 逐条看）`);
     return r.passed ? 0 : 1;

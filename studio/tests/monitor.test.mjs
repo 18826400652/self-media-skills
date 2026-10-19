@@ -141,3 +141,55 @@ test("review：什么都没有时说清楚，不报错", () => {
   const text = review(project(), { sinceDays: 7, home: mkdtempSync(join(tmpdir(), "st-home-")) });
   assert.match(text, /没有记录到工具包命令/);
 });
+
+test("review：列出各期 qa-douyin.json 的视觉工艺指标；没有 craft 的跳过", () => {
+  const root = project();
+  const ep = join(root, "04-作品/AI办公/01-群聊");
+  mkdirSync(join(ep, "抖音"), { recursive: true });
+  writeFileSync(join(ep, "run.json"), JSON.stringify({ gates: {} }));
+  writeFileSync(join(ep, "抖音/qa-douyin.json"), JSON.stringify({
+    passed: true,
+    craft: {
+      first: { maxFont: 46, cluster: 35.2 },
+      segments: [{ maxFont: 46, cluster: 35.2, gap: 70 }, { maxFont: 104, cluster: 24, gap: 415 }],
+      material: { score: 1 },
+      variety: { centered: 8, total: 9 },
+      counts: { type: 5, hierarchy: 2, hook: 1, subject: 3, gap: 1, material: 1, variety: 1 },
+    },
+  }));
+  const text = review(root, { sinceDays: 7, home: mkdtempSync(join(tmpdir(), "st-home-")) });
+  assert.match(text, /视觉工艺/);
+  assert.match(text, /46px \/ 35\.2%/);
+  assert.match(text, /24\.0–35\.2%/);
+  assert.match(text, /415px/);
+  assert.match(text, /1\/4/);
+  assert.match(text, /8\/9/);
+  assert.match(text, /\| 14 \|/);
+});
+
+test("review：没有带 craft 的 qa-douyin.json 时说清楚", () => {
+  const root = project();
+  const ep = join(root, "04-作品/AI办公/02-群聊");
+  mkdirSync(join(ep, "抖音"), { recursive: true });
+  writeFileSync(join(ep, "run.json"), JSON.stringify({ gates: {} }));
+  writeFileSync(join(ep, "抖音/qa-douyin.json"), JSON.stringify({ passed: true }));
+  const text = review(root, { sinceDays: 7, home: mkdtempSync(join(tmpdir(), "st-home-")) });
+  assert.match(text, /没有带视觉工艺指标/);
+});
+
+test("review：列出各期的注意力指标（时长 / 静态率 / 变化率 / 响度）", () => {
+  const root = project();
+  const ep = join(root, "04-作品/AI办公/01-群聊");
+  writeFileSync(join(ep, "run.json"), "{}");
+  writeFileSync(join(ep, "抖音/measure.json"), JSON.stringify({
+    at: new Date().toISOString(),
+    duration: 75.4,
+    video: { staticRatio: 0.42, changeRate: 14.3, longestStill: 2 },
+    loudness: { integrated: -14.1, truePeak: -1.4 },
+  }));
+  const text = review(root, { sinceDays: 7, home: mkdtempSync(join(tmpdir(), "st-home-")) });
+  assert.match(text, /## 注意力指标/);
+  assert.match(text, /75\.4s/);
+  assert.match(text, /42%/);
+  assert.match(text, /-14\.1 LUFS/);
+});

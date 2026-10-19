@@ -40,10 +40,13 @@ const count = (text, re) => Number(text.match(re)?.[1] ?? 0);
 // 在 node --test 里再跑 node --test 时，子进程会继承 NODE_TEST_CONTEXT，改用给父进程看的格式；去掉它才是正常输出
 const { NODE_TEST_CONTEXT, ...cleanEnv } = process.env;
 
+/** node --test 的参数：强制 TAP，Node 24 默认的 spec reporter 里没有 # pass，数不出来 */
+export const nodeTestArgs = (files) => ["--test", "--test-reporter=tap", ...files];
+
 /** 跑一个套件：{ pass, fail, failed（失败的用例名）, error（跑不起来时的输出） } */
 function runSuite(s) {
   const r = s.kind === "node"
-    ? spawnSync(process.execPath, ["--test", ...s.files], { cwd: s.dir, env: cleanEnv, encoding: "utf8" })
+    ? spawnSync(process.execPath, nodeTestArgs(s.files), { cwd: s.dir, env: cleanEnv, encoding: "utf8" })
     : spawnSync(s.python, ["-m", "pytest", "-q"], { cwd: s.dir, env: cleanEnv, encoding: "utf8" });
   const out = `${r.stdout ?? ""}${r.stderr ?? ""}`;
   if (s.kind === "node") {

@@ -18,7 +18,7 @@ test("templates/index.html：四个 vd 标记都在", () => {
 
 // 项目品牌目录里的 brand-*.html 同样只能用字体变量，由 st doctor 检查（工具包测试不读作品项目）
 test("单段模板只用 var(--vd-*) 字体变量（hyperframes lint 看不到跨文件的 @font-face）", () => {
-  const files = { "segment.html": read("segment.html") };
+  const files = { "segment.html": read("segment.html"), "segment-hero.html": read("segment-hero.html") };
   for (const [name, html] of Object.entries(files)) {
     const literal = [...html.matchAll(/font-family:\s*([^;"]*"[^"]+"[^;]*);/g)].map((m) => m[1]);
     assert.deepEqual(literal, [], `${name} 写了字体名`);
@@ -41,4 +41,46 @@ test("templates/DIRECTOR.md：说明文字里没有被当成 @词 的字（全�
   // 机器块和（待填）行里的 @词 是要换掉的占位，换掉后不会留下；其余说明文字会一直留在写好的 DIRECTOR.md 里
   const prose = read("DIRECTOR.md").replace(/```json[\s\S]*?```/, "").split("\n").filter((l) => !l.includes("（待填")).join("\n");
   assert.deepEqual(parseDirector(prose).tokens, []);
+});
+
+test("templates/DIRECTOR.md：§3 有 6 行视觉工艺自检，§1 有材质与视觉规范", () => {
+  const md = read("DIRECTOR.md");
+  for (const k of ["视觉工艺 · 主体", "视觉工艺 · 材质", "视觉工艺 · 字阶", "视觉工艺 · 空白带", "视觉工艺 · 色彩锚点", "视觉工艺 · 构图变化"]) {
+    assert.ok(md.includes(k), "缺少 " + k);
+  }
+  assert.match(md, /- \*\*材质与光影\*\*/);
+  assert.match(md, /- \*\*视觉规范\*\*/);
+  const prose = md.replace(/```json[\s\S]*?```/, "").split("\n").filter((l) => !l.includes("（待填")).join("\n");
+  assert.deepEqual(parseDirector(prose).tokens, []);
+});
+
+test("templates/index.html：材质 / 字阶变量和工具类都在；材质层在 segments 和 brand 之间", () => {
+  const html = read("index.html");
+  for (const v of ["--vd-shadow-paper", "--vd-grain", "--vd-vignette", "--vd-type-display", "--vd-type-heading", "--vd-type-body", "--vd-type-caption", "--vd-type-label"]) {
+    assert.ok(html.includes(v), v);
+  }
+  for (const c of [".vd-shadow", ".vd-grain", ".vd-vignette"]) assert.ok(html.includes(c), c);
+  for (const n of ["head", "audio", "segments", "brand"]) assert.ok(html.includes("<!-- vd:" + n + " --><!-- /vd:" + n + " -->"), n);
+  assert.match(html, /data-vd-material="grain"/);
+  assert.match(html, /data-vd-material="vignette"/);
+  assert.ok(html.indexOf("<!-- /vd:segments -->") < html.indexOf('data-vd-material="grain"'), "材质层要在各段之后");
+  assert.ok(html.indexOf('data-vd-material="vignette"') < html.indexOf("<!-- vd:brand -->"), "材质层要在账号固定元素之前");
+});
+
+test("templates/segment.html：有 camera 包裹层和 push-in", () => {
+  const html = read("segment.html");
+  assert.match(html, /data-vd-camera="push-in"/);
+  assert.match(html, /VDACT\.pushIn/);
+  assert.match(html, /\.cam \{ position: absolute; inset: 0/);
+});
+
+test("templates/segment-hero.html：好段模板有大标题、主体卡片、胶带和三层投影", () => {
+  const html = read("segment-hero.html");
+  assert.match(html, /var\(--vd-type-display/);
+  assert.match(html, /var\(--vd-shadow-paper\)/);
+  assert.match(html, /data-vd-material="tape"/);
+  assert.match(html, /rotate\(-3deg\)/);
+  assert.match(html, /860px/);
+  assert.match(html, /data-composition-id="SEG_ID"/);
+  assert.match(html, /data-vd-proof/);
 });

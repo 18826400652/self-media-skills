@@ -1,5 +1,6 @@
 // 抖音专用检查（纯函数）：按 @词 落定时刻查出画面、安全区、字幕带、栏目标签遮挡、@词 元素可见；每 0.5 秒比画面签名查 2 秒不动
-const W = 1080, H = 1920, TOL = 2;
+import { W, H, frameCraft } from "./craft.mjs";
+const TOL = 2;
 const SAFE = { top: 200, right: 160, bottom: 480 }; // 平台界面占的边（director-rules 第 11 条）
 const RIGHT_FROM = 760; // 右侧按钮列（头像、点赞、评论、收藏、分享）从这里往下；上半屏内容可以用到 x 1020
 export const CAPTION = { top: 1180, bottom: 1440 }; // 字幕带只放字幕
@@ -19,6 +20,26 @@ export function qaTimes(built, duration) {
     if (t < duration) inspect.push({ t, label: `@${cue}`, cue, seg: seg.id });
   }
   for (const s of segs) if (s.end <= duration) inspect.push({ t: r2(s.end - SEG_TAIL), label: `${s.id} 结尾`, seg: s.id });
+  // beats：每个动作前后各一帧，用来查「有没有真的动」
+  for (const s of built.vd?.segments ?? []) {
+    const seg = segs.find((x) => x.id === s.id);
+    if (!seg) continue;
+    for (const b of s.beats ?? []) {
+      const cue = String(b.at).replace(/^@/, "");
+      const at = built.cues[cue];
+      if (at === undefined) continue;
+      const key = `${b.action}:${b.at}`;
+      const before = r2(Math.max(seg.start, at - 0.2));
+      const after = r2(Math.min(seg.end - 0.05, at + 0.3));
+      if (before < duration) inspect.push({ t: before, label: `beat-before:${key}`, beat: { cue, action: b.action }, seg: s.id });
+      if (after < duration) inspect.push({ t: after, label: `beat-after:${key}`, beat: { cue, action: b.action }, seg: s.id });
+    }
+  }
+  // 开场（0.05 秒：第一帧，画面还没开始演）+ 首帧（0.8 秒，入场基本落定）
+  const open = segs.find((s) => s.start <= 0.05 && 0.05 < s.end);
+  if (open && 0.05 < duration) inspect.push({ t: 0.05, label: "开场", seg: open.id });
+  const first = segs.find((s) => s.start <= 0.8 && 0.8 < s.end);
+  if (first && 0.8 < duration && !inspect.some((x) => x.t === 0.8)) inspect.push({ t: 0.8, label: "首帧", seg: first.id });
   inspect.sort((a, b) => a.t - b.t);
   const end = Math.min(duration, built.total);
   const grid = [];
@@ -60,6 +81,39 @@ export function checkComposition(frames) {
     const low = Math.round(v.low);
     return { level: "warn", kind: "composition", sel: seg, t: v.t, msg: `${seg} 整段内容最低只到 y ${low}，字幕带上方一直空着 ${CAPTION.top - 30 - low} 像素：画面挤在上方，放大或往下铺（主要内容铺到 y 1150 左右）` };
   });
+}
+
+/** 每个 beat 的标记要存在、落定时看得见、和 0.2 秒前比有变化；全部 warn */
+export function checkBeats(frames, segments = []) {
+  const out = [];
+  for (const seg of segments) {
+    for (const b of seg.beats ?? []) {
+      const key = `${b.action}:${b.at}`;
+      const after = frames.find((f) => f.label === `beat-after:${key}`);
+      const before = frames.find((f) => f.label === `beat-before:${key}`);
+      const el = after?.data?.elements?.find((e) => e.beat === key);
+      if (!el) { out.push({ level: "warn", kind: "beat-missing", sel: seg.id, t: after?.t ?? 0, msg: `${seg.id} 的 beat ${key} 没有 data-vd-beat 标记（或没截到）` }); continue; }
+      if ((el.opacity ?? 1) <= 0.05) { out.push({ level: "warn", kind: "beat-hidden", sel: el.sel, t: after.t, msg: `${seg.id} 的 beat ${key} 落定时看不见` }); continue; }
+      const prev = before?.data?.elements?.find((e) => e.sel === el.sel);
+      if (prev && prev.box.every((v, i) => v === el.box[i]) && Math.abs((prev.opacity ?? 1) - (el.opacity ?? 1)) < 0.05) {
+        out.push({ level: "warn", kind: "beat-still", sel: el.sel, t: after.t, msg: `${seg.id} 的 beat ${key} 没有动（box 和 opacity 都没变）` });
+      }
+    }
+  }
+  return out;
+}
+
+/** 0.0s 开场：要有 ≥96px 的字、≥30% 的主体簇、可见的证据元素；全部 warn */
+export function checkFirstFrame(frames) {
+  const f = frames.find((x) => x.label === "开场");
+  if (!f) return [];
+  const { maxFont, cluster } = frameCraft(f);
+  const proof = (f.data?.elements ?? []).some((e) => e.proof && (e.opacity ?? 1) > 0.05 && e.box[2] > e.box[0] && e.box[3] > e.box[1]);
+  const out = [];
+  if (maxFont < 96) out.push({ level: "warn", kind: "attention-first-font", sel: "", t: f.t, msg: `首帧最大字号 ${Math.round(maxFont)}px（<96）：第一秒没有落点` });
+  if (cluster < 30) out.push({ level: "warn", kind: "attention-first-cluster", sel: "", t: f.t, msg: `首帧主体簇 ${cluster.toFixed(1)}%（<30）：第一秒没有主体` });
+  if (!proof) out.push({ level: "warn", kind: "attention-first-proof", sel: "", t: f.t, msg: "首帧没有可见的证据元素：给成品截图 / 录屏加 data-vd-proof" });
+  return out;
 }
 
 export function checkCues(frames, cues) {
@@ -109,3 +163,6 @@ export function summarize(issues) {
   }
   return [...groups.values()].map((g) => (g.length === 1 ? g[0] : { ...g[0], msg: `${g[0].msg}（共 ${g.length} 处）` }));
 }
+
+
+export { analyzeCraft, checkCraft, craftCounts, craftSummary, CRAFT_DEFAULTS } from "./craft.mjs";

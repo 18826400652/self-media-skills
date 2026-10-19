@@ -13,6 +13,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { isMain } from "./lib/is-main.mjs";
+import { probeLoudness } from "./lib/loudness.mjs";
 
 const PEAK_MAX_DB = -0.5; // 峰值超过这个就可能爆音
 const SILENT_MEAN_DB = -45; // 平均音量低于这个基本等于没声音
@@ -22,7 +23,7 @@ const BLACK_MIN_SECONDS = 0.5;
 const ffprobeJson = (args) => JSON.parse(execFileSync("ffprobe", ["-v", "error", "-of", "json", ...args], { encoding: "utf8" }));
 
 /** 纯函数：探测结果 → 检查项（便于测试） */
-export function evaluate({ streams, packets, duration, volume, expected, blackSpans }) {
+export function evaluate({ streams, packets, duration, volume, expected, blackSpans, loudness }) {
   const items = [];
   const ok = (msg) => items.push({ level: "✓", msg });
   const bad = (msg) => items.push({ level: "✗", msg });
@@ -47,6 +48,11 @@ export function evaluate({ streams, packets, duration, volume, expected, blackSp
     if (volume.mean < SILENT_MEAN_DB) bad(`平均音量 ${volume.mean} dB，基本没有声音`);
     else if (volume.max > PEAK_MAX_DB) warn(`峰值 ${volume.max} dB，可能爆音`);
     else ok(`声音：平均 ${volume.mean} dB，峰值 ${volume.max} dB`);
+  }
+  if (loudness) {
+    if (!Number.isFinite(loudness.integrated) || loudness.integrated < -15 || loudness.integrated > -13) warn(`响度 ${loudness.integrated} LUFS，应为 -14 ±1`);
+    else ok(`响度 ${loudness.integrated} LUFS`);
+    if (Number.isFinite(loudness.truePeak) && loudness.truePeak > -1) warn(`真峰值 ${loudness.truePeak} dBFS，可能削波`);
   }
   if (blackSpans.length) warn(`有 ${blackSpans.length} 段纯黑画面：${blackSpans.map(([s, e]) => `${s.toFixed(1)}–${e.toFixed(1)}s`).join("、")}`);
   return items;
@@ -94,6 +100,7 @@ function main() {
     volume: probeVolume(abs),
     expected: project ? projectExpectation(project) : {},
     blackSpans: probeBlack(abs),
+    loudness: probeLoudness(abs),
   });
   console.log(`成片检查：${abs}`);
   for (const { level, msg } of items) console.log(`  ${level} ${msg}`);

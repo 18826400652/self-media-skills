@@ -42,8 +42,8 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 | 1–6 | 场景卡、选题关、实测、母稿、费曼检查、自检（`sc check`） | ① 选题（第 2 步） |
 | 7 | 抖音脚本 + 配音稿（`vo 抖音 --check` 通过） | ② 脚本 |
 | 8 | 配音 + 导演脚本（`vo 抖音`；`抖音/DIRECTOR.md`，`vd cues 抖音 --check` 通过） | ③a 导演脚本 |
-| 9 | 风格样片（`抖音/renders/sample.mp4`，`qa-douyin-sample.json` 无 ✗） | ③b 样片 |
-| 10 | 渲染 + QA（`vd render 抖音`，`qa-douyin.json`、`qa.json` 通过） | ④ 成片 |
+| 9 | 风格样片（`抖音/renders/sample.mp4`，`qa-douyin-sample.json` 无 ✗；⚠ 视觉工艺也要看） | ③b 样片 |
+| 10 | 渲染 + QA（`vd render 抖音`，`qa-douyin.json`、`qa.json` 通过；⚠ 视觉工艺也要看） | ④ 成片 |
 | 11–15 | 公众号、小红书、抖音草稿、发布记录、复盘 | |
 
 确认之后又改了相关文件，这个节点自动失效，要重新请用户确认：② 改了 `SCRIPT.md` / `VOICE.md`；③a 改了 `DIRECTOR.md`（只补第 8 节组件候选不算）或 `audio_meta.json`（重新配音）；③b 换了样片；④ 换了成片。工程里的 HTML 比成片新要重新渲染。`kv status` 调用 `sc check --json`、`vo --check`、`vd cues --check`，命令名可用环境变量 `KV_SC_CMD`、`KV_VO_CMD`、`KV_VD_CMD` 换掉。视频只有导演做法一套，工程就是 `抖音/`，配音直接写在里面，没有复制步骤。
