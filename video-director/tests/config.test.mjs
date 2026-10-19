@@ -76,3 +76,12 @@ test("loadConfig：craft 非法值给中文错误", () => {
   assert.throws(() => loadConfig(project({ "video-director.config.json": { ...CFG, craft: { nope: 1 } } }), V), /craft\.nope 不认识/);
   assert.throws(() => loadConfig(project({ "video-director.config.json": { ...CFG, craft: { hookCluster: 150 } } }), V), /不能超过 100/);
 });
+
+test("localDykitDir：环境变量 VD_DYKIT_DIR 优先，其次配置 dykitDir（相对项目根），都没有是 null", async () => {
+  const { localDykitDir } = await import("../scripts/lib/config.mjs");
+  const dir = project({ "video-director.config.json": { ...CFG, dykitDir: "../hf" } });
+  const config = loadConfig(dir, V);
+  assert.equal(localDykitDir(config, { VD_DYKIT_DIR: "/env/hf" }), "/env/hf");
+  assert.equal(localDykitDir(config, {}), join(dir, "../hf"));
+  assert.equal(localDykitDir(loadConfig(project({ "video-director.config.json": CFG }), V), {}), null);
+});

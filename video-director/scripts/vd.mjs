@@ -16,9 +16,9 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
-import { REPO, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, recordingProblem, writeLock } from "./lib/components.mjs";
+import { REPO, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, localArchive, recordingProblem, writeLock } from "./lib/components.mjs";
 import { buildAudio } from "./lib/audio.mjs";
-import { findProjectRoot, loadConfig } from "./lib/config.mjs";
+import { findProjectRoot, loadConfig, localDykitDir } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
 import { parseDirector, validateDirector } from "./lib/director.mjs";
@@ -34,7 +34,7 @@ const SCRIPTS = fileURLToPath(new URL(".", import.meta.url));
 const CACHE = join(homedir(), ".cache/video-director/hyperframes");
 
 /** 把要构建的段用到的 dykit 组件装进工程（按 components.lock.json 的提交号）；没用组件时不联网 */
-export function installAll(dir, built, { update = false, only = null } = {}, overrides = {}) {
+export function installAll(dir, built, { update = false, only = null, local = null } = {}, overrides = {}) {
   const deps = { ensureLock, fetchArchive, installComponent, writeLock, componentInfo, probeLen, ...overrides };
   const segs = built.segments.filter((s) => s.component && (!only || only.includes(s.id)));
   const names = [...new Set(segs.map((s) => s.component))];
@@ -42,8 +42,9 @@ export function installAll(dir, built, { update = false, only = null } = {}, ove
     if (update) console.log("◇ 本次构建没有用到组件，--update-components 没有效果");
     return [];
   }
-  const { sha, changed } = deps.ensureLock(dir, { update });
-  const repo = deps.fetchArchive(sha, CACHE);
+  if (local) console.log(`◇ 组件来自本地 ${local}（不锁版本，只用于磨组件）`);
+  const { sha, changed } = local ? { sha: "local", changed: false } : deps.ensureLock(dir, { update });
+  const repo = local ? localArchive(local) : deps.fetchArchive(sha, CACHE);
   const files = [...new Set(names.flatMap((n) => deps.installComponent(repo, n, dir)))];
   const unfit = segs.filter((s) => typeof s.duration === "number").map((s) => fitProblem({ name: s.component, segId: s.id, segDuration: s.duration, ...deps.componentInfo(repo, s.component, dir) })).filter(Boolean);
   if (unfit.length) throw new Error(`有 ${unfit.length} 个组件段撑不满：\n  - ${unfit.join("\n  - ")}`);
@@ -111,7 +112,7 @@ const COMMANDS = {
     const duration = sample ? Math.round((built.cues[vd.sample.end.slice(1)] + vd.sample.tail) * 1000) / 1000 : full;
     const only = sample ? vd.sample.segments : null;
     buildAudio(dir, built, config);
-    installAll(dir, built, { update: rest.includes("--update-components"), only });
+    installAll(dir, built, { update: rest.includes("--update-components"), only, local: localDykitDir(config) });
     if (!existsSync(join(dir, "assets/gsap.min.js"))) cpSync(config.gsap, join(dir, "assets/gsap.min.js"));
     assemble(dir, built, config, { only, duration, music: null });
     if (vd.music && !rest.includes("--no-music")) {

@@ -38,5 +38,10 @@ export function loadConfig(root, { hfVersion = installedHfVersion() } = {}) {
   }
   const craft = { ...CRAFT_DEFAULTS, ...raw };
   const abs = (x) => (isAbsolute(x) ? x : join(root, x));
-  return { fontsDir: c.fontsDir ? abs(c.fontsDir) : null, gsap: c.gsap ? abs(c.gsap) : GSAP_FILE, brandDir: abs(c.brandDir), sfxDir: abs(c.sfxDir), hfVersion, craft };
+  return { dykitDir: c.dykitDir ? abs(c.dykitDir) : null, fontsDir: c.fontsDir ? abs(c.fontsDir) : null, gsap: c.gsap ? abs(c.gsap) : GSAP_FILE, brandDir: abs(c.brandDir), sfxDir: abs(c.sfxDir), hfVersion, craft };
+}
+
+/** 本地组件库：环境变量 VD_DYKIT_DIR 优先，其次配置 dykitDir；都没有用 GitHub 上锁定的版本（null） */
+export function localDykitDir(config, env = process.env) {
+  return env.VD_DYKIT_DIR || config.dykitDir || null;
 }

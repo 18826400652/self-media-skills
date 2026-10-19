@@ -224,3 +224,19 @@ test("vd measure：调 measure.mjs，透传文件参数", () => {
   assert.equal(calls[0][1][1], "/x.mp4");
   assert.ok(calls[0][1].includes("--json"));
 });
+
+test("installAll：local 指定本地组件库时不取锁、不下载、不写锁文件", () => {
+  const never = () => { throw new Error("不应调用"); };
+  const local = project({ "registry/registry.json": { items: [] } });
+  const installed = [];
+  const deps = { ensureLock: never, fetchArchive: never, writeLock: never, installComponent: (repo, name) => { installed.push([repo, name]); return [`compositions/${name}.html`]; } };
+  const files = installAll(project({}), { segments: [{ id: "a", component: "dy-shot-proof" }] }, { local }, deps);
+  assert.deepEqual(installed, [[local, "dy-shot-proof"]]);
+  assert.deepEqual(files, ["compositions/dy-shot-proof.html"]);
+});
+
+test("installAll：local 目录不对时报错，不回退到 GitHub", () => {
+  const never = () => { throw new Error("不应调用"); };
+  const local = project({ "x.txt": "" });
+  assert.throws(() => installAll(project({}), { segments: [{ id: "a", component: "dy-x" }] }, { local }, { ensureLock: never, fetchArchive: never, writeLock: never, installComponent: never }), /registry\/registry\.json/);
+});

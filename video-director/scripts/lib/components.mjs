@@ -52,6 +52,12 @@ export function ensureLock(dir, { update = false } = {}, runFn = run) {
   return { sha, changed: sha !== lock?.sha };
 }
 
+/** 本地组件库（磨组件时用）：校验目录里有 registry/registry.json，原样返回 */
+export function localArchive(dir) {
+  if (!existsSync(join(dir, "registry/registry.json"))) throw new Error(`本地组件库 ${dir} 里没有 registry/registry.json：VD_DYKIT_DIR 或配置 dykitDir 要指向 hyperframes 仓库根目录`);
+  return dir;
+}
+
 /** 下载并解包到 cacheRoot/<sha>；先解到临时目录，成功后再改名，失败不留半截 */
 export function fetchArchive(sha, cacheRoot, runFn = run) {
   const dest = join(cacheRoot, sha);

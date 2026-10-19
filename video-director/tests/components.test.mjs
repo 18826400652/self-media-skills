@@ -184,3 +184,15 @@ test("catalogText：每个组件一段：名字、用途、适合、最短时长
   assert.match(found, /dy-vs-compare/);
   assert.match(catalogText(catalog, "没有的词"), /没有和「没有的词」相关的组件/);
 });
+
+test("localArchive：目录里有 registry/registry.json 就返回这个目录", async () => {
+  const { localArchive } = await import("../scripts/lib/components.mjs");
+  const dir = project({ "registry/registry.json": { items: [] } });
+  assert.equal(localArchive(dir), dir);
+});
+
+test("localArchive：没有 registry/registry.json 时报错，说清路径", async () => {
+  const { localArchive } = await import("../scripts/lib/components.mjs");
+  const dir = project({ "x.txt": "" });
+  assert.throws(() => localArchive(dir), (err) => err.message.includes(dir) && err.message.includes("registry/registry.json"));
+});
