@@ -4,6 +4,9 @@ const TOL = 2;
 const SAFE = { top: 200, right: 160, bottom: 480 }; // 平台界面占的边（director-rules 第 11 条）
 const RIGHT_FROM = 760; // 右侧按钮列（头像、点赞、评论、收藏、分享）从这里往下；上半屏内容可以用到 x 1020
 export const CAPTION = { top: 1180, bottom: 1440 }; // 字幕带只放字幕
+const CONTENT = { x1: 60, y1: 230, x2: 1020, y2: 1150 }; // 关键内容区（director-rules 第 11 条）
+const ZOOM_MIN_PX = 37; // 推近后要读的字在手机上至少这么大（knowledge-video qa.md 的 text-size）
+const PUNCH_MAX = 3;
 const SETTLE = 0.8; // @词 后多久算落定
 const SEG_TAIL = 0.3; // 每段结尾前多久截一张
 const GRID = 0.5;
@@ -132,6 +135,31 @@ export function checkCues(frames, cues) {
     const mine = f.data.cueMarks.find((x) => x.sel === m.sel && x.cue === m.cue);
     if (mine && !mine.visible) out.push({ level: "error", kind: "cue-hidden", sel: m.sel, t: f.t, msg: `@${m.cue}（t=${f.t}s）时 ${m.sel} 看不见` });
   }
+  return out;
+}
+
+/** 推近点：@词 落定时那一行要在内容区里、推近后字号 ≥37px */
+export function checkZooms(frames) {
+  const out = [];
+  for (const f of frames) {
+    for (const z of (f.data.zooms ?? []).filter((x) => f.cue && x.cue === f.cue)) {
+      const [x1, y1, x2, y2] = z.box;
+      const add = (what) => out.push({ level: "error", kind: "zoom-target", sel: z.sel, t: f.t, msg: `${at(f)}推近点 @${z.cue} 的 ${z.sel} ${what}` });
+      if (x1 < CONTENT.x1 - TOL || y1 < CONTENT.y1 - TOL || x2 > CONTENT.x2 + TOL || y2 > CONTENT.y2 + TOL) add(`出了内容区（x ${CONTENT.x1}–${CONTENT.x2}、y ${CONTENT.y1}–${CONTENT.y2}）`);
+      if (z.fontPx < ZOOM_MIN_PX) add(`推近后字只有 ${z.fontPx}px，手机上要 ≥${ZOOM_MIN_PX}px：推得更近或换一行`);
+    }
+  }
+  return out;
+}
+
+/** 镜头用量：custom 段一期最多 1 个；花字（dy-shot-punch，段 + overlay）最多 3 个 */
+export function checkShotCounts(segments) {
+  const out = [];
+  const custom = segments.filter((s) => s.custom).map((s) => s.id);
+  if (custom.length > 1) out.push({ level: "warn", kind: "custom-count", sel: "", t: 0, msg: `custom 段有 ${custom.length} 个（${custom.join("、")}），一期最多 1 个：换成最接近的镜头，缺的需求记进候选台账` });
+  const isPunch = (x) => x.component === "dy-shot-punch";
+  const punch = segments.filter(isPunch).length + segments.flatMap((s) => s.overlays ?? []).filter(isPunch).length;
+  if (punch > PUNCH_MAX) out.push({ level: "warn", kind: "punch-count", sel: "", t: 0, msg: `花字用了 ${punch} 次，全片最多 ${PUNCH_MAX} 次，太多就没有重拍了` });
   return out;
 }
 

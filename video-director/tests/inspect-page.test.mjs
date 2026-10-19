@@ -103,3 +103,25 @@ test("openPage：shot64 返回 base64，pixels 返回色度 / 暗部比例", { s
     assert.ok(px.stdL >= 0);
   } finally { await page.close(); }
 });
+
+const ZOOM_HTML = `<!doctype html><html><head><style>body{margin:0;width:1080px;height:1920px;position:relative}</style></head><body>
+<div data-composition-id="main" data-duration="2" style="position:absolute;inset:0">
+  <div style="position:absolute;left:100px;top:400px;transform:scale(2);transform-origin:0 0">
+    <div id="line" data-vd-zoom="@本周重点" style="font-size:20px;height:50px;width:200px">本周重点</div>
+    <div id="region" data-vd-zoom="@四块" data-vd-zoom-text="15" style="position:absolute;left:0;top:100px;width:300px;height:80px"></div>
+  </div>
+</div>
+<script>window.__player = { getDuration: () => 2, renderSeek: async () => {} };</script></body></html>`;
+
+test("openPage：data-vd-zoom 元素带上框和推近后的字号（缩放算进去；data-vd-zoom-text 代替 font-size）", { skip: !chrome && "没有 Chrome" }, async () => {
+  const page = await openPage({ html: ZOOM_HTML, root: project({}) });
+  try {
+    const f = await page.frame(0.5);
+    assert.deepEqual(f.zooms, [
+      { cue: "本周重点", sel: "#line", box: [100, 400, 500, 500], fontPx: 40 },
+      { cue: "四块", sel: "#region", box: [100, 600, 700, 760], fontPx: 30 },
+    ]);
+  } finally {
+    await page.close();
+  }
+});

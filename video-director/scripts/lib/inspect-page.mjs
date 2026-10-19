@@ -101,6 +101,13 @@ function collect() {
     const box = boxOf(e);
     return { cue: e.getAttribute("data-vd-cue"), sel: selOf(e), visible: opacityOf(e) >= 0.5 && area(box) > 0 && onScreen(box) };
   });
+  // 推近点：镜头推近后要读的那行（data-vd-zoom="@词"）。字号 = font-size（或 data-vd-zoom-text）× 祖先缩放
+  const zooms = [...document.querySelectorAll("[data-vd-zoom]")].filter((e) => !inBrand(e)).map((e) => {
+    const r = e.getBoundingClientRect();
+    const scale = e.offsetHeight ? r.height / e.offsetHeight : 1;
+    const base = Number(e.getAttribute("data-vd-zoom-text")) || parseFloat(getComputedStyle(e).fontSize);
+    return { cue: e.getAttribute("data-vd-zoom").replace(/^@/, ""), sel: selOf(e), box: [r.left, r.top, r.right, r.bottom].map(Math.round), fontPx: Math.round(base * scale) };
+  });
   const kick = document.getElementById("bk-label");
   let kicker = { visible: false, occludedBy: null };
   if (kick && opacityOf(kick) > 0.05 && area(boxOf(kick))) {
@@ -114,7 +121,7 @@ function collect() {
     }
     kicker = { visible: true, occludedBy: by };
   }
-  return { elements, blocks, texts, materials, aestheticOk, cueMarks, kicker, sig: sig.join("|") };
+  return { elements, blocks, texts, materials, aestheticOk, cueMarks, zooms, kicker, sig: sig.join("|") };
 }
 
 /* 在页面里执行：把截图缩到 1/4，统计鲜艳 / 暗部像素和亮度分布。和 collect 一样必须自包含 */
