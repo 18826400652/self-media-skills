@@ -120,3 +120,10 @@ test("下一步提示用新命令：第 8 步 vo + vd cues，第 10 步 vd rende
   const r = practicalStatus(dirFacts({ steps: { render: { ok: false, why: "还没渲染" } } }));
   assert.match(r.next, /^10 渲染 \+ QA：.*vd render 抖音/);
 });
+
+test("复盘没做、④ 已通过、台账里有这期该磨的镜头 → remind 列出名字；没有就不提醒", () => {
+  const f = { ...facts({ steps: { retro: notOk() } }), shotQueue: ["dy-shot-diff"] };
+  assert.match(practicalStatus(f).remind, /镜头候选该磨了：dy-shot-diff（第 2 次出现）.*dropped/);
+  assert.equal(practicalStatus({ ...f, shotQueue: [] }).remind, undefined);
+  assert.equal(practicalStatus({ ...facts({ steps: { retro: notOk() }, gates: { final: unpassed } }), shotQueue: ["dy-shot-diff"] }).remind, undefined);
+});

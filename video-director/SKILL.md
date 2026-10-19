@@ -92,6 +92,15 @@ dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独�
 - 字体：机器块可写 `"fonts": { "title": "serif" | "sans", "body": "serif" | "sans" }`，默认标题宋体、正文黑体
 - 旧工程的 `index.html` 要用组件时，在 `<script src="cues.js"></script>` 下一行加 `<!-- vd:head --><!-- /vd:head -->`
 
+## 缺镜头时（出现两次才磨）
+
+每段先选镜头（`director-rules.md` 第 18 条）。镜头库里没有合适的：
+
+1. 这一期先手写：机器块写 `"shot": "custom"` + `reason` / `need` / `candidate`，一期最多 1 段；同一期还缺第二种就用最接近的镜头凑合。
+2. `vd check` 自动把它记进项目的镜头候选台账（默认 `00-规划/镜头候选.json`，可在 `video-director.config.json` 的 `shotLedger` 改）。写 candidate 前先读台账，同一类需求用已有的名字。
+3. 同一个候选在另一期又出现 → 台账标 queued，这期照常手写出片；复盘时 `kv status` 提醒，用户同意后按磨镜头流程做，"典型"那组内容用这两期手写段的真实内容。
+4. 入库后台账改成 done、记上镜头 id；用户不做就改成 dropped，不再提醒。
+
 ## 组件候选（让组件库越用越全）
 
 `DIRECTOR.md` 第 8 节记录「换文字就能复用」的画面。每做完一段回来填；`vd check` 会列出来；**关卡 ④ 交成片时把候选一起交给用户**，用户决定哪些提交到 hyperframes（按 hyperframes 仓库 `dykit-storyboard` 技能的新组件流程：测试 + 5 主题对比图 + 用户确认）。

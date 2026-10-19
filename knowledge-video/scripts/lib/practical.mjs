@@ -85,7 +85,14 @@ export function practicalStatus(facts) {
       next = own.content === true && SAVE_HOW[first.key] ? saveNext(first) : `${first.n} ${first.label}：${HOW[first.key]}${own.why ? `（现在：${own.why}）` : ""}`;
     }
   }
-  return { rows, next: next ?? "这期做完了", waitingFor };
+  return { rows, next: next ?? "这期做完了", waitingFor, ...shotRemind(facts) };
+}
+
+/** ④ 通过后、复盘还没写：台账里这期第二次出现的镜头候选要提醒用户（video-director 的缺镜头流程） */
+function shotRemind(facts) {
+  const final = facts.gates.final;
+  if (!facts.shotQueue?.length || facts.steps.retro?.ok || !final?.passed || final.stale) return {};
+  return { remind: `镜头候选该磨了：${facts.shotQueue.join("、")}（第 2 次出现）。和用户确认后按 video-director 的磨镜头流程做；不做就把台账里的 status 改成 dropped` };
 }
 
 /** 到第 n 步（含）为止，第一个挡路的原因；null = 都走完了 */

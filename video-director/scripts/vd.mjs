@@ -18,6 +18,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { assemble, cuesJs } from "./lib/assemble.mjs";
 import { REPO, projectCatalog, catalogEntry, catalogText, componentInfo, ensureLock, fetchArchive, fitProblem, installComponent, localArchive, recordingProblem, textProblems, writeLock } from "./lib/components.mjs";
 import { buildAudio, shotSfx } from "./lib/audio.mjs";
+import { recordLedger } from "./lib/ledger.mjs";
 import { findProjectRoot, loadConfig, localDykitDir } from "./lib/config.mjs";
 import { buildCues } from "./lib/cues.mjs";
 import { missingAts } from "./lib/frame-ats.mjs";
@@ -174,8 +175,9 @@ const COMMANDS = {
   },
   check(dir, _rest, config = loadConfig(findProjectRoot(dir)), { requireBin = requireHf } = {}) {
     const bin = requireBin();
-    const { parsed } = load(dir);
+    const { parsed, built } = load(dir);
     console.log(candidatesText(parsed.candidates));
+    for (const c of recordLedger({ root: findProjectRoot(dir), projectDir: dir, segments: built.segments, ...(config.shotLedger ? { ledgerRel: config.shotLedger } : {}) })) console.log(`◇ 镜头候选台账：${c}`);
     const r = run(bin, ["check", "."], { cwd: dir });
     process.stdout.write(r.stdout);
     if (r.status !== 0) { console.error(r.stderr); return 1; }
