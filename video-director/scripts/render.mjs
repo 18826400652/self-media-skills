@@ -46,7 +46,10 @@ export function normalizeAudio(file, { run = spawnSync } = {}) {
     return false;
   }
   const tmp = file.replace(/\.mp4$/i, "") + ".norm.mp4";
-  const r = run("ffmpeg", applyArgs(file, loudnormFilter(m), tmp), { stdio: "inherit" });
+  // loudnorm 会把声音尾巴补到整秒（29.93 → 30.0），成片就比画面长、verify 报少帧：按画面时长截掉
+  const video = Number(run("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "csv=p=0", file], { encoding: "utf8" }).stdout);
+  const filter = loudnormFilter(m) + (video > 0 ? `,atrim=0:${video}` : "");
+  const r = run("ffmpeg", applyArgs(file, filter, tmp), { stdio: "inherit" });
   if (r.status !== 0) {
     console.warn(`⚠ 响度标准化失败（原片保留）：ffmpeg 返回 ${r.status ?? "?"}`);
     return false;

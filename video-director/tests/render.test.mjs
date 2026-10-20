@@ -101,3 +101,14 @@ test("vd render：调 hyperframes 时 HYPERFRAMES_FFMPEG_PATH 指向包装脚本
   } finally { if (orig === undefined) delete process.env.HYPERFRAMES_FFMPEG_PATH; else process.env.HYPERFRAMES_FFMPEG_PATH = orig; }
   assert.deepEqual(seen, [FFMPEG_WRAPPER, "/my/ffmpeg"]);
 });
+
+test("响度标准化后声音和画面一样长（loudnorm 会把声音补到整秒，verify 就会报少帧）", async () => {
+  const { normalizeAudio } = await import("../scripts/render.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "vd-norm-"));
+  const file = join(dir, "x.mp4");
+  const make = spawnSync2("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "color=c=gray:s=320x240:r=30:d=29.93", "-f", "lavfi", "-i", "sine=f=440:d=29.93:sample_rate=48000", "-c:v", "libx264", "-c:a", "aac", file]);
+  assert.equal(make.status, 0, String(make.stderr));
+  assert.equal(normalizeAudio(file), true);
+  const probe = (sel) => Number(spawnSync2("ffprobe", ["-v", "error", "-select_streams", sel, "-show_entries", "stream=duration", "-of", "csv=p=0", file], { encoding: "utf8" }).stdout);
+  assert.ok(Math.abs(probe("a:0") - probe("v:0")) < 0.03, `声音 ${probe("a:0")} 秒，画面 ${probe("v:0")} 秒`);
+});
