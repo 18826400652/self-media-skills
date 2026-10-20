@@ -27,6 +27,19 @@ export function voiceKeyParts(tts) {
   return parts.filter((v) => v !== undefined && v !== "");
 }
 
+const HEARTBEAT_MS = 30_000;
+
+/** 等 promise 的时候每隔 everyMs 报一声已等多久（一次合成可能要几分钟，没输出看不出是慢还是卡住） */
+export async function withHeartbeat(promise, { everyMs = HEARTBEAT_MS, log = console.log } = {}) {
+  const started = Date.now();
+  const timer = setInterval(() => log(`     …这一段还没好，已等 ${Math.round((Date.now() - started) / 1000)} 秒`), everyMs);
+  try {
+    return await promise;
+  } finally {
+    clearInterval(timer);
+  }
+}
+
 export function probeDuration(file) {
   const out = execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file]);
   return Number(out.toString().trim());
@@ -84,7 +97,7 @@ export async function synthesizeClean(line, tts, dir, name) {
     console.log(`  ✓  ${name}（缓存）`);
   } else {
     console.log(`  🎙  ${name}：${line.text}`);
-    await provider.synthesize({ ...tts, text: ttsText, outFile: raw });
+    await withHeartbeat(provider.synthesize({ ...tts, text: ttsText, outFile: raw }));
   }
 
   const file = raw.replace(/\.wav$/, ".trim.wav");
@@ -116,7 +129,7 @@ export async function synthesizeSegment(segment, lines, tts, dir) {
     console.log(`  ✓  ${segment.name}（第 ${lines[0].frame}–${lines.at(-1).frame} 帧，缓存）`);
   } else {
     console.log(`  🎙  ${segment.name}（第 ${lines[0].frame}–${lines.at(-1).frame} 帧）：${text}`);
-    await provider.synthesize({ ...tts, text, direction: spokenPrompt(segment.prompt), outFile: raw });
+    await withHeartbeat(provider.synthesize({ ...tts, text, direction: spokenPrompt(segment.prompt), outFile: raw }));
   }
 
   // {语气词} 照样念，但不进字幕：从时间戳里去掉，再按原文字数分帧

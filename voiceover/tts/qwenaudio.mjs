@@ -23,6 +23,9 @@ const ASR_MODEL = "fun-asr";
 const SAMPLE_RATE = 24000;
 const TIMEOUT_MS = 300_000;
 const ASR_TIMEOUT_MS = 180_000;
+const POLL_MS = 1000;
+const POLL_TIMEOUT_MS = 30_000; // 查一次识别进度最多等这么久，卡住就放弃这一次、接着查
+const POLL_LOG_MS = 15_000; // 识别等得久时，隔这么久报一次已等多久
 const ATTEMPTS = 5;
 const TAIL = "只说引号里的话，一字不改，不加背景音乐和音效。";
 const MIME = { ".wav": "audio/wav", ".mp3": "audio/mpeg", ".ogg": "audio/ogg", ".opus": "audio/ogg" };
@@ -89,27 +92,51 @@ async function post(url, body, headers = {}) {
   }
 }
 
-/** 录音文件识别（异步任务）：音频 URL → [{ text, start, end }]（秒） */
-async function transcribe(url) {
+const isTimeout = (err) => err?.name === "TimeoutError" || err?.name === "AbortError";
+const seconds = (since) => Math.round((Date.now() - since) / 1000);
+
+/** 查一次识别任务；这一次卡住（超时）返回 null，由外面接着查 */
+async function pollTask(id, timeoutMs, log) {
+  try {
+    const res = await fetch(`${TASKS}/${id}`, { headers: { Authorization: `Bearer ${process.env.DASHSCOPE_API_KEY}` }, signal: AbortSignal.timeout(timeoutMs) });
+    return await res.json();
+  } catch (err) {
+    if (!isTimeout(err)) throw err;
+    log(`     查询识别进度超时（${timeoutMs / 1000} 秒没回），接着查`);
+    return null;
+  }
+}
+
+/**
+ * 录音文件识别（异步任务）：音频 URL → [{ text, start, end }]（秒）
+ * opts 只给测试调快用：轮询间隔、单次请求超时、总期限、报进度间隔、打印函数
+ */
+export async function transcribe(url, opts = {}) {
+  const { pollMs = POLL_MS, requestTimeoutMs = POLL_TIMEOUT_MS, deadlineMs = ASR_TIMEOUT_MS, logEveryMs = POLL_LOG_MS, log = console.log } = opts;
   const sub = await post(ASR, { model: ASR_MODEL, input: { file_urls: [url] }, parameters: { language_hints: ["zh", "en"] } }, { "X-DashScope-Async": "enable" });
   const id = sub.output?.task_id;
   if (!id) throw new Error(`识别任务没有创建成功：${JSON.stringify(sub).slice(0, 300)}`);
-  const deadline = Date.now() + ASR_TIMEOUT_MS;
+  const started = Date.now();
+  let lastLog = started;
   for (;;) {
-    await sleep(1000);
-    const res = await fetch(`${TASKS}/${id}`, { headers: { Authorization: `Bearer ${process.env.DASHSCOPE_API_KEY}` } });
-    const task = await res.json();
-    const status = task.output?.task_status;
+    await sleep(pollMs);
+    const task = await pollTask(id, requestTimeoutMs, log);
+    const status = task?.output?.task_status;
     if (status === "SUCCEEDED") {
       const result = task.output.results?.[0];
       if (!result?.transcription_url) throw new Error(`识别失败：${JSON.stringify(result).slice(0, 300)}`);
-      const transcript = await (await fetch(result.transcription_url)).json();
+      const transcript = await (await fetch(result.transcription_url, { signal: AbortSignal.timeout(requestTimeoutMs) })).json();
+      log(`     识别完成（${seconds(started)} 秒）`);
       return (transcript.transcripts?.[0]?.sentences ?? []).flatMap((s) =>
         (s.words ?? []).map((w) => ({ text: w.text, start: w.begin_time / 1000, end: w.end_time / 1000 })),
       );
     }
     if (status === "FAILED") throw new Error(`识别失败：${task.output?.message ?? JSON.stringify(task.output).slice(0, 300)}`);
-    if (Date.now() > deadline) throw new Error(`识别超时（任务 ${id}）`);
+    if (Date.now() - started > deadlineMs) throw new Error(`识别超时（任务 ${id}）`);
+    if (logEveryMs && Date.now() - lastLog >= logEveryMs) {
+      lastLog = Date.now();
+      log(`     识别中，已等 ${seconds(started)} 秒`);
+    }
   }
 }
 
@@ -120,12 +147,16 @@ export async function synthesize(opts) {
   }
   const text = spokenText(opts);
   try {
+    const started = Date.now();
+    console.log("     ① 生成音频…");
     const gen = await post(GENERATE, buildBody(opts));
     const url = gen.output?.audio?.url;
     if (!url) throw new Error(`没有返回音频：${JSON.stringify(gen).slice(0, 300)}`);
+    console.log(`     ② 生成好了（${seconds(started)} 秒），下载…`);
     const audio = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
     if (!audio.ok) throw new Error(`下载音频失败：HTTP ${audio.status}`);
     writeFileSync(outFile, Buffer.from(await audio.arrayBuffer()));
+    console.log("     ③ 识别逐字时间（对字幕用）…");
     const heard = await transcribe(url);
     if (!heard.length) throw new Error("识别结果是空的，音频可能没有人声");
     writeFileSync(outFile.replace(/\.wav$/, ".words.json"), JSON.stringify(alignToText(heard, text)));

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { applyHead, audioHosts, brandHosts, cuesJs, customVars, headBlock, replaceBlock, segmentHosts, setRootDuration } from "../scripts/lib/assemble.mjs";
 
@@ -45,6 +46,17 @@ test("brandHosts：字幕带重点词、栏目标签贯穿全片、结尾从最�
   assert.match(h, /&amp;/);
   assert.match(h, /&#39;/);
   assert.doesNotMatch(h, /data-variable-values='[^']*'[^>]*'/);
+});
+
+test("brandHosts：ending 没写 next 时传空字符串（结尾条不出下一期预告）", () => {
+  const vd = { kicker: "k", palette: { bg: "#F1ECE2", ink: "#1C1A17", muted: "#6E675C", accent: "#FFD84D", alert: "#D2372A" }, ending: { question: "q", cta: "c", hold: 2 } };
+  const h = brandHosts({ vd, groups: [], lines: [{ line: 1, start: 0, end: 3.32 }], duration: 5 });
+  assert.match(h, /&quot;next&quot;:&quot;&quot;|"next":""/);
+});
+
+test("骨架里的 brand-ending.html：next 为空时整块预告不显示", () => {
+  const html = readFileSync(new URL("../../studio/skeleton/06-品牌资产/hyperframes/brand-ending.html", import.meta.url), "utf8");
+  assert.match(html, /if \(!v\.next\)/);
 });
 
 test("audioHosts：配音一条；有配乐时第二条带 media-start 和音量", () => {

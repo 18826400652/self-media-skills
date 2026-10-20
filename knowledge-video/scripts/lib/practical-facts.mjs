@@ -1,4 +1,4 @@
-// 从作品目录读出实用类 15 步的事实，交给 practical.mjs 判断。
+// 从作品目录读出实用类 16 步的事实，交给 practical.mjs 判断。
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -239,8 +239,20 @@ export function shotQueue(root, dir) {
   return (JSON.parse(readFileSync(p, "utf8")).items ?? []).filter((x) => x.status === "queued" && x.episodes?.some((e) => e.work === work)).map((x) => x.name);
 }
 
+const shortName = (dir) => basename(dir).replace(/^\d+-/, "");
+const squash = (t) => t.replace(/\s+/g, "");
+
+/** 选题清单「已做」一节（没有这个标题就看全文）里出现了这期简称，空格不算 */
+function topicsStep(dir, topicList) {
+  if (!existsSync(topicList)) return no(`没有 ${topicList}（路径在 knowledge-video.config.json 的 topicList 里改）`);
+  const md = readFileSync(topicList, "utf8");
+  const done = md.match(/^##\s*已做[^\n]*\n([\s\S]*?)(?=^##\s|(?![\s\S]))/m)?.[1] ?? md;
+  const name = shortName(dir);
+  return squash(done).includes(squash(name)) ? ok() : no(`选题清单「已做」里还没有「${name}」`);
+}
+
 function retroStep(dir, experienceDir) {
-  const name = basename(dir).replace(/^\d+-/, "");
+  const name = shortName(dir);
   const hit = existsSync(experienceDir) && readdirSync(experienceDir).some((f) => f.includes(name));
   return hit ? ok() : no(`经验库里还没有文件名带「${name}」的记录`);
 }
@@ -256,13 +268,14 @@ function gateFacts(dir, run) {
   }));
 }
 
-export function collectPracticalFacts(dir, run, { runSc, runVoiceCheck, runVdCues, experienceDir }) {
+export function collectPracticalFacts(dir, run, { runSc, runVoiceCheck, runVdCues, experienceDir, topicList }) {
   const { platform, ...sc } = scSteps(dir, runSc);
   const steps = {
     ...sc,
     script: scriptStep(dir, run, runVoiceCheck),
     ...directorSteps(dir, runVdCues),
     ...draftSteps(dir, run),
+    topics: topicsStep(dir, topicList),
     record: recordStep(dir),
     retro: retroStep(dir, experienceDir),
   };

@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-CN" data-composition-variables='[
-  {"id":"next","type":"string","label":"下一期预告","default":"下一期：……"},
+  {"id":"next","type":"string","label":"下一期预告（空 = 不预告）","default":"下一期：……"},
   {"id":"question","type":"string","label":"结尾问题","default":"你怎么看？"},
   {"id":"cta","type":"string","label":"评论引导","default":"评论区说说 ↓"},
   {"id":"holdAt","type":"number","label":"问题出现时间（相对本段，秒）","default":4},
@@ -38,8 +38,12 @@
           const t = Number(v.holdAt);
           gsap.set(["#be-next", "#be-q", "#be-cta"], { opacity: 0 });
           const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out", immediateRender: false } });
-          tl.fromTo("#be-next", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.4 }, 0.2);
-          tl.to("#be-next", { opacity: 0, y: -30, duration: 0.3, ease: "power2.in" }, t - 0.3);
+          // 没写下一期预告：整块不出现
+          if (!v.next) $("be-next").style.display = "none";
+          else {
+            tl.fromTo("#be-next", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.4 }, 0.2);
+            tl.to("#be-next", { opacity: 0, y: -30, duration: 0.3, ease: "power2.in" }, t - 0.3);
+          }
           tl.fromTo("#be-q", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.45 }, t);
           tl.fromTo("#be-cta", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4 }, t + 0.5);
           window.__timelines["brand-ending"] = tl;

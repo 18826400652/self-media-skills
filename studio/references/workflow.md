@@ -315,6 +315,13 @@ kv status 04-作品/<系列>/NN-<简称>
 - **kv 判定**：`抖音/renders/` 里有正式成片（不算 `sample`、`compare`、`预览` 开头的）；成片比工程里最新的 HTML 新；`qa-douyin.json` 存在、`passed: true`、比最新 HTML 新；`qa.json` 比成片新、`passed: true`；确认 ④ 通过
 - **注意**：视频不进 git，成品另存网盘
 
+> **第 11–13 步三个平台互不依赖**，哪个先存都能 `kv done`。某个平台这个项目或某个系列不做（比如公众号改成每周合集、单期不发），在项目根目录 `knowledge-video.config.json` 里关掉，`kv status` 显示 `–`、不再列为下一步，`kv done` 也不收：
+> ```jsonc
+> "skipPlatforms": { "*": ["wechat"] }              // 全项目不做公众号
+> "skipPlatforms": { "AI替我干活": ["wechat"] }      // 只这个系列（键是 04-作品/ 下的系列目录名）
+> ```
+> 可选值 `wechat`、`xiaohongshu`、`douyin`。
+
 ### 第 11 步：公众号
 
 - **skill**：content-repurpose（`references/wechat.md`）→ wechat-article（`wa`）→ browser-draft
@@ -378,7 +385,16 @@ kv status 04-作品/<系列>/NN-<简称>
 - **kv 判定**：`抖音/发布文案.md` 不是空模板；`抖音/out/` 里最新的 `NN.png` 比 `抖音/封面.md` 新；而且已经 `kv done douyin`
 - **注意**：**抖音网页端只保留一条未发布的作品**：已有一条时脚本会停下，先在创作者中心把它发布或「放弃」。预览在创作者中心「发布视频」页点「继续编辑」，右侧有手机预览。不传 `--cover` 时用视频画面做封面，弹窗有时加载不出来，会提示「封面没设上」
 
-### 第 14 步：发布记录
+### 第 14 步：更新选题清单
+
+- **做什么**：打开选题清单（默认 `03-选题池/选题清单.md`，路径在 `knowledge-video.config.json` 的 `topicList`）：
+  1. 这期从「待做」挪到「已做」，选题或期数那一栏写上作品简称（目录名去掉编号，如 `AI写周报`）；领取关键词一起填上，后面开新一期别撞
+  2. 这期对标（`选题关.md`）、评论区、搜索联想词里冒出来的新题补进「待做」：写清来源，没实测过的标「待实测」
+  3. 系列说明（`00-规划/系列/<系列>.md`）里列候选选题的那一节同步改
+- **kv 判定**：选题清单「已做」一节（没有这个标题就看全文）里出现了这期简称，空格不算
+- **什么时候做**：三个平台草稿存完就做，不用等发布
+
+### 第 15 步：发布记录
 
 - **做什么**：照 `发布记录.md` 的清单逐条过：
   - **抖音**：完整看一遍成片；横竖封面；背景音乐（`vd build` 已自带配乐）；发布文案；置顶评论（说清怎么领模板，按 `lead`）；领取入口里已经放好模板；**勾选「内容由 AI 生成」**；全程没有微信号、二维码、「加微信」；数字都能在实测记录里找到出处
@@ -388,7 +404,7 @@ kv status 04-作品/<系列>/NN-<简称>
 - **kv 判定**：`发布记录.md` 里「置顶评论（原文）」代码块已经换成真实原文（不是模板里的占位文字）
 - **发布时间**：按本项目设置；没有就先用晚上 19–21 点，发几期后按后台数据调
 
-### 第 15 步：复盘
+### 第 16 步：复盘
 
 - **skill**：knowledge-video（经验库）
 - **做什么**：在 `00-规划/经验库/` 写 `YYYY-MM-DD-<简称>.md`：
@@ -422,7 +438,7 @@ kv status 04-作品/<系列>/NN-<简称>
 
 | 命令 | 用途 |
 |---|---|
-| `kv status <作品>` | 列出 15 步 ✓/·、确认节点状态、**下一步做什么 + 为什么没过** |
+| `kv status <作品>` | 列出 16 步 ✓/·、确认节点状态、**下一步做什么 + 为什么没过** |
 | `kv gate <作品> topic\|script\|director\|sample\|final "原话"` | 记下用户的确认；前面的步骤没做完会被拒绝 |
 | `kv gate <作品> <节点> --edit "原话"` | 记下修改意见（不算通过） |
 | `kv done <作品> wechat\|xiaohongshu\|douyin` | 记下草稿已存；内容文件没写好会被拒绝 |
@@ -431,7 +447,7 @@ kv status 04-作品/<系列>/NN-<简称>
 
 **内部机制**：
 
-- **进度从文件推出来，不靠手记**：`practical-facts.mjs` 读作品目录，判断每一步满足没有；`practical.mjs` 的步骤表只有一套（15 步），从第 1 步往下找第一个没满足的，就是「下一步」
+- **进度从文件推出来，不靠手记**：`practical-facts.mjs` 读作品目录，判断每一步满足没有；`practical.mjs` 的步骤表只有一套（16 步），从第 1 步往下找第一个没满足的，就是「下一步」
 - 第 1–6 步调 `sc check --json`，按出问题的文件归到对应的步骤；第 7 步调 `vo --check`；第 8 步调 `vd cues --check`。命令名可以用 `KV_SC_CMD`、`KV_VO_CMD`、`KV_VD_CMD` 换
 - **确认的指纹**：`kv gate` 把相关文件的 sha256 存进 `run.json`。之后文件一变，这个节点就算 stale，要重新确认：
 
@@ -445,7 +461,7 @@ kv status 04-作品/<系列>/NN-<简称>
 
 - **新旧检查**：成片比最新 HTML 旧、`qa.json` 比成片旧、`qa-douyin.json` 比最新 HTML 旧、封面 PNG 比 `封面.md` 旧，都算没做完
 - **正式成片**：文件名以「预览」「sample」「compare」开头的 mp4 都不算
-- 配置 `knowledge-video.config.json`：`series`、`audience`、`voiceGuide`、`experienceDir`
+- 配置 `knowledge-video.config.json`：`series`、`audience`、`voiceGuide`、`experienceDir`、`topicList`（选题清单，第 14 步看它）、`skipPlatforms`（不做的平台，见第 11 步前的说明）
 
 ### 4.2 scenario-content（`sc`）：内容这几步怎么做
 
