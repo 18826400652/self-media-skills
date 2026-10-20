@@ -135,6 +135,12 @@ test("headBlock：有组件才引入 dykit 样式和脚本", () => {
   assert.match(headBlock(true), /<link rel="stylesheet" href="assets\/dykit\/dykit.css" \/>[\s\S]*<script src="assets\/dykit\/hf-kit.js"><\/script>/);
 });
 
+test("applyHead：全片铺一层配色底色（#root 背景 = palette.bg），叠加类组件不再露白底", () => {
+  const h = applyHead("<!-- vd:head --><!-- /vd:head -->", true, "#F1ECE2");
+  assert.match(h, /<style>#root \{ background: #F1ECE2; \}<\/style>/);
+  assert.doesNotMatch(applyHead("<!-- vd:head --><!-- /vd:head -->", false), /#root \{ background/);
+});
+
 test("applyHead：旧工程没有 vd:head 标记、也没用组件时照常构建；用了组件才要求标记", () => {
   const old = "<head><script src=\"cues.js\"></script></head>";
   assert.equal(applyHead(old, false), old);
