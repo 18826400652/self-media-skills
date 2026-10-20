@@ -65,7 +65,8 @@ const readable = (bg, ...colors) => colors.find((c) => contrast(c, bg) >= READAB
  */
 export function customVars(p, fonts = {}) {
   if (contrast(p.ink, p.bg) < READABLE) throw new Error(`palette.ink（${p.ink}）和 palette.bg（${p.bg}）对比度只有 ${contrast(p.ink, p.bg).toFixed(2)}:1，组件里的字看不清：至少要 ${READABLE}:1`);
-  const accent = readable(p.bg, p.accent, p.alert, p.ink);
+  // 强调色看不清时退回正文色，不退到 alert：alert 是「错的」，拿来强调会误导
+  const accent = readable(p.bg, p.accent, p.ink);
   const alert = readable(p.bg, p.alert, p.ink);
   return `--hf-custom-bg:${p.bg};--hf-custom-text:${p.ink};--hf-custom-muted:${p.muted};--hf-custom-accent:${accent};--hf-custom-alert:${alert};--hf-custom-highlight:${p.accent};` +
     `--hf-custom-font-title:${FONT_VAR[fonts.title ?? "serif"]};--hf-custom-font-body:${FONT_VAR[fonts.body ?? "sans"]};` +
