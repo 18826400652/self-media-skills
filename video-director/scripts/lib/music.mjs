@@ -43,10 +43,13 @@ export function loopArgs(src, out, len, duration, fade = SEAM) {
   return ["-y", "-v", "error", ...inputs, "-filter_complex", chain, "-map", `[a${n - 1}]`, "-t", total, out];
 }
 
-/** 循环补到 duration 秒，写成 out（相对工程）；失败抛错 */
+/**
+ * 循环补到视频长度再多一整段（len 秒），写成 out（相对工程）；失败抛错。
+ * 多的那段是重拍对位的余量：只补到视频长度时 data-media-start 只能是 0，music.drop 永远对不上
+ */
 function loopTo(dir, src, out, duration, runFn, len) {
   const tmp = join(dir, "assets/audio/.loop-tmp.wav");
-  const r = runFn("ffmpeg", loopArgs(join(dir, src), tmp, len, duration), { cwd: dir });
+  const r = runFn("ffmpeg", loopArgs(join(dir, src), tmp, len, duration + len), { cwd: dir });
   if (r.status !== 0) throw new Error(`配乐循环补齐失败：${(r.stderr || "").trim()}`);
   if (existsSync(tmp)) renameSync(tmp, join(dir, out));
   return out;
