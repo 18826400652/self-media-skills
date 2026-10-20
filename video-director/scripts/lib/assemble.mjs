@@ -65,7 +65,8 @@ const readable = (bg, ...colors) => colors.find((c) => contrast(c, bg) >= READAB
  */
 export function customVars(p, fonts = {}) {
   if (contrast(p.ink, p.bg) < READABLE) throw new Error(`palette.ink（${p.ink}）和 palette.bg（${p.bg}）对比度只有 ${contrast(p.ink, p.bg).toFixed(2)}:1，组件里的字看不清：至少要 ${READABLE}:1`);
-  const accent = readable(p.bg, p.accent, p.alert, p.ink);
+  // 强调色看不清时退回正文色，不退到 alert：alert 是「错的」，拿来强调会误导
+  const accent = readable(p.bg, p.accent, p.ink);
   const alert = readable(p.bg, p.alert, p.ink);
   return `--hf-custom-bg:${p.bg};--hf-custom-text:${p.ink};--hf-custom-muted:${p.muted};--hf-custom-accent:${accent};--hf-custom-alert:${alert};--hf-custom-highlight:${p.accent};` +
     `--hf-custom-font-title:${FONT_VAR[fonts.title ?? "serif"]};--hf-custom-font-body:${FONT_VAR[fonts.body ?? "sans"]};` +
@@ -82,10 +83,13 @@ export function headBlock(hasComponents) {
   return hasComponents ? `\n    <link rel="stylesheet" href="assets/dykit/dykit.css" />\n    <script src="assets/dykit/hf-kit.js"></script>\n    ` : "";
 }
 
+/** 全片底色：各段下面铺 palette.bg（叠加类组件自己不带底色，没有这层会露白底） */
+export const rootBgBlock = (bg) => (bg ? `<style>#root { background: ${bg}; }</style>\n    ` : "");
+
 /** 写 vd:head 块；旧工程没有这个标记、也没用组件时原样返回 */
-export function applyHead(html, hasComponents) {
+export function applyHead(html, hasComponents, bg = null) {
   if (!hasComponents && !html.includes("<!-- vd:head -->")) return html;
-  return replaceBlock(html, "head", headBlock(hasComponents) + actionsBlock());
+  return replaceBlock(html, "head", headBlock(hasComponents) + rootBgBlock(bg) + actionsBlock());
 }
 
 const motion = (s) => ({ ...(s.enter ? { enter: s.enter } : {}), ...(s.exit ? { exit: s.exit } : {}) });
@@ -134,7 +138,7 @@ export function assemble(dir, built, config, { only = null, duration, music = nu
   const groups = JSON.parse(readFileSync(join(dir, "caption_groups.json"), "utf8")).groups.filter((g) => g.start < duration);
   let html = readFileSync(idx, "utf8");
   const used = built.segments.filter((s) => !only || only.includes(s.id));
-  html = applyHead(html, used.some((s) => s.component));
+  html = applyHead(html, used.some((s) => s.component), built.vd.palette?.bg);
   html = replaceBlock(html, "audio", audioHosts({ duration, music }));
   const plan = new Map(transitionPlan(built.segments).map((p) => [p.id, p]));
   const timed = built.segments.map((s) => ({ ...s, ...plan.get(s.id) }));

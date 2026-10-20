@@ -54,11 +54,12 @@ COVER_BG = '(document.querySelector(' + js_str(COVER_THUMB) + ') || {style: {}})
 
 def set_cover():
     """上传自己的封面图。缩略图要真实鼠标悬停才出现「编辑封面」，而且它只认真实的鼠标点击（JS click 没反应）；
-    弹窗里的图片上传框是弹窗打开后才有的。网页会把封面裁成 3:4（9:16 的图只留上面一截），封面大字要放在上半部分。"""
+    弹窗里的图片上传框是弹窗打开后才有的。网页会把封面裁成 3:4（9:16 的图只留上面一截），封面大字要放在上半部分。
+    找不到「编辑封面」（发布页改版）时不中断：用视频第一帧接着存草稿，返回 False，结尾提醒手动换。"""
     cover = PAYLOAD.get("cover")
     if not cover:
         log("封面：用视频第一帧（没传 --cover）")
-        return
+        return True
     before = wait_until(COVER_BG, timeout=60, what="视频第一帧封面生成")  # 缩略图有画面后，悬停才会出「编辑封面」
     xy = None
     for _ in range(5):
@@ -73,7 +74,8 @@ def set_cover():
             break
         time.sleep(2)
     if not xy:
-        fail("找不到「编辑封面」，发布页可能改版了")
+        log("⚠ 封面没设上：找不到「编辑封面」（小红书发布页可能改版了），先用视频第一帧存草稿")
+        return False
     click_at_xy(xy[0], xy[1])
     wait_until("""!!document.querySelector("input[type=file][accept*=image]")""", timeout=30, what="封面弹窗")
     time.sleep(1)
@@ -84,6 +86,7 @@ def set_cover():
         fail("封面弹窗里找不到「完成」")
     wait_until(f"""(() => {{ const b = {COVER_BG}; return b && b !== {js_str(before)}; }})()""", timeout=60, what="封面换成上传的图")
     log(f"封面：{os.path.basename(cover)}（已上传）")
+    return True
 
 
 def fill_title():
@@ -143,10 +146,12 @@ def save_draft(before):
 
 before = open_publish_page()
 upload_video()
-set_cover()
+cover_ok = set_cover()
 fill_title()
 fill_body()
 add_topics()
 shot("xiaohongshu-video-draft")
 save_draft(before)
 print(f"✓ 小红书视频草稿已暂存：{COPY['title']}。在创作服务平台「草稿箱」里打开预览，确认后由你发布（草稿只在这台电脑的浏览器里）。")
+if not cover_ok:
+    print(f"⚠ 封面还是视频第一帧：在草稿里手动换成 {PAYLOAD['cover']}（脚本找不到「编辑封面」，小红书发布页可能改版了）")

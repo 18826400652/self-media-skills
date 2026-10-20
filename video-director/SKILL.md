@@ -88,7 +88,7 @@ dykit 组件库在 GitHub 的 `18826400652/hyperframes`（公开仓库，单独�
 - **旧版组件**：`components.lock.json` 锁的还是 2026-10 之前的组件库时，组件时间是写死的；放进比 `minDuration + 2` 秒还长的段，`vd build` 直接报错——`vd build . --update-components` 换成新版
 - 第一次 `vd build` 把最新提交号写进 `components.lock.json`，之后一直用这个版本，重新渲染不会变样；要用新版组件：`vd build . --update-components`
 - 下载的仓库缓存在 `~/.cache/video-director/hyperframes/<提交号>/`，断网时已缓存的版本照常能用
-- 配色怎么套：`palette.accent` 是荧光笔底色；组件里当文字、描边用的强调色取 `accent`、`alert`、`ink` 里第一个在底色上看得清的（对比度 ≥ 3:1）。纸面 + 荧光黄的配色下，组件强调色会是 `alert` 红——如果本片红色代表「错的」，用组件前想清楚会不会混淆
+- 配色怎么套：`palette.accent` 是荧光笔底色；组件里当文字、描边用的强调色是 `accent`，在底色上看不清（对比度 < 3:1）时退回 `ink`，不会用 `alert` 红（红只表示「错的」）。纸面 + 荧光黄的配色下，组件强调色就是墨色，不用再在 vars 里手写 accent
 - 字体：机器块可写 `"fonts": { "title": "serif" | "sans", "body": "serif" | "sans" }`，默认标题宋体、正文黑体
 - 旧工程的 `index.html` 要用组件时，在 `<script src="cues.js"></script>` 下一行加 `<!-- vd:head --><!-- /vd:head -->`
 

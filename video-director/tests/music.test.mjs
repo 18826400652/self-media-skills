@@ -93,7 +93,8 @@ test("resolveMusic：取到的还是比视频短 → 循环补齐并提醒", () 
   const src = resolveMusic(dir, "lo-fi", fakeRun(calls), { duration: 91, probe: lens({ "bgm.wav": 54 }), warn: (m) => warns.push(m) });
   assert.equal(src, "assets/audio/bgm.wav");
   const ff = calls.find((c) => c[0] === "ffmpeg");
-  assert.ok(ff && ff.join(" ").includes("acrossfade") && ff.includes("91"), JSON.stringify(calls));
+  // 补到视频长度再多一整段（91 + 54），重拍对位才有挪的余量
+  assert.ok(ff && ff.join(" ").includes("acrossfade") && ff.includes("145"), JSON.stringify(calls));
   assert.match(warns.join("\n"), /循环/);
   assert.match(warns.join("\n"), /接缝处淡入淡出.*不想听出重复.*assets\/audio\/bgm\.mp3/);
 });
@@ -105,6 +106,15 @@ test("resolveMusic：用户自己放的 bgm.mp3 太短 → 不替换、不取曲
   assert.equal(src, "assets/audio/bgm-loop.wav");
   assert.ok(!calls.some((c) => c[1] === "media-use"));
   assert.ok(calls.some((c) => c[0] === "ffmpeg"));
+});
+
+test("循环补齐后的配乐能让重拍落在任意时间点（多补的一整段就是对位余量）", () => {
+  const len = 30, duration = 97, drop = 70.66;
+  // 30 秒一段、每 0.5 秒一拍，循环到 duration + len
+  const total = duration + len;
+  const beats = Array.from({ length: total * 2 }, (_, i) => ({ time: i / 2, strength: i % 8 === 0 ? 1 : 0.5 }));
+  assert.equal(pickBeat(beats.filter((b) => b.time <= duration), drop, duration, duration), null, "只补到视频长度：没法对位");
+  assert.ok(pickBeat(beats, drop, duration, total), "多补一段：能对位");
 });
 
 test("resolveMusic：已有配乐够长 → 照旧用，不调用任何命令", () => {

@@ -59,6 +59,12 @@ test("骨架里的 brand-ending.html：next 为空时整块预告不显示", () 
   assert.match(html, /if \(!v\.next\)/);
 });
 
+test("骨架里的 brand-ending.html：下一期预告和问题一起在最后一句说完后（holdAt）出现，不盖住最后一段", () => {
+  const html = readFileSync(new URL("../../studio/skeleton/06-品牌资产/hyperframes/brand-ending.html", import.meta.url), "utf8");
+  assert.match(html, /tl\.fromTo\("#be-next",[^\n]*\}, t\);/);
+  assert.doesNotMatch(html, /tl\.to\("#be-next"/, "不再先出现再淡出");
+});
+
 test("audioHosts：配音一条；有配乐时第二条带 media-start 和音量", () => {
   assert.doesNotMatch(audioHosts({ duration: 10, music: null }), /id="music"/);
   const a = audioHosts({ duration: 10, music: { src: "assets/audio/bgm.wav", mediaStart: 3.046, volume: 0.4 } });
@@ -96,8 +102,8 @@ test("segmentHosts：组件段带 --hf-safe-bottom:1150px（字幕带 1180 上�
 
 test("customVars：配色和字体变成 --hf-custom-* 变量；荧光笔用 accent，组件强调色取和底色对比度够的", () => {
   const v = customVars(PAL, { title: "serif", body: "sans" });
-  // 纸面上荧光黄当文字看不清（< 3:1），组件强调色改用 alert 红；荧光笔底色仍是黄
-  assert.match(v, /--hf-custom-bg:#F1ECE2;--hf-custom-text:#1C1A17;--hf-custom-muted:#6E675C;--hf-custom-accent:#D2372A;--hf-custom-alert:#D2372A;--hf-custom-highlight:#FFD84D/);
+  // 纸面上荧光黄当文字看不清（< 3:1），组件强调色退回正文墨色——不退到 alert 红（红 = 错的，强调色用红会误导）；荧光笔底色仍是黄
+  assert.match(v, /--hf-custom-bg:#F1ECE2;--hf-custom-text:#1C1A17;--hf-custom-muted:#6E675C;--hf-custom-accent:#1C1A17;--hf-custom-alert:#D2372A;--hf-custom-highlight:#FFD84D/);
   assert.match(v, /--hf-custom-font-title:var\(--vd-serif\);--hf-custom-font-body:var\(--vd-sans\)/);
   assert.match(v, /--hf-custom-on-accent:#FFFFFF;--hf-custom-on-alert:#FFFFFF;--hf-custom-on-highlight:#1C1A17/);
   // 深色底：荧光黄够亮，直接当强调色，上面的字用墨色
@@ -133,6 +139,12 @@ test("同一组件用两次：宿主 id 不重复，变量各自独立", () => {
 test("headBlock：有组件才引入 dykit 样式和脚本", () => {
   assert.equal(headBlock(false), "");
   assert.match(headBlock(true), /<link rel="stylesheet" href="assets\/dykit\/dykit.css" \/>[\s\S]*<script src="assets\/dykit\/hf-kit.js"><\/script>/);
+});
+
+test("applyHead：全片铺一层配色底色（#root 背景 = palette.bg），叠加类组件不再露白底", () => {
+  const h = applyHead("<!-- vd:head --><!-- /vd:head -->", true, "#F1ECE2");
+  assert.match(h, /<style>#root \{ background: #F1ECE2; \}<\/style>/);
+  assert.doesNotMatch(applyHead("<!-- vd:head --><!-- /vd:head -->", false), /#root \{ background/);
 });
 
 test("applyHead：旧工程没有 vd:head 标记、也没用组件时照常构建；用了组件才要求标记", () => {
