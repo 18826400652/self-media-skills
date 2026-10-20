@@ -41,6 +41,13 @@ test("parseDirector：配色不是 #RRGGBB、sfx 的 at 不是 @词 都报错", 
   assert.match(e, /sfx\[0\].at 必须写成 @词/);
 });
 
+test("parseDirector：ending.next 可以不写或写空（不预告下一期），question、cta 照样必填", () => {
+  const { next, ...rest } = VD.ending;
+  assert.deepEqual(parseDirector(doc({ ...VD, ending: rest })).errors, []);
+  assert.deepEqual(parseDirector(doc({ ...VD, ending: { ...VD.ending, next: "" } })).errors, []);
+  assert.match(parseDirector(doc({ ...VD, ending: { ...VD.ending, question: "" } })).errors.join(), /ending\.question 不能为空/);
+});
+
 test("validateDirector：分段必须从第 1 句连续覆盖到最后一句", () => {
   const p = parseDirector(doc());
   assert.deepEqual(validateDirector(p, 3), []);

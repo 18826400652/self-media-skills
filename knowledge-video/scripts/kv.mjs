@@ -2,7 +2,7 @@
 // 用法：kv check|brief|status|init|gate|done <作品目录> …
 //   check   检查 research.json、SCRIPT.md 的依据、qa.json（存在时）。有 ✗ 退出码 1
 //   brief   research.json → 研究简报.md（给人在确认节点 ① 看）
-//   status  当前阶段、下一步、还没通过的确认节点（实用类：完整一期的 15 步）
+//   status  当前阶段、下一步、还没通过的确认节点（实用类：完整一期的 16 步）
 //   init    [--fresh] [--unsettled 说明]   新建 run.json（有 场景卡.md 为实用类）；--fresh 记下刚生成的模板，用来判断「还没写」；--unsettled：st new --先不定 开的，记下当时没定的方向
 //   gate    <节点> [--edit] "用户原话"   记录用户确认。实用类：topic script director sample final；概念科普：script director sample final
 //   done    <wechat|xiaohongshu|douyin>   存草稿成功后记一笔
@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { renderBrief } from "./lib/brief.mjs";
-import { loadConfig } from "./lib/config.mjs";
+import { loadConfig, skippedPlatforms } from "./lib/config.mjs";
 import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis } from "./lib/script.mjs";
@@ -179,7 +179,8 @@ const writeRun = (dir, run) => writeFileSync(join(dir, FILES.run), JSON.stringif
 
 function practicalFacts(dir, run) {
   const cfg = loadConfig(dir);
-  return { ...collectPracticalFacts(dir, run, { ...defaultRunners(), experienceDir: join(cfg.root, cfg.experienceDir) }), shotQueue: shotQueue(cfg.root, dir) };
+  const paths = { experienceDir: join(cfg.root, cfg.experienceDir), topicList: join(cfg.root, cfg.topicList) };
+  return { ...collectPracticalFacts(dir, run, { ...defaultRunners(), ...paths }), shotQueue: shotQueue(cfg.root, dir), skip: skippedPlatforms(cfg, dir) };
 }
 
 /** 读 run.json；实用类目录没有 run.json 时报错（不能当概念科普处理） */
@@ -268,7 +269,7 @@ function printPracticalStatus(dir, run) {
   const s = practicalStatus(practicalFacts(dir, run));
   console.log(`类型：实用技巧`);
   for (const r of s.rows) {
-    console.log(` ${r.done ? "✓" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}${r.note ? `  ${r.note}` : ""}`);
+    console.log(` ${r.done ? "✓" : r.skipped ? "–" : "·"} ${String(r.n).padStart(2)} ${r.label}${r.gate ? gateText(r, run.gates?.[r.gate]) : ""}${r.note ? `  ${r.note}` : ""}`);
   }
   console.log(`下一步：${s.next}`);
   if (s.remind) console.log(`◇ ${s.remind}`);

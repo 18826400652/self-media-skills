@@ -113,7 +113,7 @@ export function brandHosts({ vd, groups, lines, duration }) {
     host("brand-captions", "compositions/frames/brand-captions.html", 0, duration, 41, vars({ groups: JSON.stringify(caps), ...pal }) + " ") +
     // 样片总长不到最后一句时不放结尾
     (last.start >= duration ? "" : host("brand-ending", "compositions/frames/brand-ending.html", last.start, r3(duration - last.start), 42,
-      vars({ next: vd.ending.next, question: vd.ending.question, cta: vd.ending.cta, holdAt: r3(last.end - last.start), ...pal }) + " "));
+      vars({ next: vd.ending.next ?? "", question: vd.ending.question, cta: vd.ending.cta, holdAt: r3(last.end - last.start), ...pal }) + " "));
 }
 
 export function audioHosts({ duration, music }) {

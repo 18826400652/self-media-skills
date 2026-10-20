@@ -1,7 +1,7 @@
 // 千问音频生成适配器的纯逻辑测试（不联网）：node --test tests/*.test.mjs
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildBody, buildPrompt, spokenText } from "../tts/qwenaudio.mjs";
+import { buildBody, buildPrompt, spokenText, transcribe } from "../tts/qwenaudio.mjs";
 
 test("buildPrompt：参考音频用 @voice1 引用，导演稿和逐帧两种写法", () => {
   assert.equal(
@@ -22,4 +22,74 @@ test("buildBody：单声道 24k、语速用 rate、填了 seed 才带；不支�
 test("spokenText：导演稿取引号里的台词，逐帧取 text", () => {
   assert.equal(spokenText({ direction: '真诚地说道："看完…呃，不想发。"边想边说。' }), "看完…呃，不想发。");
   assert.equal(spokenText({ text: "你好" }), "你好");
+});
+
+// 识别任务轮询：假的 fetch，按 URL 回应答
+function fakeFetch(handlers) {
+  const calls = [];
+  const fn = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
+    for (const [re, h] of handlers) if (re.test(String(url))) return h(init, calls);
+    throw new Error(`没料到的请求：${url}`);
+  };
+  return { fn, calls };
+}
+const json = (data, status = 200) => ({ ok: status < 400, status, json: async () => data, text: async () => JSON.stringify(data) });
+const hang = (init) => new Promise((_, reject) => init.signal?.addEventListener("abort", () => reject(init.signal.reason)));
+const DONE = { output: { task_status: "SUCCEEDED", results: [{ transcription_url: "https://result/x.json" }] } };
+const RESULT = { transcripts: [{ sentences: [{ words: [{ text: "你好", begin_time: 0, end_time: 500 }] }] }] };
+const FAST = { pollMs: 5, requestTimeoutMs: 50, deadlineMs: 3000, logEveryMs: 0 };
+
+async function withFetch(f, run) {
+  const saved = globalThis.fetch;
+  globalThis.fetch = f;
+  process.env.DASHSCOPE_API_KEY ??= "test";
+  try { return await run(); } finally { globalThis.fetch = saved; }
+}
+
+test("transcribe：每个请求（提交、轮询、取结果）都带超时，识别完返回逐字时间", { timeout: 5000 }, async () => {
+  let polls = 0;
+  const f = fakeFetch([
+    [/asr\/transcription/, () => json({ output: { task_id: "t1" } })],
+    [/tasks\/t1/, () => (++polls < 3 ? json({ output: { task_status: "RUNNING" } }) : json(DONE))],
+    [/result\/x\.json/, () => json(RESULT)],
+  ]);
+  const logs = [];
+  const words = await withFetch(f.fn, () => transcribe("https://audio/a.wav", { ...FAST, log: (m) => logs.push(m) }));
+  assert.deepEqual(words, [{ text: "你好", start: 0, end: 0.5 }]);
+  assert.ok(f.calls.every((c) => c.init.signal), "每个 fetch 都要有 signal");
+  assert.match(logs.join("\n"), /识别完成/);
+});
+
+test("transcribe：轮询一次卡住不会挂死，超时后接着查", { timeout: 5000 }, async () => {
+  let polls = 0;
+  const f = fakeFetch([
+    [/asr\/transcription/, () => json({ output: { task_id: "t2" } })],
+    [/tasks\/t2/, (init) => (++polls === 1 ? hang(init) : json(DONE))],
+    [/result\/x\.json/, () => json(RESULT)],
+  ]);
+  const logs = [];
+  const words = await withFetch(f.fn, () => transcribe("https://audio/a.wav", { ...FAST, log: (m) => logs.push(m) }));
+  assert.equal(words.length, 1);
+  assert.match(logs.join("\n"), /查询识别进度超时/);
+});
+
+test("transcribe：一直没结果，到期限报「识别超时」带任务号", { timeout: 5000 }, async () => {
+  const f = fakeFetch([
+    [/asr\/transcription/, () => json({ output: { task_id: "t3" } })],
+    [/tasks\/t3/, () => json({ output: { task_status: "RUNNING" } })],
+  ]);
+  await assert.rejects(withFetch(f.fn, () => transcribe("https://audio/a.wav", { ...FAST, deadlineMs: 60, log: () => {} })), /识别超时（任务 t3）/);
+});
+
+test("transcribe：等得久时定时打印「识别中，已等 N 秒」", { timeout: 5000 }, async () => {
+  let polls = 0;
+  const f = fakeFetch([
+    [/asr\/transcription/, () => json({ output: { task_id: "t4" } })],
+    [/tasks\/t4/, () => (++polls < 6 ? json({ output: { task_status: "RUNNING" } }) : json(DONE))],
+    [/result\/x\.json/, () => json(RESULT)],
+  ]);
+  const logs = [];
+  await withFetch(f.fn, () => transcribe("https://audio/a.wav", { ...FAST, pollMs: 10, logEveryMs: 20, log: (m) => logs.push(m) }));
+  assert.ok(logs.some((m) => /识别中，已等 \d+ 秒/.test(m)), logs.join("\n"));
 });

@@ -21,7 +21,7 @@ cd ~/my-media && st doctor                          # 逐项检查，按提示�
 | 模块 | 命令 | 用途 |
 |---|---|---|
 | [studio](studio/SKILL.md) | `st` | 总入口：作品项目体检（`st doctor`）、新建一期（`st new`）、建项目（`st init`）、安装（`st install`）；默认模板、通用流程 |
-| [knowledge-video](knowledge-video/SKILL.md) | `kv` | 一期的总调度：15 步进度（`kv status`）、用户确认（`kv gate`）、草稿记录（`kv done`）；概念科普的导演手册 |
+| [knowledge-video](knowledge-video/SKILL.md) | `kv` | 一期的总调度：16 步进度（`kv status`）、用户确认（`kv gate`）、草稿记录（`kv done`）；概念科普的导演手册 |
 | [scenario-content](scenario-content/SKILL.md) | `sc` | 内容这几步怎么做（场景卡 → 选题关 → 实测 → 母稿 → 费曼检查 → 自检）；`sc bench` 抓对标，`sc check` 检查，`sc rec` 录实测 |
 | [content-repurpose](content-repurpose/SKILL.md) | — | 方法：一份母稿改编成公众号、小红书、抖音版本 |
 | [voiceover](voiceover/SKILL.md) | `vo` | 配音：口播稿 → 每帧配音、逐字时间、字幕分组 |

@@ -108,6 +108,19 @@ test("发布记录看置顶评论；复盘看经验库里有没有带简称的�
   assert.equal(f.steps.retro.ok, true);
 });
 
+test("更新选题清单：看「已做」一节里有没有这期简称（忽略空格）；没有文件时说出路径", () => {
+  const dir = episode({});
+  const name = basename(dir);
+  const list = join(dir, "选题清单.md");
+  assert.match(collect(dir, run(), { topicList: list }).steps.topics.why, /没有 .*选题清单\.md/);
+  writeFileSync(list, `# 选题清单\n\n## 待做\n\n| ${name} 的续集 |\n\n## 已做\n\n| 别的题 |\n`);
+  const f = collect(dir, run(), { topicList: list });
+  assert.equal(f.steps.topics.ok, false);
+  assert.match(f.steps.topics.why, new RegExp(`「已做」里还没有「${name}」`));
+  writeFileSync(list, `## 已做\n\n| ${name.split("-").join(" - ")}：五天日报 | 第 1 期 |\n\n## 想过但先不做\n`);
+  assert.equal(collect(dir, run(), { topicList: list }).steps.topics.ok, true);
+});
+
 const vdOk = () => ({ ok: true, msg: "" });
 const D = "抖音";
 const dCollect = (dir, r = run(), o = {}) => collect(dir, r, { runVdCues: vdOk, ...o });

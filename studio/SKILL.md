@@ -51,7 +51,7 @@ st confirm series <系列名> "用户原话"           # 系列说明聊完、�
 4. 确认节点：用户明确说通过后才 `kv gate <作品> <节点> "用户原话"`；提修改意见用 `--edit`
 5. 三个草稿（`wa draft`、`vdraft --to xiaohongshu`、`vdraft`）成功后 `kv done <作品> wechat|xiaohongshu|douyin`
 
-完整流程（15 步、5 个确认节点，每步调哪个 skill、哪条命令、kv 怎么判定）：**`references/workflow.md`**。
+完整流程（16 步、5 个确认节点，每步调哪个 skill、哪条命令、kv 怎么判定）：**`references/workflow.md`**。
 
 铁律：**实测绝不编造；只存草稿，永远不点发布；登录、扫码、验证由用户做。**
 

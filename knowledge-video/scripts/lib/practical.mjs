@@ -1,6 +1,7 @@
-// 实用类一期的 15 步和 5 个确认节点（纯函数）。输入 facts 由 practical-facts.mjs 从作品目录读出来。
+// 实用类一期的 16 步和 5 个确认节点（纯函数）。输入 facts 由 practical-facts.mjs 从作品目录读出来。
 //   facts.steps[key] = { ok, why, content? }   这一步自己的条件满足没有；why 是没满足的原因；
 //                                              content=false 表示草稿步骤的内容本身还没写好
+//   facts.skip = ["wechat", …]   这个项目 / 系列不做的平台（knowledge-video.config.json 的 skipPlatforms）
 //   facts.gates[gate] = { passed, at, quote, stale, changed }   stale：确认后相关文件的内容又改过（排版不算）；changed：改了哪些文件
 export const GATE_LABEL = { topic: "① 选题关", script: "② 脚本 + 配音稿", director: "③a 导演脚本", sample: "③b 风格样片", final: "④ 成片" };
 export const DRAFT_KEYS = ["wechat", "xiaohongshu", "douyin"];
@@ -19,8 +20,9 @@ export const STEPS = [
   { n: 11, key: "wechat", label: "公众号" },
   { n: 12, key: "xiaohongshu", label: "小红书" },
   { n: 13, key: "douyin", label: "抖音草稿" },
-  { n: 14, key: "record", label: "发布记录" },
-  { n: 15, key: "retro", label: "复盘" },
+  { n: 14, key: "topics", label: "更新选题清单" },
+  { n: 15, key: "record", label: "发布记录" },
+  { n: 16, key: "retro", label: "复盘" },
 ];
 
 export const GATES = STEPS.filter((s) => s.gate).map((s) => s.gate);
@@ -37,6 +39,7 @@ const HOW = {
   wechat: "写 公众号/文章.md（wa），wa draft 存草稿成功后 kv done <作品> wechat",
   xiaohongshu: "写 小红书/文案.md（标题 ≤ 20 字），vdraft <成片.mp4> --copy 小红书/文案.md --cover 抖音/out/01.png --to xiaohongshu 存草稿成功后 kv done <作品> xiaohongshu",
   douyin: "写 抖音/发布文案.md（标题 ≤ 30 字），ic render 抖音/封面.md 出封面，vdraft <成片.mp4> --copy 抖音/发布文案.md --cover 抖音/out/01.png 存草稿成功后 kv done <作品> douyin",
+  topics: "按 studio references/workflow.md 第 14 步更新选题清单：这期挪到「已做」（写上作品简称），这期对标、评论区、搜索联想词里冒出来的新题补进「待做」（写来源、标待实测），系列说明里列选题的地方同步改",
   record: "在 发布记录.md 填置顶评论原文",
   retro: "在经验库写这期的复盘（文件名带作品简称）",
   director: "vo 抖音 配音 → 按 video-director 写 抖音/DIRECTOR.md，vd cues 抖音 --check 通过",
@@ -52,6 +55,9 @@ const SAVE_HOW = {
 const saveNext = (s) => `${s.n} ${s.label}：内容已写好，只差存草稿：${SAVE_HOW[s.key]}，成功后 kv done <作品> ${s.key}；用户自己存的，用户说存好了再 kv done <作品> ${s.key}`;
 const LAST_GATE_N = Math.max(...STEPS.filter((s) => s.gate).map((s) => s.n));
 
+const PLATFORM_LABEL = { wechat: "公众号", xiaohongshu: "小红书", douyin: "抖音" };
+const isSkipped = (facts, key) => (facts.skip ?? []).includes(key);
+
 const gateState = (g) => (g.passed && !g.stale ? "passed" : g.passed && g.stale ? "stale" : "waiting");
 
 export function practicalStatus(facts) {
@@ -62,6 +68,10 @@ export function practicalStatus(facts) {
     const own = facts.steps[s.key];
     // ④ 通过后的草稿、发布记录、复盘互不依赖：各自算 ✓，内容写好没存草稿的单独标出来
     if (s.n > LAST_GATE_N && !next && !waitingFor) {
+      if (isSkipped(facts, s.key)) {
+        rows.push({ n: s.n, key: s.key, label: s.label, done: false, skipped: true, note: "这个项目 / 系列不做" });
+        continue;
+      }
       const pendingSave = !own.ok && own.content === true && SAVE_HOW[s.key];
       rows.push({ n: s.n, key: s.key, label: s.label, done: own.ok, ...(pendingSave ? { note: "内容已写好，待存草稿" } : {}) });
       continue;
@@ -79,7 +89,7 @@ export function practicalStatus(facts) {
     }
   }
   if (!next && !waitingFor) {
-    const first = STEPS.find((s) => s.n > LAST_GATE_N && !facts.steps[s.key].ok);
+    const first = STEPS.find((s) => s.n > LAST_GATE_N && !facts.steps[s.key].ok && !isSkipped(facts, s.key));
     if (first) {
       const own = facts.steps[first.key];
       next = own.content === true && SAVE_HOW[first.key] ? saveNext(first) : `${first.n} ${first.label}：${HOW[first.key]}${own.why ? `（现在：${own.why}）` : ""}`;
@@ -117,10 +127,11 @@ export function gateBlocker(facts, gate) {
 
 export function doneBlocker(facts, key) {
   if (!DRAFT_KEYS.includes(key)) return `只能记 ${DRAFT_KEYS.join("、")}：${key}`;
-  const step = STEPS.find((s) => s.key === key);
+  if (isSkipped(facts, key)) return `这个项目 / 系列不做${PLATFORM_LABEL[key]}（knowledge-video.config.json 的 skipPlatforms），不用记`;
   const own = facts.steps[key];
   if (own.content === false) return own.why;
-  const before = blockerThrough(facts, step.n - 1);
+  // ④ 之后三个平台互不依赖：只看到成片为止的步骤
+  const before = blockerThrough(facts, LAST_GATE_N);
   if (before) return before;
   const g = facts.gates.final;
   return g.passed && !g.stale ? null : `${GATE_LABEL.final} 还没确认`;

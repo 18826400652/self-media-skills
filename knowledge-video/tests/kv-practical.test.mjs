@@ -137,14 +137,14 @@ test("kv init：run.json 里没有 video 字段，也没有 storyboard 节点", 
   assert.deepEqual(Object.keys(run.gates), ["topic", "script", "director", "sample", "final"]);
 });
 
-test("老 run.json（带 video: director）：status 显示 15 步；kv gate director 前面没做完时拒绝，不报没有这个节点", () => {
+test("老 run.json（带 video: director）：status 显示 16 步；kv gate director 前面没做完时拒绝，不报没有这个节点", () => {
   const dir = practical();
   writeFileSync(join(dir, "run.json"), JSON.stringify({ type: "practical", video: "director", gates: { topic: { passed: false } }, done: {}, templates: {} }));
   const s = kv({ KV_VD_CMD: VD_OK }, "status", dir);
   assert.equal(s.status, 0, s.stderr);
   assert.match(s.stdout, / 8 配音 \+ 导演脚本/);
   assert.match(s.stdout, / 9 风格样片/);
-  assert.match(s.stdout, /15 复盘/);
+  assert.match(s.stdout, /16 复盘/);
   const g = kv({ KV_VD_CMD: VD_OK }, "gate", dir, "director", "通过");
   assert.equal(g.status, 1);
   assert.match(g.stdout, /还不能记 ③a 导演脚本/);

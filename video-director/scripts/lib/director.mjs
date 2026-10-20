@@ -87,7 +87,8 @@ function checkVd(vd) {
   for (const k of ["title", "body"]) if (vd.fonts?.[k] !== undefined && !["serif", "sans"].includes(vd.fonts[k])) e.push(`fonts.${k} 只能是 serif 或 sans`);
   (vd.sfx ?? []).forEach((s, i) => { if (!/^@\S/.test(s.at ?? "")) e.push(`sfx[${i}].at 必须写成 @词`); });
   if (vd.music && !/^@\S/.test(vd.music.drop ?? "")) e.push("music.drop 必须写成 @词（或把 music 写成 null）");
-  for (const k of ["next", "question", "cta"]) if (!vd.ending?.[k]) e.push(`ending.${k} 不能为空`);
+  // next 可以不写：不预告下一期（比如下一期还没实测）
+  for (const k of ["question", "cta"]) if (!vd.ending?.[k]) e.push(`ending.${k} 不能为空`);
   if (!(vd.ending?.hold >= 0)) e.push("ending.hold 必须是不小于 0 的秒数");
   if (!/^@\S/.test(vd.sample?.end ?? "")) e.push("sample.end 必须写成 @词");
   return e;

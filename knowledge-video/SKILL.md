@@ -29,13 +29,13 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 
 | 命令 | 什么时候用 |
 |---|---|
-| `kv status <作品>` | 每一步开始前；列出 15 步 ✓/·、确认节点、下一步 |
+| `kv status <作品>` | 每一步开始前；列出 16 步 ✓/·、确认节点、下一步 |
 | `kv gate <作品> <topic\|script\|director\|sample\|final> "用户原话"` | 用户明确说通过之后。前面没做完会被拒绝 |
 | `kv gate <作品> <节点> --edit "用户原话"` | 用户提了修改意见（不算通过） |
-| `kv done <作品> <wechat\|xiaohongshu\|douyin>` | `wa draft` / `vdraft --to xiaohongshu` / `vdraft` 成功之后；用户自己存草稿的，用户说存好了再记。④ 通过后第 11–15 步各算各的，内容写好没存的显示「待存草稿」 |
+| `kv done <作品> <wechat\|xiaohongshu\|douyin>` | `wa draft` / `vdraft --to xiaohongshu` / `vdraft` 成功之后；用户自己存草稿的，用户说存好了再记。④ 通过后第 11–16 步各算各的，内容写好没存的显示「待存草稿」；三个平台互不依赖，哪个先存都能记 |
 | `kv init <作品> [--fresh]` | 老作品补 run.json；`--fresh` 记下刚生成的模板，用来判断「还没写」 |
 
-15 步、5 个确认节点：
+16 步、5 个确认节点：
 
 | # | 步骤 | 确认 |
 |---|---|---|
@@ -44,7 +44,9 @@ ln -s <skill 目录>/bin/kv ~/.local/bin/kv             # 命令行能直接用 
 | 8 | 配音 + 导演脚本（`vo 抖音`；`抖音/DIRECTOR.md`，`vd cues 抖音 --check` 通过） | ③a 导演脚本 |
 | 9 | 风格样片（`抖音/renders/sample.mp4`，`qa-douyin-sample.json` 无 ✗；⚠ 视觉工艺也要看） | ③b 样片 |
 | 10 | 渲染 + QA（`vd render 抖音`，`qa-douyin.json`、`qa.json` 通过；⚠ 视觉工艺也要看） | ④ 成片 |
-| 11–15 | 公众号、小红书、抖音草稿、发布记录、复盘 | |
+| 11–13 | 公众号、小红书、抖音草稿（不做的平台在 `knowledge-video.config.json` 的 `skipPlatforms` 里关掉，显示 `–`） | |
+| 14 | 更新选题清单（`topicList` 指的文件「已做」一节里出现这期简称） | |
+| 15–16 | 发布记录、复盘 | |
 
 确认之后又改了相关文件，这个节点自动失效，要重新请用户确认：② 改了 `SCRIPT.md` / `VOICE.md`；③a 改了 `DIRECTOR.md`（只补第 8 节组件候选不算）或 `audio_meta.json`（重新配音）；③b 换了样片；④ 换了成片。工程里的 HTML 比成片新要重新渲染。`kv status` 调用 `sc check --json`、`vo --check`、`vd cues --check`，命令名可用环境变量 `KV_SC_CMD`、`KV_VO_CMD`、`KV_VD_CMD` 换掉。视频只有导演做法一套，工程就是 `抖音/`，配音直接写在里面，没有复制步骤。
 
