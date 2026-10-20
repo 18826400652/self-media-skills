@@ -59,6 +59,12 @@ test("骨架里的 brand-ending.html：next 为空时整块预告不显示", () 
   assert.match(html, /if \(!v\.next\)/);
 });
 
+test("骨架里的 brand-ending.html：下一期预告和问题一起在最后一句说完后（holdAt）出现，不盖住最后一段", () => {
+  const html = readFileSync(new URL("../../studio/skeleton/06-品牌资产/hyperframes/brand-ending.html", import.meta.url), "utf8");
+  assert.match(html, /tl\.fromTo\("#be-next",[^\n]*\}, t\);/);
+  assert.doesNotMatch(html, /tl\.to\("#be-next"/, "不再先出现再淡出");
+});
+
 test("audioHosts：配音一条；有配乐时第二条带 media-start 和音量", () => {
   assert.doesNotMatch(audioHosts({ duration: 10, music: null }), /id="music"/);
   const a = audioHosts({ duration: 10, music: { src: "assets/audio/bgm.wav", mediaStart: 3.046, volume: 0.4 } });

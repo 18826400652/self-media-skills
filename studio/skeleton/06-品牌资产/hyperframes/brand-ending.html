@@ -38,12 +38,9 @@
           const t = Number(v.holdAt);
           gsap.set(["#be-next", "#be-q", "#be-cta"], { opacity: 0 });
           const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out", immediateRender: false } });
-          // 没写下一期预告：整块不出现
+          // 下一期预告和问题一起在最后一句说完后出现：本段从最后一句开头就开始，早出来会盖住最后一段的画面。没写预告：整块不出现
           if (!v.next) $("be-next").style.display = "none";
-          else {
-            tl.fromTo("#be-next", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.4 }, 0.2);
-            tl.to("#be-next", { opacity: 0, y: -30, duration: 0.3, ease: "power2.in" }, t - 0.3);
-          }
+          else tl.fromTo("#be-next", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.4 }, t);
           tl.fromTo("#be-q", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.45 }, t);
           tl.fromTo("#be-cta", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4 }, t + 0.5);
           window.__timelines["brand-ending"] = tl;
