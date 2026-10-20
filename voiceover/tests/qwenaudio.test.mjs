@@ -35,7 +35,11 @@ function fakeFetch(handlers) {
   return { fn, calls };
 }
 const json = (data, status = 200) => ({ ok: status < 400, status, json: async () => data, text: async () => JSON.stringify(data) });
-const hang = (init) => new Promise((_, reject) => init.signal?.addEventListener("abort", () => reject(init.signal.reason)));
+// 模拟卡住的请求：等到超时被中止。AbortSignal.timeout 的计时器不撑住进程（Node 22），真请求有网络连接撑着，这里挂个计时器代替
+const hang = (init) => new Promise((_, reject) => {
+  const keepAlive = setInterval(() => {}, 1000);
+  init.signal?.addEventListener("abort", () => { clearInterval(keepAlive); reject(init.signal.reason); });
+});
 const DONE = { output: { task_status: "SUCCEEDED", results: [{ transcription_url: "https://result/x.json" }] } };
 const RESULT = { transcripts: [{ sentences: [{ words: [{ text: "你好", begin_time: 0, end_time: 500 }] }] }] };
 const FAST = { pollMs: 5, requestTimeoutMs: 50, deadlineMs: 3000, logEveryMs: 0 };
