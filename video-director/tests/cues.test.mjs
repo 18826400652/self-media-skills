@@ -47,6 +47,16 @@ test("resolveCue 词不存在：报错并给出最接近的 3 个候选", () => 
   assert.throws(() => resolveCue(s, "资料", 99), /「资料」只出现了 \d+ 次，没有第 99 次/);
 });
 
+test("segmentTimes：组件段默认 drift（慢推镜），镜头段不加；写了 drift 就照写的", () => {
+  const segs = segmentTimes([
+    { id: "a", lines: [1, 2], component: "dy-answer-check" },
+    { id: "b", lines: [3, 4], shot: "dy-shot-proof" },
+    { id: "c", lines: [5, 6], component: "dy-prompt-card", drift: false },
+    { id: "d", lines: [7, 8] },
+  ], lineTimes(META));
+  assert.deepEqual(segs.map((s) => !!s.drift), [true, false, false, false]);
+});
+
 test("segmentTimes + buildCues：段时间来自句时间；cues 键名带序号", () => {
   const segs = segmentTimes([{ id: "a", lines: [1, 2] }, { id: "b", lines: [3, 17] }], lineTimes(META));
   near(segs[0].duration, 7.13);

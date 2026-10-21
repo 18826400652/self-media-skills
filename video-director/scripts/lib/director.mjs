@@ -75,6 +75,7 @@ function checkVd(vd) {
   (Array.isArray(vd.segments) ? vd.segments : []).forEach((s, i) => {
     if (s.component !== undefined && !COMPONENT.test(s.component)) e.push(`segments[${i}].component 必须是 dykit 组件名（dy-开头）`);
     e.push(...checkShot(s, `segments[${i}]`));
+    if (s.drift !== undefined && typeof s.drift !== "boolean") e.push(`segments[${i}].drift 只能是 true 或 false`);
     if (s.vars !== undefined && (typeof s.vars !== "object" || s.vars === null || Array.isArray(s.vars))) e.push(`segments[${i}].vars 必须是对象`);
     if (s.beats !== undefined && !Array.isArray(s.beats)) e.push(`segments[${i}].beats 必须是数组`);
     (Array.isArray(s.beats) ? s.beats : []).forEach((b, j) => {

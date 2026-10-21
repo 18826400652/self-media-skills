@@ -46,3 +46,16 @@ test("VDACT.panInOut：pan-up 在竖直方向走 1920；没有 data-vd-enter / e
   assert.deepEqual(calls, [["to", { x: 0, y: -1920, filter: "blur(12px)", duration: 0.6, ease: "power2.inOut" }, 3]]);
   assert.deepEqual(runPan({}, 3), []);
 });
+
+test("VDACT.applyDrift：VD.seg 里标了 drift 的段，宿主以顶边为基准、从段开头到段尾慢慢放大到 1.02（匀速，内容不往上顶进栏目标签）", () => {
+  const calls = [];
+  const ctx = { window: {}, gsap: { set: (sel, v) => calls.push(["set", sel, v]) } };
+  vm.runInNewContext(ACTIONS_JS, ctx);
+  ctx.window.VD = { seg: { a: { start: 0, duration: 5 }, b: { start: 5, duration: 4, drift: true } } };
+  const tl = { to: (sel, v, at) => calls.push(["to", sel, v, at]) };
+  ctx.window.VDACT.applyDrift(tl);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls)), [
+    ["set", "#host-b", { scale: 1, transformOrigin: "50% 0%" }],
+    ["to", "#host-b", { scale: 1.02, duration: 4, ease: "none" }, 5],
+  ]);
+});

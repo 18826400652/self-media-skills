@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
-import { applyHead, audioHosts, brandHosts, cuesJs, customVars, headBlock, replaceBlock, segmentHosts, setRootDuration } from "../scripts/lib/assemble.mjs";
+import { applyHead, audioHosts, brandHosts, cuesJs, customVars, ensureDriftCall, headBlock, replaceBlock, segmentHosts, setRootDuration } from "../scripts/lib/assemble.mjs";
 
 const HTML = `<div id="root" data-composition-id="main" data-start="0" data-duration="10">
 <!-- vd:segments -->old<!-- /vd:segments -->
@@ -15,6 +15,19 @@ test("replaceBlock 只替换标记之间，手写部分保留；重复执行结�
   assert.match(a, /贯穿元素/);
   assert.equal(replaceBlock(a, "segments", "\nNEW\n"), a);
   assert.throws(() => replaceBlock(HTML, "brand", "x"), /index.html 缺少标记 <!-- vd:brand -->/);
+});
+
+test("cuesJs：段带 drift 标记（只有 true 才写）", () => {
+  const js = cuesJs({ cues: {}, segments: [{ id: "a", start: 0, duration: 2, drift: true }, { id: "b", start: 2, duration: 3, drift: false }] });
+  assert.match(js, /"a":\{"start":0,"duration":2,"drift":true\}/);
+  assert.match(js, /"b":\{"start":2,"duration":3\}/);
+});
+
+test("ensureDriftCall：主时间轴注册前补一句 VDACT.applyDrift(tl)；已经有了不重复加", () => {
+  const html = '      const tl = gsap.timeline();\n      window.__timelines["main"] = tl;\n';
+  const once = ensureDriftCall(html);
+  assert.match(once, /if \(window\.VDACT && VDACT\.applyDrift\) VDACT\.applyDrift\(tl\);[^\n]*\n      window\.__timelines\["main"\] = tl;/);
+  assert.equal(ensureDriftCall(once), once);
 });
 
 test("setRootDuration：只改 main 根元素的 data-duration", () => {
