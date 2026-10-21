@@ -62,6 +62,16 @@ test("④ 通过后，草稿、发布记录、复盘各算各的：内容写好�
   assert.doesNotMatch(s.next, /写 公众号\/文章\.md/);
 });
 
+test("配了封面路径：下一步给的 vdraft 命令用项目自己的封面", () => {
+  const saved = { ok: false, why: "还没存草稿", content: true };
+  const covers = { douyinCover: "封面/抖音封面-9x16.png", xiaohongshuCover: "封面/小红书封面-3x4.png" };
+  const d = practicalStatus({ ...facts({ steps: { douyin: saved } }), ...covers });
+  assert.match(d.next, /--cover 封面\/抖音封面-9x16\.png/);
+  assert.doesNotMatch(d.next, /抖音\/out\/01\.png/);
+  const x = practicalStatus({ ...facts({ steps: { xiaohongshu: saved } }), ...covers });
+  assert.match(x.next, /--cover 封面\/小红书封面-3x4\.png --to xiaohongshu/);
+});
+
 test("④ 通过后内容还没写：下一步照旧是写内容", () => {
   const s = practicalStatus(facts({ steps: { wechat: { ok: false, why: "公众号/文章.md 还是空模板", content: false } } }));
   assert.match(s.next, /^11 公众号：写 公众号\/文章\.md/);

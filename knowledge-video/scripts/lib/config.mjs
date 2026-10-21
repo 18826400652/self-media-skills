@@ -4,7 +4,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { DRAFT_KEYS } from "./practical.mjs";
 
 export const CONFIG_NAME = "knowledge-video.config.json";
-const DEFAULTS = { series: null, audience: null, voiceGuide: null, experienceDir: "经验库", topicList: "03-选题池/选题清单.md", skipPlatforms: {} };
+const DEFAULTS = { series: null, audience: null, voiceGuide: null, experienceDir: "经验库", topicList: "03-选题池/选题清单.md", skipPlatforms: {}, douyinCover: null, xiaohongshuCover: null };
 
 function findUp(start) {
   for (let dir = resolve(start); ; dir = dirname(dir)) {
@@ -36,4 +36,15 @@ export function skippedPlatforms(cfg, episodeDir) {
   const bad = keys.filter((k) => !DRAFT_KEYS.includes(k));
   if (bad.length) throw new Error(`${CONFIG_NAME} 的 skipPlatforms 里有不认识的平台：${bad.join("、")}（只能是 ${DRAFT_KEYS.join("、")}）`);
   return [...new Set(keys)];
+}
+
+/** 视频里承诺了领取方式：从项目根目录往上找 studio.json，lead 不为空 */
+export function promisesLead(root) {
+  for (let dir = resolve(root); ; dir = dirname(dir)) {
+    const p = join(dir, "studio.json");
+    if (existsSync(p)) {
+      try { return !!String(JSON.parse(readFileSync(p, "utf8")).lead ?? "").trim(); } catch { return false; }
+    }
+    if (dirname(dir) === dir) return false;
+  }
 }
