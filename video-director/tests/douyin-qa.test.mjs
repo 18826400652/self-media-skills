@@ -30,6 +30,24 @@ test("qaTimes：样片时长之外的 @词 和段不查；grid 每 0.5 秒，只
   assert.equal(qaTimes(built, 30).grid.at(-1), 9.5);
 });
 
+test("checkFrame：内容（文字或卡片）贴到、压到栏目标签（在它下面一层也算）→ ✗；全屏背景、data-layout-ignore 不算", () => {
+  const kicker = { visible: true, occludedBy: null, box: [64, 200, 420, 240] };
+  const card = { sel: "#host-seg-07-lead .card", box: [80, 236, 1000, 900], opacity: 1 };
+  const i = checkFrame(frame({ kicker, blocks: [card] }));
+  assert.equal(i.length, 1);
+  assert.equal(i[0].kind, "kicker-overlap");
+  assert.equal(i[0].level, "error");
+  assert.match(i[0].msg, /#host-seg-07-lead \.card 压到栏目标签/);
+  // 紧贴在标签下面、没压上：⚠（挤，但不算错）
+  const near = checkFrame(frame({ kicker, blocks: [{ ...card, box: [80, 245, 1000, 900] }] }));
+  assert.deepEqual(near.map((x) => [x.kind, x.level]), [["kicker-near", "warn"]]);
+  assert.equal(checkFrame(frame({ kicker, blocks: [{ ...card, box: [80, 260, 1000, 900] }] })).length, 0, "留出间距就不报");
+  assert.equal(checkFrame(frame({ kicker, blocks: [{ sel: "#bg", box: [0, 0, 1080, 1920], opacity: 1 }] })).length, 0, "全屏背景不算");
+  assert.equal(checkFrame(frame({ kicker, blocks: [{ sel: "#shot", box: [118, 0, 1080, 1500], opacity: 1 }] })).length, 0, "从标签上方就开始、铺到它后面的大图是背景，不算");
+  assert.equal(checkFrame(frame({ kicker, blocks: [{ ...card, ignore: true }] })).length, 0);
+  assert.equal(checkFrame(frame({ kicker, elements: [el({ sel: "#t", box: [100, 220, 300, 260] })] }))[0].kind, "kicker-overlap");
+});
+
 test("checkFrame：出画面、进顶部 / 右侧 / 底部安全区、压字幕带 → ✗", () => {
   const kinds = (e) => checkFrame(frame({ elements: [el(e)] })).map((i) => i.kind);
   assert.deepEqual(kinds({ box: [-40, 400, 300, 500] }), ["out"]);

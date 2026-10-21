@@ -37,13 +37,13 @@ test("openPage：读时长；按时间读元素框、@词 可见、栏目标签�
     assert.ok(!f0.elements.some((e) => e.sel === "#cap"), "字幕在 host-brand-* 里，不查");
     assert.deepEqual(f0.elements.find((e) => e.sel === "#shape"), { sel: "#shape", text: false, key: true, allowSafe: false, box: [600, 800, 700, 900], opacity: 1 });
     assert.deepEqual(f0.elements.find((e) => e.sel === "#proof"), { sel: "#proof", text: false, key: false, allowSafe: false, proof: true, box: [200, 1200, 400, 1280], opacity: 1 }, "只有 data-vd-proof 也要收进来");
-    assert.deepEqual(f0.kicker, { visible: true, occludedBy: null });
+    assert.deepEqual(f0.kicker, { visible: true, occludedBy: null, box: [64, 228, 464, 268] }, "带上标签的框，查内容贴不贴着它");
     assert.deepEqual(f0.elements.find((e) => e.sel === "#paper").box, [100, 300, 400, 350], "被 overflow:hidden 裁掉的部分不算");
     const f1 = await page.frame(1.5);
     assert.equal(f1.cueMarks[0].visible, true);
     assert.notEqual(f1.sig, f0.sig, "元素变了签名就变");
     assert.deepEqual((await page.frame(2.5)).elements.find((e) => e.sel === "#b").box, [100, 1500, 400, 1560]);
-    assert.deepEqual((await page.frame(3.5)).kicker, { visible: true, occludedBy: "#cover" });
+    assert.deepEqual((await page.frame(3.5)).kicker, { visible: true, occludedBy: "#cover", box: [64, 228, 464, 268] });
   } finally {
     await page.close();
   }
