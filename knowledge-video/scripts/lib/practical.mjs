@@ -1,6 +1,7 @@
 // 实用类一期的 16 步和 5 个确认节点（纯函数）。输入 facts 由 practical-facts.mjs 从作品目录读出来。
 //   facts.steps[key] = { ok, why, content? }   这一步自己的条件满足没有；why 是没满足的原因；
 //                                              content=false 表示草稿步骤的内容本身还没写好
+//   facts.douyinCover / xiaohongshuCover   项目自己的封面路径（提示里的 vdraft --cover 用它）
 //   facts.skip = ["wechat", …]   这个项目 / 系列不做的平台（knowledge-video.config.json 的 skipPlatforms）
 //   facts.gates[gate] = { passed, at, quote, stale, changed }   stale：确认后相关文件的内容又改过（排版不算）；changed：改了哪些文件
 export const GATE_LABEL = { topic: "① 选题关", script: "② 脚本 + 配音稿", director: "③a 导演脚本", sample: "③b 风格样片", final: "④ 成片" };
@@ -52,7 +53,19 @@ const SAVE_HOW = {
   xiaohongshu: "vdraft <成片.mp4> --copy 小红书/文案.md --cover 抖音/out/01.png --to xiaohongshu",
   douyin: "vdraft <成片.mp4> --copy 抖音/发布文案.md --cover 抖音/out/01.png",
 };
-const saveNext = (s) => `${s.n} ${s.label}：内容已写好，只差存草稿：${SAVE_HOW[s.key]}，成功后 kv done <作品> ${s.key}；用户自己存的，用户说存好了再 kv done <作品> ${s.key}`;
+const DEFAULT_COVER = "抖音/out/01.png";
+
+/** 提示里的封面换成项目配的路径（knowledge-video.config.json 的 douyinCover / xiaohongshuCover） */
+function withCover(text, key, facts) {
+  const dy = facts.douyinCover;
+  const cover = key === "xiaohongshu" ? facts.xiaohongshuCover ?? dy : key === "douyin" ? dy : null;
+  if (!cover) return text;
+  const out = text.replace(`--cover ${DEFAULT_COVER}`, `--cover ${cover}`);
+  return key === "douyin" && dy ? out.replace("ic render 抖音/封面.md 出封面", `出封面（${dy}）`) : out;
+}
+const howFor = (key, facts) => withCover(HOW[key], key, facts);
+
+const saveNext = (s, facts) => `${s.n} ${s.label}：内容已写好，只差存草稿：${withCover(SAVE_HOW[s.key], s.key, facts)}，成功后 kv done <作品> ${s.key}；用户自己存的，用户说存好了再 kv done <作品> ${s.key}`;
 const LAST_GATE_N = Math.max(...STEPS.filter((s) => s.gate).map((s) => s.n));
 
 const PLATFORM_LABEL = { wechat: "公众号", xiaohongshu: "小红书", douyin: "抖音" };
@@ -81,7 +94,7 @@ export function practicalStatus(facts) {
     const done = !next && own.ok && (!g || state === "passed");
     rows.push({ n: s.n, key: s.key, label: s.label, done, ...(s.gate ? { gate: s.gate, gateState: state } : {}) });
     if (done || next) continue;
-    if (!own.ok) next = `${s.n} ${s.label}：${HOW[s.key]}${own.why ? `（现在：${own.why}）` : ""}`;
+    if (!own.ok) next = `${s.n} ${s.label}：${howFor(s.key, facts)}${own.why ? `（现在：${own.why}）` : ""}`;
     else {
       waitingFor = s.gate;
       const why = state === "stale" ? `确认后改过${g.changed?.length ? `（${g.changed.join("、")}）` : ""}，需要重新确认，` : "";
@@ -92,7 +105,7 @@ export function practicalStatus(facts) {
     const first = STEPS.find((s) => s.n > LAST_GATE_N && !facts.steps[s.key].ok && !isSkipped(facts, s.key));
     if (first) {
       const own = facts.steps[first.key];
-      next = own.content === true && SAVE_HOW[first.key] ? saveNext(first) : `${first.n} ${first.label}：${HOW[first.key]}${own.why ? `（现在：${own.why}）` : ""}`;
+      next = own.content === true && SAVE_HOW[first.key] ? saveNext(first, facts) : `${first.n} ${first.label}：${howFor(first.key, facts)}${own.why ? `（现在：${own.why}）` : ""}`;
     }
   }
   return { rows, next: next ?? "这期做完了", waitingFor, ...shotRemind(facts) };

@@ -59,6 +59,37 @@ test("确认节点：指纹一致 passed，不一致 stale", () => {
   assert.equal(collect(dir, run()).gates.script.passed, false);
 });
 
+test("实测录屏可以按轮放在子目录里（实测/千问第3轮/录屏.mp4）", () => {
+  const dir = episode({ "实测/千问第3轮/录屏.mp4": "x" });
+  const f = collect(dir, run(), { runSc: () => ({ items: [] }) });
+  assert.equal(f.steps.test.ok, true, f.steps.test.why);
+});
+
+test("抖音封面路径可配（douyinCover）：配了就看这个文件在不在，不再要求 ic render 出的 抖音/out/01.png", () => {
+  const dir = episode({ "抖音/发布文案.md": "写好了" });
+  let f = collect(dir, run(), { douyinCover: "封面/抖音封面-9x16.png" });
+  assert.equal(f.steps.douyin.content, false);
+  assert.match(f.steps.douyin.why, /封面\/抖音封面-9x16\.png/);
+  mkdirSync(join(dir, "封面"));
+  writeFileSync(join(dir, "封面/抖音封面-9x16.png"), "p");
+  f = collect(dir, run(), { douyinCover: "封面/抖音封面-9x16.png" });
+  assert.equal(f.steps.douyin.content, true);
+});
+
+test("领取物：承诺了领取方式（lead）时三个草稿步骤都要 领取物/ 里有文件；没承诺不查", () => {
+  const dir = episode({ "公众号/文章.md": "写好了", "小红书/文案.md": "写好了" });
+  let f = collect(dir, run(), { lead: true });
+  for (const k of ["wechat", "xiaohongshu"]) {
+    assert.equal(f.steps[k].content, false);
+    assert.match(f.steps[k].why, /领取物\/ 里还没有东西/);
+  }
+  assert.equal(collect(dir, run(), { lead: false }).steps.wechat.content, true);
+  mkdirSync(join(dir, "领取物"));
+  writeFileSync(join(dir, "领取物/模板.md"), "x");
+  f = collect(dir, run(), { lead: true });
+  assert.equal(f.steps.wechat.content, true);
+});
+
 test("草稿步骤：内容空模板 content=false；写好没记 done 只差存草稿；抖音封面出图要比源文件新", () => {
   const dir = episode({ "公众号/文章.md": "tpl", "小红书/文案.md": "tpl", "抖音/发布文案.md": "写好了", "抖音/封面.md": "f", "抖音/out/01.png": "p" });
   touch(dir, "抖音/封面.md", 2000); touch(dir, "抖音/out/01.png", 1000);

@@ -21,6 +21,14 @@ function latest(dir, sub, re) {
   return files.sort((a, b) => mtime(b) - mtime(a))[0] ?? null;
 }
 
+/** sub 下面（含子目录，最多 depth 层）有没有符合 re 的文件 */
+function hasDeep(dir, sub, re, depth = 3) {
+  const p = join(dir, sub);
+  if (!existsSync(p) || depth < 0) return false;
+  return readdirSync(p, { withFileTypes: true }).some((e) =>
+    e.isDirectory() ? hasDeep(p, e.name, re, depth - 1) : re.test(e.name));
+}
+
 // 正式成片：renders/ 里最新的 mp4（FINAL_RE 不算压缩预览、风格样片、新旧对比）
 const finalMp4 = (dir, sub) => {
   const mp4 = latest(dir, sub, FINAL_RE);
@@ -112,7 +120,8 @@ function scSteps(dir, runSc) {
     const mine = fails.filter((i) => i.file === file);
     out[key] = mine.length ? no(mine.map((i) => i.msg).join("；")) : ok();
   }
-  if (out.test.ok && !latest(dir, "实测", /\.mp4$/)) out.test = no("实测/ 里没有录屏 mp4（sc rec）");
+  // 按轮放在子目录里也算（实测/千问第3轮/录屏.mp4）
+  if (out.test.ok && !hasDeep(dir, "实测", /\.mp4$/)) out.test = no("实测/ 里没有录屏 mp4（sc rec）");
   // 第 6 步只管内容阶段（第 1–5 步的文件和全局项）；平台文件的 ✗ 到各自那一步再拦
   const own = fails.filter((i) => !platformStep(i.file));
   out.selfcheck = own.length ? no(`sc check 还有 ${own.length} 项 ✗：${own.map((i) => i.msg).join("；")}`) : ok();
@@ -210,15 +219,25 @@ function directorSteps(dir, runVdCues) {
   return { director, sample, render };
 }
 
-function draftSteps(dir, run) {
+const LEAD_DIR = "领取物";
+
+/**
+ * douyinCover：项目自己的抖音封面路径（相对作品目录，knowledge-video.config.json）；不配就看 ic render 出的 抖音/out/NN.png
+ * lead：视频里承诺了领取方式（studio.json 的 lead）→ 存草稿前 领取物/ 里要有东西
+ */
+function draftSteps(dir, run, { douyinCover = null, lead = false } = {}) {
   const t = run.templates;
-  const step = (key, contentWhy) => contentWhy ? no(contentWhy, { content: false }) : run.done?.[key] ? ok() : no("还没存草稿", { content: true });
+  const leadWhy = lead && !hasDeep(dir, LEAD_DIR, /./, 2) && `${LEAD_DIR}/ 里还没有东西：视频和文案里承诺了领模板（studio.json 的 lead），先把要发的东西做好放进去`;
+  const step = (key, contentWhy) => (contentWhy || leadWhy) ? no(contentWhy || leadWhy, { content: false }) : run.done?.[key] ? ok() : no("还没存草稿", { content: true });
+  const coverWhy = douyinCover
+    ? !existsSync(join(dir, douyinCover)) && `抖音封面还没出图（${douyinCover}）`
+    : !rendered(dir, "抖音/封面.md", "抖音/out") && "抖音封面还没出图（ic render 抖音/封面.md）";
   return {
     wechat: step("wechat", !written(dir, "公众号/文章.md", t) && "公众号/文章.md 还是空模板"),
     xiaohongshu: step("xiaohongshu", !written(dir, "小红书/文案.md", t) && "小红书/文案.md 还是空模板"),
     douyin: step("douyin",
       !written(dir, "抖音/发布文案.md", t) ? "抖音/发布文案.md 还是空模板"
-        : !rendered(dir, "抖音/封面.md", "抖音/out") && "抖音封面还没出图（ic render 抖音/封面.md）"),
+        : coverWhy),
   };
 }
 
@@ -268,13 +287,13 @@ function gateFacts(dir, run) {
   }));
 }
 
-export function collectPracticalFacts(dir, run, { runSc, runVoiceCheck, runVdCues, experienceDir, topicList }) {
+export function collectPracticalFacts(dir, run, { runSc, runVoiceCheck, runVdCues, experienceDir, topicList, douyinCover, lead }) {
   const { platform, ...sc } = scSteps(dir, runSc);
   const steps = {
     ...sc,
     script: scriptStep(dir, run, runVoiceCheck),
     ...directorSteps(dir, runVdCues),
-    ...draftSteps(dir, run),
+    ...draftSteps(dir, run, { douyinCover, lead }),
     topics: topicsStep(dir, topicList),
     record: recordStep(dir),
     retro: retroStep(dir, experienceDir),

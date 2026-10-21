@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { renderBrief } from "./lib/brief.mjs";
-import { loadConfig, skippedPlatforms } from "./lib/config.mjs";
+import { loadConfig, promisesLead, skippedPlatforms } from "./lib/config.mjs";
 import { validateQa } from "./lib/qa.mjs";
 import { parseResearchJson, validateResearch } from "./lib/research.mjs";
 import { checkBasis } from "./lib/script.mjs";
@@ -179,8 +179,9 @@ const writeRun = (dir, run) => writeFileSync(join(dir, FILES.run), JSON.stringif
 
 function practicalFacts(dir, run) {
   const cfg = loadConfig(dir);
-  const paths = { experienceDir: join(cfg.root, cfg.experienceDir), topicList: join(cfg.root, cfg.topicList) };
-  return { ...collectPracticalFacts(dir, run, { ...defaultRunners(), ...paths }), shotQueue: shotQueue(cfg.root, dir), skip: skippedPlatforms(cfg, dir) };
+  const covers = { douyinCover: cfg.douyinCover, xiaohongshuCover: cfg.xiaohongshuCover };
+  const opts = { experienceDir: join(cfg.root, cfg.experienceDir), topicList: join(cfg.root, cfg.topicList), douyinCover: cfg.douyinCover, lead: promisesLead(cfg.root) };
+  return { ...collectPracticalFacts(dir, run, { ...defaultRunners(), ...opts }), ...covers, shotQueue: shotQueue(cfg.root, dir), skip: skippedPlatforms(cfg, dir) };
 }
 
 /** 读 run.json；实用类目录没有 run.json 时报错（不能当概念科普处理） */

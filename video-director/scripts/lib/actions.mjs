@@ -2,6 +2,17 @@
 // 一律先 gsap.set 初态再 tl.to（seek 安全；不用 fromTo，避开 immediateRender 的坑）
 export const ACTIONS_JS = `
 window.VDACT = {
+  // 组件段慢推镜：cues.js 里 VD.seg 标了 drift 的段，宿主整段匀速放大到 1.02（几拍之间画面也在动）。
+  // 以画面顶边为基准往下长：内容不往上顶进栏目标签；底边最多下移约 25px，组件底边离字幕带留了 30px
+  applyDrift: function (tl) {
+    var seg = (window.VD && window.VD.seg) || {};
+    Object.keys(seg).forEach(function (id) {
+      var s = seg[id];
+      if (!s.drift) return;
+      gsap.set("#host-" + id, { scale: 1, transformOrigin: "50% 0%" });
+      tl.to("#host-" + id, { scale: 1.02, duration: s.duration, ease: "none" }, s.start);
+    });
+  },
   pushIn: function (tl, sel, dur, opts) {
     var o = opts || {};
     gsap.set(sel, { scale: o.from == null ? 1 : o.from, transformOrigin: "50% 45%" });

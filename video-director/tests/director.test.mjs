@@ -148,10 +148,16 @@ test("checkVd：shot 和 component 不能同时写；shot 只能是 dy-shot- 开
   assert.equal(withSegs([{ id: "a", lines: [1, 3], shot: "dy-shot-proof", vars: {} }]), "");
 });
 
-test("checkVd：overlays 每项 shot 是 dy-shot- 开头、at 写成 @词", () => {
-  const e = withSegs([{ id: "a", lines: [1, 3], shot: "dy-shot-proof", overlays: [{ shot: "dy-stamp", at: "编一套" }] }]);
-  assert.match(e, /segments\[0\]\.overlays\[0\]\.shot 必须是 dy-shot- 开头的镜头名/);
+test("checkVd：overlays 每项 shot 是 dy- 开头的镜头或组件（花字 dy-sticker-pop、盖章 dy-stamp 也能叠）、at 写成 @词", () => {
+  assert.equal(withSegs([{ id: "a", lines: [1, 3], shot: "dy-shot-proof", overlays: [{ shot: "dy-sticker-pop", at: "@编一套" }, { shot: "dy-stamp", at: "@编一套" }] }]), "");
+  const e = withSegs([{ id: "a", lines: [1, 3], shot: "dy-shot-proof", overlays: [{ shot: "sticker", at: "编一套" }] }]);
+  assert.match(e, /segments\[0\]\.overlays\[0\]\.shot 必须是 dy- 开头的镜头或组件名/);
   assert.match(e, /segments\[0\]\.overlays\[0\]\.at 必须写成 @词/);
+});
+
+test("checkVd：drift 只能是 true / false", () => {
+  assert.match(withSegs([{ id: "a", lines: [1, 3], component: "dy-stamp", drift: "yes" }]), /segments\[0\]\.drift 只能是 true 或 false/);
+  assert.equal(withSegs([{ id: "a", lines: [1, 3], component: "dy-stamp", drift: false }]), "");
 });
 
 test("checkVd：transition 只能是 auto、none 或 pan-left/right/up/down", () => {

@@ -43,6 +43,7 @@
     <script>
       const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out", immediateRender: false } });
       // 手写：背景和贯穿元素的动画，时间用 VD.cues["词"]（全片秒数）
+      if (window.VDACT && VDACT.applyDrift) VDACT.applyDrift(tl); // vd build 加的：组件段慢推镜（DIRECTOR.md 里该段写 "drift": false 关掉）
       window.__timelines["main"] = tl;
       tl.seek(0);
     </script>

@@ -22,7 +22,7 @@ export function setRootDuration(html, seconds) {
 }
 
 export function cuesJs({ cues, segments }) {
-  const seg = Object.fromEntries(segments.map((s) => [s.id, { start: s.start, duration: s.duration }]));
+  const seg = Object.fromEntries(segments.map((s) => [s.id, { start: s.start, duration: s.duration, ...(s.drift ? { drift: true } : {}) }]));
   return `// vd build 生成，不要手改。各段用 VD.at("词", "段id") 取相对段开头的秒数
 window.VD = {
   cues: ${JSON.stringify(cues)},
@@ -83,6 +83,15 @@ export function headBlock(hasComponents) {
   return hasComponents ? `\n    <link rel="stylesheet" href="assets/dykit/dykit.css" />\n    <script src="assets/dykit/hf-kit.js"></script>\n    ` : "";
 }
 
+const DRIFT_CALL = `if (window.VDACT && VDACT.applyDrift) VDACT.applyDrift(tl); // vd build 加的：组件段慢推镜（DIRECTOR.md 里该段写 "drift": false 关掉）`;
+const MAIN_REGISTER = `window.__timelines["main"] = tl;`;
+
+/** 主时间轴注册前补一句 VDACT.applyDrift(tl)（老工程的 index.html 没有这句）；已有就不动 */
+export function ensureDriftCall(html) {
+  if (html.includes("VDACT.applyDrift") || !html.includes(MAIN_REGISTER)) return html;
+  return html.replace(/^([ \t]*)window\.__timelines\["main"\] = tl;/m, (line, indent) => `${indent}${DRIFT_CALL}\n${line}`);
+}
+
 /** 全片底色：各段下面铺 palette.bg（叠加类组件自己不带底色，没有这层会露白底） */
 export const rootBgBlock = (bg) => (bg ? `<style>#root { background: ${bg}; }</style>\n    ` : "");
 
@@ -139,7 +148,7 @@ export function assemble(dir, built, config, { only = null, duration, music = nu
   let html = readFileSync(idx, "utf8");
   const used = built.segments.filter((s) => !only || only.includes(s.id));
   html = applyHead(html, used.some((s) => s.component), built.vd.palette?.bg);
-  html = replaceBlock(html, "audio", audioHosts({ duration, music }));
+  html = ensureDriftCall(replaceBlock(html, "audio", audioHosts({ duration, music })));
   const plan = new Map(transitionPlan(built.segments).map((p) => [p.id, p]));
   const timed = built.segments.map((s) => ({ ...s, ...plan.get(s.id) }));
   html = replaceBlock(html, "segments", segmentHosts(timed, only, built.vd.palette, built.vd.fonts) + "    ");

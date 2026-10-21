@@ -60,7 +60,9 @@ export function segmentTimes(segments, lines) {
     if (!a || !b) throw new Error(`段 ${s.id} 的句号 ${s.lines.join("–")} 超出配音范围（共 ${lines.length} 句）`);
     const seg = { id: s.id, start: a.start, duration: round(b.end - a.start), transition: s.transition ?? "auto", overlays: [] };
     const component = s.shot && s.shot !== "custom" ? s.shot : s.component;
-    if (component) return { ...seg, component, vars: s.vars ?? {} };
+    // 组件段几拍之间画面不动：默认整段慢推镜（VDACT.applyDrift）；镜头自带动作，不加
+    const drift = s.drift ?? (!!s.component && !s.shot);
+    if (component) return { ...seg, component, vars: s.vars ?? {}, drift };
     if (s.shot === "custom") return { ...seg, custom: { reason: s.reason, need: s.need, candidate: s.candidate } };
     return seg;
   });

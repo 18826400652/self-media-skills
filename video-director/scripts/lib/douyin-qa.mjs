@@ -66,8 +66,27 @@ export function checkFrame(f) {
   }
   const k = f.data.kicker;
   if (k.visible && k.occludedBy) out.push({ level: "error", kind: "kicker", sel: k.occludedBy, t: f.t, msg: `${at(f)}栏目标签被 ${k.occludedBy} 挡住` });
+  else if (k.visible && k.box) out.push(...nearKicker(f, k.box));
   return out;
 }
+
+const KICKER_GAP = 12; // 内容离栏目标签至少留这么多像素
+const isBackdrop = ([x1, y1, x2, y2]) => x2 - x1 >= W * 0.9 && y2 - y1 >= H * 0.5;
+const touches = ([a1, b1, a2, b2], [x1, y1, x2, y2], gap) => a1 < x2 + gap && a2 > x1 - gap && b1 < y2 + gap && b2 > y1 - gap;
+
+/**
+ * 内容压到、贴到栏目标签：在标签下面一层（没挡住它）也算。压上了 ✗，只是贴得太近（不到 KICKER_GAP）⚠。
+ * 不算：全屏背景、装饰层、从标签上方就开始铺到它后面的大图（故意当背景用）
+ */
+function nearKicker(f, kbox) {
+  const items = [...f.data.elements.filter((e) => !e.allowSafe), ...(f.data.blocks ?? []).filter((b) => !b.ignore && !isBackdrop(b.box))]
+    .filter((e) => e.box[1] > kbox[1]);
+  const over = items.find((e) => touches(e.box, kbox, -TOL));
+  if (over) return [{ level: "error", kind: "kicker-overlap", sel: over.sel, t: f.t, msg: `${at(f)}${over.sel} 压到栏目标签，往下挪或缩小` }];
+  const near = items.find((e) => touches(e.box, kbox, KICKER_GAP));
+  return near ? [{ level: "warn", kind: "kicker-near", sel: near.sel, t: f.t, msg: `${at(f)}${near.sel} 离栏目标签不到 ${KICKER_GAP} 像素，看着挤` }] : [];
+}
+
 
 // 构图：一段里所有截图（@词 落定和段结尾）最低的内容元素都在这条线以上 = 整段挤在上方、下半屏空着（约为可用区 200–1150 的 60%）
 const LOW_CONTENT = 770;
