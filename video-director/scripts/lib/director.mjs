@@ -59,7 +59,8 @@ function checkShot(s, at) {
   if (s.transition !== undefined && !TRANSITIONS.includes(s.transition)) e.push(`${at}.transition 只能是 ${TRANSITIONS.join("|")}`);
   if (s.overlays !== undefined && !Array.isArray(s.overlays)) e.push(`${at}.overlays 必须是数组`);
   (Array.isArray(s.overlays) ? s.overlays : []).forEach((o, j) => {
-    if (!SHOT.test(o?.shot ?? "")) e.push(`${at}.overlays[${j}].shot 必须是 dy-shot- 开头的镜头名`);
+    // 叠加的可以是镜头，也可以是花字、盖章这类透明底的组件（dy-sticker-pop、dy-stamp）
+    if (!COMPONENT.test(o?.shot ?? "")) e.push(`${at}.overlays[${j}].shot 必须是 dy- 开头的镜头或组件名`);
     if (!/^@\S/.test(o?.at ?? "")) e.push(`${at}.overlays[${j}].at 必须写成 @词`);
   });
   return e;
